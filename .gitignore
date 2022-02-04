@@ -1,0 +1,9 @@
+resources/
+bin/
+lib/
+x64/
+src/
+Psychspiration.sln
+Settings.csv
+.vs/
+include/
