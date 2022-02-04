@@ -7,3 +7,5 @@ Psychspiration.sln
 Settings.csv
 .vs/
 include/
+Psychspiration/Psychspiration.vcxproj
+Psychspiration/Psychspiration.vcxproj.filters
