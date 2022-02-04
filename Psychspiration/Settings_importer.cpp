@@ -1,4 +1,4 @@
-#include "Psychspiration/Settings_importer.h"
+#include <Settings_importer.h>
 std::vector<std::string> split(const std::string& s, char delim);
 void Settings::update()
 {

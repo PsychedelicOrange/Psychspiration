@@ -111,13 +111,14 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
     //glEnable(GL_DEPTH_CLAMP);
     //glEnable(GL_MULTISAMPLE);
     //glEnable(GL_FRAMEBUFFER_SRGB);
     //stbi_set_flip_vertically_on_load(true);
     // build and compile our shader zprogram
     // ------------------------------------
+
     Shader::shaderPath = User1->shaderPath;
     
     Shader ourShader("vertex_invertex_.vs","shadowbckup.fs","0");
@@ -129,8 +130,8 @@ int main()
     Shader defLightingPass("Lpass_pbr.vs", "Lpass_pbr.fs", "0");
     float scale = 0.1;
     //Model bulb("C:\\Users\\parth\\source\\repos\\Psychspiration\\resources\\models\\light bulb\\bulb.obj");
-    Model bulb("C:\\Users\\parth\\source\\repos\\Psychspiration\\resources\\bulb\\bulb1.glb");
-    Model axes("C:\\Users\\parth\\source\\repos\\Psychspiration\\resources\\models\\helmet_with_lights.glb");
+    Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
+    Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
 
     setLights(defLightingPass);
     setLights(pbrShader);
@@ -201,7 +202,7 @@ int main()
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    Scene scene("C:\\Users\\parth\\source\\repos\\Psychspiration\\resources\\sponza", ourShader);
+    Scene scene(User1->resourcePath+"streets", ourShader);
     int nrLights;
     Model* models{ new Model[scene.name.size()] };
     bool gotLights = 0;

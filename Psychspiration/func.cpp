@@ -57,7 +57,6 @@ std::string Shader::shaderPath{ "lol" };
         try
         {
             // open files
-            std::cout << Shader::shaderPath + vertexPath;
             vShaderFile.open(Shader::shaderPath+vertexPath);
             fShaderFile.open(Shader::shaderPath +fragmentPath);
             std::stringstream vShaderStream, fShaderStream;
