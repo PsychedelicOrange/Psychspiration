@@ -111,7 +111,8 @@ void main()
     float shadow = doshadows ? ShadowCalculation(FragPos) : 1.0; 
     vec3 color   = ambient + shadow * Lo; 
     //gamma correction done in glEnable sRGB
-    FragColor = vec4(color,1.0f);
+    //FragColor = vec4(color,1.0f);
+    FragColor = vec4(vec3(color),1.0);
     //FragColor = vec4(pointLights[0].position,0.0f);
 }
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -156,7 +157,7 @@ float ShadowCalculation(vec3 fragPos)
     // get vector between fragment position and light position 
     vec3 fragToLight = fragPos - pointLights[0].position; 
     // ise the fragment to light vector to sample from the depth map    
-    float closestDepth = texture(depthMap, fragToLight).r;
+    float closestDepth = texture(depthMap, fragToLight).r; 
     // it is currently in linear range between [0,1], let's re-transform it back to original depth value 
     closestDepth *= far_plane;
     // now get current linear depth as the length between the fragment and light position 

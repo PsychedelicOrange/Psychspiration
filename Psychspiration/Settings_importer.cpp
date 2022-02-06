@@ -13,7 +13,6 @@ void Settings::update()
         std::getline(file, prop);
     }
     std::cout << prop;
-
     std::vector<std::string> settings;
     settings = split(prop, ',');
     SCR_WIDTH = stoi(settings[0]);

@@ -120,174 +120,20 @@ int main()
     // ------------------------------------
 
     Shader::shaderPath = User1->shaderPath;
-    
-    Shader ourShader("vertex_invertex_.vs","shadowbckup.fs","0");
-    Shader simpleDepthShader("pointshadow.vs","pointshadow.fs","pointshadow.gs");
-    Shader lightCubeShader("vertex_lightcube.vs","fragment_lightcube.fs", "0");
-    Shader debugDepthQuad("debug.vs", "debug.fs", "0");
+    Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
-    Shader defGeometryPass("Gpass.vs", "Gpass.fs","0");
-    Shader defLightingPass("Lpass_pbr.vs", "Lpass_pbr.fs", "0");
-    float scale = 0.1;
-    //Model bulb("C:\\Users\\parth\\source\\repos\\Psychspiration\\resources\\models\\light bulb\\bulb.obj");
+    setLights(pbrShader);
     Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
     Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
-
-    setLights(defLightingPass);
-    setLights(pbrShader);
-
-
-    unsigned int gBuffer;
-    glGenFramebuffers(1, &gBuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-    unsigned int gPosition, gNormal, gAlbedo, gRoughMetal;
-
-    // - position color buffer
-    glGenTextures(1, &gPosition);
-    glBindTexture(GL_TEXTURE_2D, gPosition);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
-
-    // - normal color buffer
-    glGenTextures(1, &gNormal);
-    glBindTexture(GL_TEXTURE_2D, gNormal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-
-    // - albedo color buffer
-    glGenTextures(1, &gAlbedo);
-    glBindTexture(GL_TEXTURE_2D, gAlbedo);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
-
-    // - roughmetal color buffer
-    glGenTextures(1, &gRoughMetal);
-    glBindTexture(GL_TEXTURE_2D, gRoughMetal);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gRoughMetal, 0);
-
-    // - tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
-    unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3 };
-    glDrawBuffers(4, attachments);
-
-
-
-    // create and attach depth buffer (renderbuffer)
-    unsigned int rboDepth;
-    glGenRenderbuffers(1, &rboDepth);
-    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, User1->SCR_WIDTH, User1->SCR_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
-    // finally check if framebuffer is complete
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "Framebuffer not complete!" << std::endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    Scene scene(User1->resourcePath+"streets", ourShader);
-    int nrLights;
+    Scene scene(User1->resourcePath+"sponza");
     Model* models{ new Model[scene.name.size()] };
-    bool gotLights = 0;
     for (int i = 0; i < scene.name.size(); i++)
     {
-        std::cout << "Object in scene: " << scene.name[i]<< std::endl;
+        std::cout << "Object in scene: " << scene.name[i] << std::endl;
         const aiScene* assimpScene = models[i].getpath(scene.scenePath + scene.name[i] + ".glb");
-        
-        if (!gotLights)
-        {
-            std::cout << "Scene has lights : " << assimpScene->HasLights();
-            if (assimpScene->HasLights())
-            {
-               
-                std::vector <PointLight> pointLights;
-                std::vector <DirectionalLight> directionalLights;
-                std::vector <SpotLight> spotLights;
-                nrLights = assimpScene->mNumLights;
-                std::cout <<"number of lights" << nrLights;
-                int nrPointLights=0;
-                int nrDirectionalLights=0;
-                int nrSpotLights=0;
-                aiLight** light = assimpScene->mLights;
-                for (int i = 0; i < nrLights; i++)
-                {
-                    if(light[i]->mType== aiLightSource_POINT)
-                    {
-                        PointLight pointLight;
-                        pointLight.position.x = light[i]->mPosition.x;
-                        pointLight.position.y = light[i]->mPosition.y;
-                        pointLight.position.z = light[i]->mPosition.z;
-                        pointLight.color.x = light[i]->mColorDiffuse.r;
-                        pointLight.color.y = light[i]->mColorDiffuse.g;
-                        pointLight.color.z = light[i]->mColorDiffuse.b;
-                        pointLight.constant = light[i]->mAttenuationConstant;
-                        pointLight.linear = light[i]->mAttenuationLinear;
-                        pointLight.quadratic = light[i]->mAttenuationQuadratic;
-                        pointLight.size.x = light[i]->mSize.x;
-                        pointLight.size.y = light[i]->mSize.y;
-                        pointLights.push_back(pointLight);
-                        nrPointLights++;
-                    }
-                    if (light[i]->mType == aiLightSource_DIRECTIONAL)
-                    {   
-                        DirectionalLight directionalLight;
-                        directionalLight.color.x = light[i]->mColorDiffuse.r;
-                        directionalLight.color.y = light[i]->mColorDiffuse.g;
-                        directionalLight.color.z = light[i]->mColorDiffuse.b;
-                        directionalLight.direction.x = light[i]->mDirection.x;
-                        directionalLight.direction.y = light[i]->mDirection.y;
-                        directionalLight.direction.z = light[i]->mDirection.z;
-                        directionalLights.push_back(directionalLight);
-                        nrDirectionalLights++;
-                    }
-                    if (light[i]->mType == aiLightSource_SPOT)
-                    {
-                        SpotLight spotLight;
-                        spotLight.color.x = light[i]->mColorDiffuse.r;
-                        spotLight.color.y = light[i]->mColorDiffuse.g;
-                        spotLight.color.z = light[i]->mColorDiffuse.b;
-                        spotLight.position.x = light[i]->mPosition.x;
-                        spotLight.position.y = light[i]->mPosition.y;
-                        spotLight.position.z = light[i]->mPosition.z;
-                        spotLight.constant = light[i]->mAttenuationConstant;
-                        spotLight.linear = light[i]->mAttenuationLinear;
-                        spotLight.quadratic = light[i]->mAttenuationQuadratic;
-                        spotLight.angleInnerCone = light[i]->mAngleInnerCone;
-                        spotLight.angleOuterCone = light[i]->mAngleOuterCone;
-                        spotLights.push_back(spotLight);
-                        nrSpotLights++;
-                    }
-                }
-
-                gotLights = 1;
-            }
-            
-        }
-            
     }
-    defLightingPass.use();
-    defLightingPass.setInt("gPosition", 0);
-    defLightingPass.setInt("gNormal", 1);
-    defLightingPass.setInt("gAlbedo", 2);
-    defLightingPass.setInt("gRoughMetal", 3);
-    
+    float scale = 0.1;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -306,55 +152,23 @@ int main()
         glClearColor(0,0,0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-        
-        // 2. Geometry Pass
-        // -------------------------
-
-        glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            defGeometryPass.use();
-            glm::mat4 model = glm::mat4(1.0f);
+            pbrShader.use();
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)User1->SCR_WIDTH / (float)User1->SCR_HEIGHT, 0.1f, 100.0f);
             glm::mat4 view = camera.GetViewMatrix();
-            defGeometryPass.setMat4("projection", projection);
-            defGeometryPass.setMat4("view", view);
-            defGeometryPass.setInt("donormals", normals);
-            drawScene(scene, defGeometryPass, models);
-            defGeometryPass.setMat4("model", model);
-            defGeometryPass.setBool("existnormals", 1);
+            pbrShader.setMat4("projection", projection);
+            pbrShader.setMat4("view", view);
+            pbrShader.setVec3("viewPos", camera.Position);
+            pbrShader.setVec3("spotLight.position", camera.Position);
+            pbrShader.setVec3("spotLight.direction", camera.Front);
+            pbrShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+            pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
+            pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
+            pbrShader.setBool("existnormals", 1);
+            drawScene(scene, pbrShader, models);
+
             //axes.Draw(defGeometryPass);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        // 2. Lighting pass: 
-        // ------------------------
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        defLightingPass.use();
-        defLightingPass.setVec3("viewPos", camera.Position);
-        defLightingPass.setVec3("spotLight.position", camera.Position);
-        defLightingPass.setVec3("spotLight.direction", camera.Front);
-        defLightingPass.setVec3("pointLights[0].position", pointLightPositions[0]);
-        defLightingPass.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
-        defLightingPass.setInt("donormals", normals); // enable/disable normals by pressing '2'
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-        glActiveTexture(GL_TEXTURE0+1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        glActiveTexture(GL_TEXTURE0+2);
-        glBindTexture(GL_TEXTURE_2D, gAlbedo);
-        glActiveTexture(GL_TEXTURE0+3);
-        glBindTexture(GL_TEXTURE_2D, gRoughMetal);
-        //drawScene(scene, defLightingPass, models);
-        renderQuad();
-   
-        // end of deffered shading
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // write to default framebuffer
-        glBlitFramebuffer(
-            0, 0, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, 0, User1->SCR_WIDTH, User1->SCR_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST
-        );
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
         //render the bulbs
         glm::mat4 model1 = glm::mat4(1.0f);
         lightCubeShader.use();

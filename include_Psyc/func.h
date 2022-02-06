@@ -661,7 +661,7 @@ public:
     //std::vector<glm::vec4> rotation_axis;
     std::string scenePath;
     //Model* models;
-    Scene(std::string scenePath, Shader ourShader)
+    Scene(std::string scenePath)
     {
         scenePath = scenePath + "\\";
         this->scenePath = scenePath;
@@ -681,7 +681,7 @@ public:
         }
         //std::cout << prop;
         propvec = split(prop, ',');
-        
+        std::cout << "Read number of models as " << propvec.size() / 10;
         for (int i = 0; i < (propvec.size()-10); i = i + 11)
         {
 
