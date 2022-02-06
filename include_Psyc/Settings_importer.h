@@ -13,6 +13,8 @@ public:
 	std::string shaderPath; //path to shader
 	unsigned int hdr;
 	float exposure;
+	unsigned int MSAA;
+	unsigned int AF;
 	void update();
 	Settings()
 	{

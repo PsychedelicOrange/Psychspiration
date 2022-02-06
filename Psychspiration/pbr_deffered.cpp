@@ -72,8 +72,8 @@ int main()
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, 4);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
@@ -126,7 +126,7 @@ int main()
     setLights(pbrShader);
     Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
     Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
-    Scene scene(User1->resourcePath+"sponza");
+    Scene scene(User1->resourcePath+"trashshop");
     Model* models{ new Model[scene.name.size()] };
     for (int i = 0; i < scene.name.size(); i++)
     {
@@ -180,6 +180,7 @@ int main()
     {
         // per-frame time logic
         // --------------------
+        
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

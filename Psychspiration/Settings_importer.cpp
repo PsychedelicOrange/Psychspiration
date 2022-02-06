@@ -12,7 +12,7 @@ void Settings::update()
     {
         std::getline(file, prop);
     }
-    //std::cout << prop;
+    file.close();
     std::vector<std::string> settings;
     settings = split(prop, ',');
     SCR_WIDTH = stoi(settings[0]);
@@ -21,4 +21,6 @@ void Settings::update()
     shaderPath = settings[3];
     hdr = stoi(settings[4]);
     exposure = stof(settings[5]);
+    MSAA = stoi(settings[6]);
+    AF = stoi(settings[7]);
 }
