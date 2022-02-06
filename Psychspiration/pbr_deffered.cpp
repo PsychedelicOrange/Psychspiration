@@ -17,13 +17,12 @@ void renderQuad();
 //const unsigned int SCR_WIDTH = 1920;
 //const unsigned int SCR_HEIGHT = 1080;
 Settings* User1 = new Settings();
-bool shadows = true;
-bool normals = true;
+bool shadows = true; //toggle
+bool normals = true; //toggle
 bool forward = true;
 bool shadowsKeyPressed = false;
 bool normalsKeyPressed = false;
 bool forwardKeyPressed = false;
-
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = User1->SCR_WIDTH / 2.0f;
@@ -76,6 +75,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_SAMPLES, 4);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 #ifdef __APPLE__
@@ -85,7 +85,7 @@ int main()
     // glfw window creation
     // --------------------
     //GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
-    GLFWwindow* window = glfwCreateWindow(User1->SCR_WIDTH, User1->SCR_HEIGHT, "LearnOpenGL", 0, NULL);
+    GLFWwindow* window = glfwCreateWindow(User1->SCR_WIDTH, User1->SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -113,8 +113,8 @@ int main()
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_CULL_FACE);
     //glEnable(GL_DEPTH_CLAMP);
-    //glEnable(GL_MULTISAMPLE);
-    //glEnable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_FRAMEBUFFER_SRGB);
     //stbi_set_flip_vertically_on_load(true);
     // build and compile our shader zprogram
     // ------------------------------------
@@ -122,6 +122,7 @@ int main()
     Shader::shaderPath = User1->shaderPath;
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
+    Shader hdrShader("quad.vs", "hdr.fs","0");
     setLights(pbrShader);
     Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
     Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
@@ -133,6 +134,45 @@ int main()
         const aiScene* assimpScene = models[i].getpath(scene.scenePath + scene.name[i] + ".glb");
     }
     float scale = 0.1;
+    // configure floating point framebuffer
+ // ------------------------------------
+    unsigned int postFBO;
+    glGenFramebuffers(1, &postFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
+    // create floating point color buffer with hdr 16 bit
+    unsigned int textureColorBufferMultiSampled;
+    glGenTextures(1, &textureColorBufferMultiSampled);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA16F, User1->SCR_WIDTH, User1->SCR_HEIGHT, GL_TRUE);
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
+    // create a (also multisampled) renderbuffer object for depth and stencil attachments
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, User1->SCR_WIDTH, User1->SCR_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // configure second post-processing framebuffer
+    unsigned int intermediateFBO;
+    glGenFramebuffers(1, &intermediateFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
+    // create a color attachment texture
+    unsigned int screenTexture;
+    glGenTextures(1, &screenTexture);
+    glBindTexture(GL_TEXTURE_2D, screenTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);	// we only need a color buffer
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // render loop
     // -----------
@@ -150,9 +190,10 @@ int main()
         // render
         // ------
         glClearColor(0,0,0, 1.0f);
+        glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
 
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             pbrShader.use();
             glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)User1->SCR_WIDTH / (float)User1->SCR_HEIGHT, 0.1f, 100.0f);
             glm::mat4 view = camera.GetViewMatrix();
@@ -166,23 +207,36 @@ int main()
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             drawScene(scene, pbrShader, models);
-
-            //axes.Draw(defGeometryPass);
+            //draw the bulbs
+            glm::mat4 model1 = glm::mat4(1.0f);
+            lightCubeShader.use();
+            lightCubeShader.setMat4("projection", projection);
+            lightCubeShader.setMat4("view", view);
+            for (unsigned int i = 0; i < 1; i++)
+            {
+                model1 = glm::mat4(1.0f);
+                model1 = glm::translate(model1, pointLightPositions[i]);
+                model1 = glm::scale(model1, glm::vec3(0.08f)); // Make it a smaller cube
+                // model1 = model1 * world_trans_intitial
+                lightCubeShader.setMat4("model", model1);
+                bulb.Draw(lightCubeShader);
+            }
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+        glBlitFramebuffer(0, 0, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, 0, User1->SCR_WIDTH, User1->SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+        //post processing
+        //------------------------------------------------------------------------------------------------------------------------
         
-        //render the bulbs
-        glm::mat4 model1 = glm::mat4(1.0f);
-        lightCubeShader.use();
-        lightCubeShader.setMat4("projection", projection);
-        lightCubeShader.setMat4("view", view);
-        for (unsigned int i = 0; i < 1; i++)
-        {
-            model1 = glm::mat4(1.0f);
-            model1 = glm::translate(model1, pointLightPositions[i]);
-            model1 = glm::scale(model1, glm::vec3(0.08f)); // Make it a smaller cube
-            // model1 = model1 * world_trans_intitial
-            lightCubeShader.setMat4("model", model1);
-            bulb.Draw(lightCubeShader);
-        }
+        hdrShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, screenTexture);
+        hdrShader.setInt("hdr", User1->hdr);
+        hdrShader.setFloat("exposure", User1->exposure);
+        renderQuad();
+       
 
        
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -250,6 +304,10 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_0) == GLFW_RELEASE)
     {
         forwardKeyPressed = false;
+    }
+    if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS)
+    {
+        User1->update();
     }
     
 }

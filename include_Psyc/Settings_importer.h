@@ -10,7 +10,9 @@ public:
 	unsigned int SCR_HEIGHT;
 	unsigned int monitor; // 0 for windowed, 1 for fullscreen
 	std::string resourcePath; // path to scene for now
-	std::string shaderPath ; //path to shader
+	std::string shaderPath; //path to shader
+	unsigned int hdr;
+	float exposure;
 	void update();
 	Settings()
 	{

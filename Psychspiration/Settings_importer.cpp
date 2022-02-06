@@ -12,11 +12,13 @@ void Settings::update()
     {
         std::getline(file, prop);
     }
-    std::cout << prop;
+    //std::cout << prop;
     std::vector<std::string> settings;
     settings = split(prop, ',');
     SCR_WIDTH = stoi(settings[0]);
     SCR_HEIGHT = stoi(settings[1]);
     resourcePath = settings[2];
     shaderPath = settings[3];
+    hdr = stoi(settings[4]);
+    exposure = stof(settings[5]);
 }
