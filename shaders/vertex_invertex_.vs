@@ -5,14 +5,6 @@ layout (location = 2) in vec2 aTexCoords;
 layout (location = 3) in vec3 aTangent;
 layout (location = 4) in vec3 aBitangent;
 
-#define NR_POINT_LIGHTS 1
-struct PointLight {
-    vec3 position;
-    vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
-};
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexCoords;
@@ -22,7 +14,6 @@ out mat3 TBNinverse;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform vec3 viewPos;
 
 void main()

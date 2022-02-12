@@ -33,41 +33,15 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 void updatelightloc(std::string x, float deltaTime);
-
+unsigned int lightSelector=0;
 // lighting
-glm::vec3 pointLightPositions[] = {
-        glm::vec3(-2.0f, 4.0f, -1.0f),
-       glm::vec3(0.0f,  0.0f,  0.5f),
-        glm::vec3(0.0f,  0.0f,  0.5f),
-        glm::vec3(0.0f,  0.0f,  0.5f)
-};
-
-struct PointLight {
-    glm::vec3 position;
-    glm::vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
-    glm::vec2 size;
-};
-struct DirectionalLight {
-    glm::vec3 direction;
-    glm::vec3 color;
-};
-struct SpotLight {
-    glm::vec3 position;
-    glm::vec3 direction;
-    float angleInnerCone;
-    float angleOuterCone;
-    float constant;
-    float linear;
-    float quadratic;
-    glm::vec3 color;
-};
-
-
+std::vector<PointLight> light;
+unsigned int numLights;
+ScreenToView screen2View;
 int main()
 {
+    camera.setUser(User1);
+
     std::cout << " using version " << aiGetVersionMajor << "." << aiGetVersionMinor << " Assimp. " << std::endl;
     // glfw: initialize and configure
     // ------------------------------
@@ -85,7 +59,7 @@ int main()
     // glfw window creation
     // --------------------
     //GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
-    GLFWwindow* window = glfwCreateWindow(User1->SCR_WIDTH, User1->SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
+    GLFWwindow* window = glfwCreateWindow(User1->SCR_WIDTH, User1->SCR_HEIGHT, "LearnOpenGL", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -111,7 +85,7 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     //glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -120,20 +94,122 @@ int main()
     // ------------------------------------
 
     Shader::shaderPath = User1->shaderPath;
+    //Pre-processing
+    Shader aabb("clusterShading.comp");
+    Shader cullLights("cull.comp");
+    //render
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
+    //post processing
     Shader hdrShader("quad.vs", "hdr.fs","0");
-    setLights(pbrShader);
+    //setLights(pbrShader);
     Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
     Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
-    Scene scene(User1->resourcePath+"trashshop");
-    Model* models{ new Model[scene.name.size()] };
+    Scene scene(User1->resourcePath+"sponza");
+    numLights = scene.lightList.size();
+    Model* models{ new Model[scene.name.size()]};
     for (int i = 0; i < scene.name.size(); i++)
     {
         std::cout << "Object in scene: " << scene.name[i] << std::endl;
         const aiScene* assimpScene = models[i].getpath(scene.scenePath + scene.name[i] + ".glb");
     }
     float scale = 0.1;
+
+    // Settings for cluster 
+    const unsigned int gridSizeX = 16;
+    const unsigned int gridSizeY = 9;
+    const unsigned int gridSizeZ = 24;
+    const unsigned int numClusters = gridSizeX * gridSizeY * gridSizeZ;
+    unsigned int sizeX, sizeY;
+    sizeX = (unsigned int)std::ceilf(User1->SCR_WIDTH/ (float)gridSizeX);
+
+    const unsigned int maxLights = 1000; // pretty overkill for sponza, but ok for testing
+    const unsigned int maxLightsPerTile = 50;
+
+    unsigned int lightSSBO, lightIndexListSSBO, lightGridSSBO, lightIndexGlobalCountSSBO;
+
+    unsigned int AABBvolumeGridSSBO;
+    glGenBuffers(1, &AABBvolumeGridSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, AABBvolumeGridSSBO);
+    //We generate the buffer but don't populate it yet.
+    glBufferData(GL_SHADER_STORAGE_BUFFER, numClusters * sizeof(VolumeTileAABB), NULL, GL_STATIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, AABBvolumeGridSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    
+    unsigned int  screenToViewSSBO;
+    glGenBuffers(1, &screenToViewSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, screenToViewSSBO);
+    //Setting up contents of buffer
+    screen2View.inverseProjectionMat = glm::inverse(camera.GetProjectionMatrix());
+    screen2View.tileSizes[0] = gridSizeX;
+    screen2View.tileSizes[1] = gridSizeY;
+    screen2View.tileSizes[2] = gridSizeZ;
+    screen2View.tileSizes[3] = sizeX;
+    screen2View.screenWidth = User1->SCR_WIDTH;
+    screen2View.screenHeight = User1->SCR_HEIGHT;
+    //Basically reduced a log function into a simple multiplication an addition by pre-calculating these
+    screen2View.sliceScalingFactor = (float)gridSizeZ / std::log2f(camera.farPlane / camera.nearPlane);
+    screen2View.sliceBiasFactor = -((float)gridSizeZ * std::log2f(camera.nearPlane) / std::log2f(camera.farPlane / camera.nearPlane));
+    //Generating and copying data to memory in GPU
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof( ScreenToView), &screen2View, GL_STATIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, screenToViewSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); 
+    //Setting up lights buffer that contains all the lights in the scene
+    
+        glGenBuffers(1, &lightSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, maxLights * sizeof( GPULight), NULL, GL_DYNAMIC_DRAW);
+
+        GLint bufMask = GL_READ_WRITE;
+
+        struct GPULight* lights = (struct GPULight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, bufMask);
+        light = scene.lightList;
+        for (unsigned int i = 0; i < numLights; ++i) {
+            //Fetching the light from the current scene
+            
+            lights[i].position = glm::vec4(light[i].position, 1.0f);
+            lights[i].color = glm::vec4(light[i].color, 1.0f);
+            lights[i].enabled = 1;
+            lights[i].intensity = light[i].power;
+            lights[i].range = light[i].size;
+        }
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, lightSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+   
+    //A list of indices to the lights that are active and intersect with a cluster
+    
+        unsigned int totalNumLights = numClusters * maxLightsPerTile; //50 lights per tile max
+        glGenBuffers(1, &lightIndexListSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightIndexListSSBO);
+
+        //We generate the buffer but don't populate it yet.
+        glBufferData(GL_SHADER_STORAGE_BUFFER, totalNumLights * sizeof(unsigned int), NULL, GL_STATIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, lightIndexListSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    //Every tile takes two unsigned ints one to represent the number of lights in that grid
+    //Another to represent the offset to the light index list from where to begin reading light indexes from
+    //This implementation is straight up from Olsson paper
+    
+        glGenBuffers(1, &lightGridSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightGridSSBO);
+
+        glBufferData(GL_SHADER_STORAGE_BUFFER, numClusters * 2 * sizeof(unsigned int), NULL, GL_STATIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, lightGridSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    
+    //Setting up simplest ssbo in the world
+    
+        glGenBuffers(1, &lightIndexGlobalCountSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightIndexGlobalCountSSBO);
+
+        //Every tile takes two unsigned ints one to represent the number of lights in that grid
+        //Another to represent the offset 
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(unsigned int), NULL, GL_STATIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, lightIndexGlobalCountSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+   
     // configure floating point framebuffer
  // ------------------------------------
     unsigned int postFBO;
@@ -173,6 +249,12 @@ int main()
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // preprocess 
+        //Building the grid of AABB enclosing the view frustum clusters
+    //aabb.use();
+    //aabb.setFloat("zNear", camera.nearPlane);
+    //aabb.setFloat("zFar", camera.farPlane);
+    //aabb.dispatch(gridSizeX, gridSizeY, gridSizeZ);
 
     // render loop
     // -----------
@@ -187,7 +269,11 @@ int main()
         // input
         // -----
         processInput(window);
-        glm::vec3 lightPos = pointLightPositions[0];
+        // pre process
+        glm::mat4 view = camera.GetViewMatrix();
+        //cullLights.use();
+        //cullLights.setMat4("viewMatrix", view);
+        //cullLights.dispatch(1, 1, 6);
         // render
         // ------
         glClearColor(0,0,0, 1.0f);
@@ -196,14 +282,14 @@ int main()
         glEnable(GL_DEPTH_TEST);
 
             pbrShader.use();
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)User1->SCR_WIDTH / (float)User1->SCR_HEIGHT, 0.1f, 100.0f);
-            glm::mat4 view = camera.GetViewMatrix();
+            glm::mat4 projection = camera.GetProjectionMatrix();
             pbrShader.setMat4("projection", projection);
             pbrShader.setMat4("view", view);
             pbrShader.setVec3("viewPos", camera.Position);
             pbrShader.setVec3("spotLight.position", camera.Position);
             pbrShader.setVec3("spotLight.direction", camera.Front);
-            pbrShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+            //for(int i= 0 ;i<numLights;i++)
+           //   pbrShader.setVec3("pointLights["+std::to_string(i)+"].position", pointLightPositions[i]);
             pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
@@ -213,10 +299,10 @@ int main()
             lightCubeShader.use();
             lightCubeShader.setMat4("projection", projection);
             lightCubeShader.setMat4("view", view);
-            for (unsigned int i = 0; i < 1; i++)
+            for (unsigned int i = 0; i < numLights; i++)
             {
                 model1 = glm::mat4(1.0f);
-                model1 = glm::translate(model1, pointLightPositions[i]);
+                model1 = glm::translate(model1, scene.lightList[i].position);
                 model1 = glm::scale(model1, glm::vec3(0.08f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
@@ -309,6 +395,23 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS)
     {
         User1->update();
+        
+    }
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+    {
+        lightSelector = 0;
+    }
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+    {
+        lightSelector = 1;
+    }
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
+    {
+        lightSelector = 2;
+    }
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS)
+    {
+        lightSelector = 3;
     }
     
 }
@@ -356,27 +459,27 @@ void updatelightloc(std::string x, float deltaTime)
     speed *= deltaTime;
     if (x == "forward")
     {
-        pointLightPositions[0].z += speed;
+        light[lightSelector].position.z += speed;
     }
     if (x == "backward")
     {
-        pointLightPositions[0].z -= speed;
+        light[lightSelector].position.z -= speed;
     }
     if (x =="left")
     {
-        pointLightPositions[0].x += speed;
+        light[lightSelector].position.x += speed;
     }
     if (x =="right")
     {
-        pointLightPositions[0].x -= speed;
+        light[lightSelector].position.x -= speed;
     }
     if (x == "up")
     {
-        pointLightPositions[0].y += speed;
+        light[lightSelector].position.y += speed;
     }
     if (x == "down")
     {
-        pointLightPositions[0].y -= speed;
+        light[lightSelector].position.y -= speed;
     }
 
 }
@@ -482,12 +585,17 @@ void setLights(Shader ourShader)
     ourShader.use();
     ourShader.setInt("depthMap", 11);
     // point light 1
-    ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+    for (int i = 0; i < numLights; i++)
+    {
+        ourShader.setVec3("pointLights["+std::to_string(i)+"].position", light[lightSelector].position);
+        ourShader.setVec3("pointLights[" + std::to_string(i) + "].color", 23.47, 21.31, 20.79);
+        //ourShader.setVec3("pointLights[" + std::to_string(i) + "].color", 1.0, 0.0, 0.0);
+        ourShader.setFloat("pointLights["+std::to_string(i)+"].constant", 10.0f);
+        ourShader.setFloat("pointLights[" + std::to_string(i) + "].linear", 0.09);
+        ourShader.setFloat("pointLights[" + std::to_string(i) + "].quadratic", 0.032);
+    }
+ 
 
-    ourShader.setVec3("pointLights[0].color", 23.47, 21.31, 20.79);
-    ourShader.setFloat("pointLights[0].constant", 1.0f);
-    ourShader.setFloat("pointLights[0].linear", 0.09);
-    ourShader.setFloat("pointLights[0].quadratic", 0.032);
     //spotlight
     ourShader.setVec3("spotLight.color", 1, 1, 1);
     ourShader.setFloat("spotLight.constant", 1.0f);

@@ -6,8 +6,14 @@ in vec3 Normal;
 in vec3 TangentViewPos;
 in vec3 TangentFragPos;
 in mat3 TBNinverse;
+layout (std430, binding = 2) buffer screenToView{
+    mat4 inverseProjection;
+    uvec4 tileSizes;
+    uvec2 screenDimensions;
+    float scale;
+    float bias;
+};
 
-#define NR_POINT_LIGHTS 1
 const float PI = 3.14159265359;
 
 struct Material {
@@ -19,19 +25,37 @@ struct Material {
     float shininess;
 }; 
 struct PointLight {
-    vec3 position;
-    vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
+    vec4 position;
+    vec4 color;
+    bool enabled;
+    float intensity;
+    float range;
 };
-
+struct LightGrid{
+    uint offset;
+    uint count;
+};
+layout (std430, binding = 2) buffer screenToView{
+    mat4 inverseProjection;
+    uvec4 tileSizes;
+    uvec2 screenDimensions;
+    float scale;
+    float bias;
+};
+layout (std430, binding = 3) buffer lightSSBO{
+    PointLight pointLight[];
+};
+layout (std430, binding = 4) buffer lightIndexSSBO{
+    uint globalLightIndexList[];
+};
+layout (std430, binding = 5) buffer lightGridSSBO{
+    LightGrid lightGrid[];
+};
 uniform vec3 viewPos;
 uniform float albedo;
 uniform float metallic;
 uniform float roughness;
 uniform float ao;
-uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform samplerCube depthMap;
 uniform float far_plane;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
@@ -73,48 +97,60 @@ void main()
      vec3 F0 = vec3(0.04f);
      F0 = mix(F0,albedo,metallic);
 
+     //Locating which cluster you are a part of
+    uint zTile     = uint(max(log2(linearDepth(gl_FragCoord.z)) * scale + bias, 0.0));
+    uvec3 tiles    = uvec3( uvec2( gl_FragCoord.xy / tileSizes[3] ), zTile);
+    uint tileIndex = tiles.x +
+                     tileSizes.x * tiles.y +
+                     (tileSizes.x * tileSizes.y) * tiles.z;  
+    uint lightCount       = lightGrid[tileIndex].count;
+    uint lightIndexOffset = lightGrid[tileIndex].offset;
+
 	vec3 Lo = vec3(0.0f);
-	for(int i =0 ;i< NR_POINT_LIGHTS;++i)
+	for(int i =0 ;i< lightCount;++i)
 	{
-    vec3 L ;
-    float distance;
-    if(normals)
-    {
-        L = normalize (TBNinverse * pointLights[i].position- fragPos);
-        distance = length(TBNinverse * pointLights[i].position- fragPos);
-    }
-    else{
-	    L = normalize (pointLights[i].position- fragPos);
-        distance = length(pointLights[i].position- fragPos);
-    }
-		vec3 H = normalize (V+L);
-		float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = pointLights[i].color * attenuation;
-        //vec3 radiance = vec3(23.47, 21.31, 20.79) * attenuation;
+        vec3 L ;
+        float distance;
+        if(normals)
+        {
+            L = normalize (TBNinverse * pointLight[i].position- fragPos);
+            distance = length(TBNinverse * pointLight[i].position- fragPos);
+        }
+        else{
+	        L = normalize (pointLight[i].position- fragPos);
+            distance = length(pointLight[i].position- fragPos);
+        }
+		    vec3 H = normalize (V+L);
+		    float attenuation = 1.0 / (distance * distance);
+            float radius = pointLight[i].range;
+            float attenuation = pow(clamp(1 - pow((distance / radius), 4.0), 0.0, 1.0), 2.0)/(1.0  + (distance * distance) );
+            vec3 radiance = pointLight[i].color * attenuation;
+            //vec3 radiance = vec3(23.47, 21.31, 20.79) * attenuation;
 
-		// calculate Cook-Terrence specular BRDF 
-		    // F
-		    vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
-            // D
-            float NDF = DistributionGGX(N, H, roughness); 
-            // G
-            float G   = GeometrySmith(N, V, L, roughness);       
-            vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
+		    // calculate Cook-Terrence specular BRDF 
+		        // F
+		        vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
+                // D
+                float NDF = DistributionGGX(N, H, roughness); 
+                // G
+                float G   = GeometrySmith(N, V, L, roughness);       
+                vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
 
-        vec3 ks = F;
-        vec3 kd = vec3(1.0)- ks;
-        kd *= (1.0-metallic);
-        Lo += (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
+            vec3 ks = F;
+            vec3 kd = vec3(1.0)- ks;
+            kd *= (1.0-metallic);
+            Lo += (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
 
 	}
-    vec3 ambient = vec3(0.03) * albedo * ao;
+    vec3 ambient = vec3(0.5) * albedo * ao;
     float shadow = doshadows ? ShadowCalculation(FragPos) : 1.0; 
     vec3 color   = ambient + shadow * Lo; 
     //gamma correction done in glEnable sRGB
     //FragColor = vec4(color,1.0f);
-    FragColor = vec4(vec3(color),1.0);
+    FragColor = vec4(vec3(0.1,1,0.1),1.0);
     //FragColor = vec4(pointLights[0].position,0.0f);
 }
+
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
@@ -170,4 +206,11 @@ float ShadowCalculation(vec3 fragPos)
     //FragColor = vec4(shadow*vec3(1.0f), 1.0); 
     // FragColor = vec4(vec3(closestDepth / far_plane), 1.0); 
     return shadow;
+}
+
+float linearDepth(float depthSample){
+    float depthRange = 2.0 * depthSample - 1.0;
+    // Near... Far... wherever you are...
+    float linear = 2.0 * zNear * zFar / (zFar + zNear - depthRange * (zFar - zNear));
+    return linear;
 }

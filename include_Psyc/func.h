@@ -14,14 +14,59 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <math.h>
-
+#include <Settings_importer.h>
 void glfwwindowinnit();
 int errorhandle(GLFWwindow* window);
 int gladinnit();
 unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma);
 unsigned int TextureEmbedded(const aiTexture* texture, std::string typeName);
 std::vector<std::string> split(const std::string& s, char delim);
+struct PointLight {
+    std::string name;
+    glm::vec3 position;
+    glm::vec3 color;
+    float power;
+    float constant;
+    float linear;
+    float quadratic;
+    float size;
+    float use_shadows;
+};
+struct DirectionalLight {
+    glm::vec3 direction;
+    glm::vec3 color;
+};
+struct SpotLight {
+    glm::vec3 position;
+    glm::vec3 direction;
+    float angleInnerCone;
+    float angleOuterCone;
+    float constant;
+    float linear;
+    float quadratic;
+    glm::vec3 color;
+};
+struct VolumeTileAABB {
+    glm::vec4 minPoint;
+    glm::vec4 maxPoint;
+} ;
 
+struct ScreenToView {
+    glm::mat4 inverseProjectionMat;
+    unsigned int tileSizes[4];
+    unsigned int screenWidth;
+    unsigned int screenHeight;
+    float sliceScalingFactor;
+    float sliceBiasFactor;
+};
+struct GPULight {
+    glm::vec4 position;
+    glm::vec4 color;
+    unsigned int enabled;
+    float intensity;
+    float range;
+    float padding;
+};
 
 class Shader
 {
@@ -31,6 +76,8 @@ public:
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader(std::string vertexPath , std::string fragmentPath, std::string geometryPath );
+    Shader(std::string computePath);
+    void dispatch(unsigned int x, unsigned int y, unsigned int z);
     void use();
     void delete_();
     void setBool(const std::string& name, bool value) const;   
@@ -81,8 +128,9 @@ const float YAW = -90.0f;
 const float PITCH = 0.0f;
 const float SPEED = 2.5f;
 const float SENSITIVITY = 0.1f;
-const float ZOOM = 45.0f;
-
+const float FOV = 45.0f;
+const float nearPlane = 0.1f;
+const float farPlane = 100.0f;
 
 // An abstract camera class that processes input and calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
 class Camera
@@ -100,10 +148,13 @@ public:
     // camera options
     float MovementSpeed;
     float MouseSensitivity;
-    float Zoom;
-
+    float fov;
+    float nearPlane;
+    float farPlane;
+    Settings* user;
+    glm::mat4 projection; 
     // constructor with vectors
-    Camera(glm::vec3 position = glm::vec3(-9.0f, 1.0f, 1.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+    Camera(glm::vec3 position = glm::vec3(-9.0f, 1.0f, 1.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), fov(FOV)
     {
         Position = position;
         WorldUp = up;
@@ -112,7 +163,7 @@ public:
         updateCameraVectors();
     }
     // constructor with scalar values
-    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), fov(FOV)
     {
         Position = glm::vec3(posX, posY, posZ);
         WorldUp = glm::vec3(upX, upY, upZ);
@@ -126,7 +177,14 @@ public:
     {
         return glm::lookAt(Position, Position + Front, Up);
     }
-
+    glm::mat4 GetProjectionMatrix()
+    {
+        return glm::perspective(glm::radians(fov), (float)user->SCR_WIDTH / (float)user->SCR_HEIGHT, nearPlane, farPlane);
+    }
+    void setUser(Settings* user)
+    {
+        this->user = user;
+    }
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
@@ -166,11 +224,11 @@ public:
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
     void ProcessMouseScroll(float yoffset)
     {
-        Zoom -= (float)yoffset;
-        if (Zoom < 1.0f)
-            Zoom = 1.0f;
-        if (Zoom > 45.0f)
-            Zoom = 45.0f;
+        fov -= (float)yoffset;
+        if (fov < 1.0f)
+            fov = 1.0f;
+        if (fov > 45.0f)
+            fov = 45.0f;
     }
 
 private:
@@ -654,6 +712,8 @@ class Scene
 {
 public:
     std::vector<std::string> propvec;
+    std::vector<std::string> lightvec;
+    std::vector<PointLight> lightList;
     std::vector<std::string> name;
     std::vector<glm::vec3> location;
     std::vector<glm::vec3> scale;
@@ -666,13 +726,14 @@ public:
         scenePath = scenePath + "\\";
         this->scenePath = scenePath;
         std::string csvpath = scenePath + "scene_prop.csv";
+        std::string lightPath = scenePath + "scene_lights.csv";
         //std::cout << csvpath;
         std::ifstream inf{ csvpath };
         std::string prop;
         if (!inf)
         {
             // Print an error and exit
-            std::cerr << "Uh oh, Sample.dat could not be opened for reading!" << std::endl;
+            std::cerr << "Uh oh, scene_prop.csv could not be opened for reading!" << std::endl;
             
         }
         while (inf)
@@ -692,6 +753,31 @@ public:
             scale.push_back(glm::vec3(std::stof(propvec[i + 8]), std::stof(propvec[i + 9]), std::stof(propvec[i + 10])));
 
         }
+        inf.close();
+        std::ifstream lightsFile{ lightPath };
+        std::string light_string;
+        if (!lightsFile)
+        {
+            std::cerr << "Uh oh, scene_lights.csv could not be opened for reading!" << std::endl;
+        }
+        while (lightsFile)
+        {
+            std::getline(lightsFile, light_string);
+        }
+        lightvec = split(light_string, ',');
+        std::cout << "Read number of models as " << lightvec.size() / 9;
+        for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
+        {
+            PointLight temp{};
+            temp.name = lightvec[i];
+            temp.position = glm::vec3(std::stof(lightvec[i + 1]), std::stof(lightvec[i + 2]), std::stof(lightvec[i + 3]));
+            temp.color = glm::vec3(std::stof(lightvec[i + 4]), std::stof(lightvec[i + 5]), std::stof(lightvec[i + 6]));
+            temp.power = std::stof(lightvec[i + 7]);
+            temp.size = std::stof(lightvec[i + 8]);
+            temp.use_shadows = std::stof(lightvec[i + 9]);
+            lightList.push_back(temp);
+        }
+
         /*
         for (int i = 0; i < rotation.size(); i++)
         {
