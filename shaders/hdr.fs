@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 out vec4 FragColor;
 
 in vec2 TexCoords;
@@ -24,6 +24,6 @@ void main()
     else
     {
         vec3 result = pow(hdrColor, vec3(1.0 / gamma));
-        FragColor = vec4(0.1,1,0.1, 1.0);
+        FragColor = vec4(result, 1.0);
     }
 }

@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 FragPos;
@@ -6,13 +6,6 @@ in vec3 Normal;
 in vec3 TangentViewPos;
 in vec3 TangentFragPos;
 in mat3 TBNinverse;
-layout (std430, binding = 2) buffer screenToView{
-    mat4 inverseProjection;
-    uvec4 tileSizes;
-    uvec2 screenDimensions;
-    float scale;
-    float bias;
-};
 
 const float PI = 3.14159265359;
 
@@ -56,13 +49,16 @@ uniform float albedo;
 uniform float metallic;
 uniform float roughness;
 uniform float ao;
-uniform samplerCube depthMap;
+//uniform samplerCube depthMap;
 uniform float far_plane;
+uniform float zNear;
+uniform float zFar;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
 float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometrySchlickGGX(float NdotV, float roughness);
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 float ShadowCalculation(vec3 fragPos);
+float linearDepth(float depthSample);
 uniform bool doshadows;
 uniform bool donormals;
 uniform bool existnormals;
@@ -113,18 +109,18 @@ void main()
         float distance;
         if(normals)
         {
-            L = normalize (TBNinverse * pointLight[i].position- fragPos);
-            distance = length(TBNinverse * pointLight[i].position- fragPos);
+            L = normalize (TBNinverse * vec3(pointLight[i].position.xyz)- fragPos);
+            distance = length(TBNinverse * pointLight[i].position.xyz- fragPos);
         }
         else{
-	        L = normalize (pointLight[i].position- fragPos);
-            distance = length(pointLight[i].position- fragPos);
+	        L = normalize (pointLight[i].position.xyz- fragPos);
+            distance = length(pointLight[i].position.xyz- fragPos);
         }
 		    vec3 H = normalize (V+L);
-		    float attenuation = 1.0 / (distance * distance);
+		   // float attenuation = 1.0 / (distance * distance);
             float radius = pointLight[i].range;
             float attenuation = pow(clamp(1 - pow((distance / radius), 4.0), 0.0, 1.0), 2.0)/(1.0  + (distance * distance) );
-            vec3 radiance = pointLight[i].color * attenuation;
+            vec3 radiance = pointLight[i].color.xyz * attenuation;
             //vec3 radiance = vec3(23.47, 21.31, 20.79) * attenuation;
 
 		    // calculate Cook-Terrence specular BRDF 
@@ -146,8 +142,8 @@ void main()
     float shadow = doshadows ? ShadowCalculation(FragPos) : 1.0; 
     vec3 color   = ambient + shadow * Lo; 
     //gamma correction done in glEnable sRGB
-    //FragColor = vec4(color,1.0f);
-    FragColor = vec4(vec3(0.1,1,0.1),1.0);
+      FragColor = vec4(color,1.0f);
+    //FragColor = vec4(vec3(0.1,1,0.1),1.0);
     //FragColor = vec4(pointLights[0].position,0.0f);
 }
 
@@ -188,25 +184,28 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	
     return ggx1 * ggx2;
 }
+
 float ShadowCalculation(vec3 fragPos)
 {
     // get vector between fragment position and light position 
-    vec3 fragToLight = fragPos - pointLights[0].position; 
+    vec3 fragToLight = fragPos - pointLight[0].position.xyz; 
     // ise the fragment to light vector to sample from the depth map    
-    float closestDepth = texture(depthMap, fragToLight).r; 
+    //float closestDepth = texture(depthMap, fragToLight).r; 
     // it is currently in linear range between [0,1], let's re-transform it back to original depth value 
-    closestDepth *= far_plane;
+   // closestDepth *= far_plane;
     // now get current linear depth as the length between the fragment and light position 
     float currentDepth = length(fragToLight);
     // test for shadows 
     float bias = 0.05; // we use a much larger bias since depth is now in [near_plane, far_plane] range 
-    float shadow = (closestDepth +  bias) < currentDepth ? 0.0 : 1.0;
+    //float shadow = (closestDepth +  bias) < currentDepth ? 0.0 : 1.0;
+    float shadow = float(1.0f);
     // display closestDepth as debug (to visualize depth cubemap) 
      //FragColor = vec4(,1.0); 
     //FragColor = vec4(shadow*vec3(1.0f), 1.0); 
     // FragColor = vec4(vec3(closestDepth / far_plane), 1.0); 
     return shadow;
 }
+
 
 float linearDepth(float depthSample){
     float depthRange = 2.0 * depthSample - 1.0;

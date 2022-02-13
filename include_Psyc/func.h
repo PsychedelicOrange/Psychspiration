@@ -329,7 +329,7 @@ public:
             // glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
             shader.setInt(("material." + name + number).c_str(), i);
             glActiveTexture(GL_TEXTURE0 + i);
-           //std::cout << " " << (name + number).c_str() << " " << i << std::endl;
+            //std::cout << " " << (name + number).c_str() << " " << i << std::endl;
             if (normalNr > 1)
             {
                 shader.setBool("existnormals", 1);
@@ -345,6 +345,7 @@ public:
             //std::cout << (GL_TEXTURE0);
             // and finally bind the texture
             glBindTexture(GL_TEXTURE_2D, textures[i].id );
+            glActiveTexture(GL_TEXTURE0);
         }
         
        
