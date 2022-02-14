@@ -10,6 +10,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void setLights(Shader ourShader);
+void setLights(Scene scene);
 void renderSphere();
 void renderQuad();
 
@@ -35,36 +36,10 @@ float lastFrame = 0.0f;
 void updatelightloc(std::string x, float deltaTime);
 
 // lighting
-glm::vec3 pointLightPositions[] = {
-        glm::vec3(-2.0f, 4.0f, -1.0f),
-       glm::vec3(0.0f,  0.0f,  0.5f),
-        glm::vec3(0.0f,  0.0f,  0.5f),
-        glm::vec3(0.0f,  0.0f,  0.5f)
-};
-
-struct PointLight {
-    glm::vec3 position;
-    glm::vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
-    glm::vec2 size;
-};
-struct DirectionalLight {
-    glm::vec3 direction;
-    glm::vec3 color;
-};
-struct SpotLight {
-    glm::vec3 position;
-    glm::vec3 direction;
-    float angleInnerCone;
-    float angleOuterCone;
-    float constant;
-    float linear;
-    float quadratic;
-    glm::vec3 color;
-};
-
+std::vector<PointLight> light;
+unsigned int numLights;
+unsigned int maxLights{ 10 };
+// maxLights = max(scene[i].numLights);
 
 int main()
 {
@@ -123,10 +98,10 @@ int main()
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
-    setLights(pbrShader);
+    //setLights(pbrShader);
     Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
     Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
-    Scene scene(User1->resourcePath+"trashshop");
+    Scene scene(User1->resourcePath+"cull lights");
     Model* models{ new Model[scene.name.size()] };
     for (int i = 0; i < scene.name.size(); i++)
     {
@@ -134,6 +109,31 @@ int main()
         const aiScene* assimpScene = models[i].getpath(scene.scenePath + scene.name[i] + ".glb");
     }
     float scale = 0.1;
+    // lights are stored in ubo // might increase performance compared to ssbo, also no need to change lights in shader
+    setLights(scene);
+    unsigned int lightUBO;
+    glGenBuffers(1, &lightUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+    glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
+
+    GLint bufMask = GL_READ_WRITE;
+    
+    struct GPULight* lights = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
+    light = scene.lightList;
+    unsigned int numLights=scene.lightList.size();
+    for (unsigned int i = 0; i < numLights; ++i) {
+        //Fetching the light from the current scene
+        lights[i].position = glm::vec4(light[i].position, 1.0f);
+        lights[i].color = glm::vec4(light[i].color, 1.0f);
+        lights[i].enabled = 1;
+        lights[i].intensity = light[i].power;
+        lights[i].range = light[i].size;
+        std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
+    }
+    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
     // configure floating point framebuffer
  // ------------------------------------
     unsigned int postFBO;
@@ -187,7 +187,6 @@ int main()
         // input
         // -----
         processInput(window);
-        glm::vec3 lightPos = pointLightPositions[0];
         // render
         // ------
         glClearColor(0,0,0, 1.0f);
@@ -203,7 +202,6 @@ int main()
             pbrShader.setVec3("viewPos", camera.Position);
             pbrShader.setVec3("spotLight.position", camera.Position);
             pbrShader.setVec3("spotLight.direction", camera.Front);
-            pbrShader.setVec3("pointLights[0].position", pointLightPositions[0]);
             pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
@@ -213,10 +211,10 @@ int main()
             lightCubeShader.use();
             lightCubeShader.setMat4("projection", projection);
             lightCubeShader.setMat4("view", view);
-            for (unsigned int i = 0; i < 1; i++)
+            for (unsigned int i = 0; i < numLights; i++)
             {
                 model1 = glm::mat4(1.0f);
-                model1 = glm::translate(model1, pointLightPositions[i]);
+                model1 = glm::translate(model1, light[i].position);
                 model1 = glm::scale(model1, glm::vec3(0.08f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
@@ -356,27 +354,27 @@ void updatelightloc(std::string x, float deltaTime)
     speed *= deltaTime;
     if (x == "forward")
     {
-        pointLightPositions[0].z += speed;
+        //light[0].z += speed;
     }
     if (x == "backward")
     {
-        pointLightPositions[0].z -= speed;
+       // pointLightPositions[0].z -= speed;
     }
     if (x =="left")
     {
-        pointLightPositions[0].x += speed;
+        //pointLightPositions[0].x += speed;
     }
     if (x =="right")
     {
-        pointLightPositions[0].x -= speed;
+        //pointLightPositions[0].x -= speed;
     }
     if (x == "up")
     {
-        pointLightPositions[0].y += speed;
+        //pointLightPositions[0].y += speed;
     }
     if (x == "down")
     {
-        pointLightPositions[0].y -= speed;
+        //pointLightPositions[0].y -= speed;
     }
 
 }
@@ -482,7 +480,7 @@ void setLights(Shader ourShader)
     ourShader.use();
     ourShader.setInt("depthMap", 11);
     // point light 1
-    ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+   // ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
 
     ourShader.setVec3("pointLights[0].color", 23.47, 21.31, 20.79);
     ourShader.setFloat("pointLights[0].constant", 1.0f);
@@ -498,6 +496,13 @@ void setLights(Shader ourShader)
     //materials
     ourShader.setFloat("material.shininess", 256.0f);
 
+}
+void setLights(Scene scene)
+{
+    
+    numLights = scene.numLights;
+    light = scene.lightList;
+    
 }
 
 // renderQuad() renders a 1x1 XY quad in NDC

@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 FragPos;
@@ -7,7 +7,6 @@ in vec3 TangentViewPos;
 in vec3 TangentFragPos;
 in mat3 TBNinverse;
 
-#define NR_POINT_LIGHTS 1
 const float PI = 3.14159265359;
 
 struct Material {
@@ -18,20 +17,22 @@ struct Material {
     sampler2D texture_roughmetal1;
     float shininess;
 }; 
-struct PointLight {
-    vec3 position;
-    vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
+struct GPULight {
+    vec4 position;
+    vec4 color;
+    unsigned int enabled;
+    float intensity;
+    float range;
+    float padding;
 };
-
+layout (std140, binding = 3) uniform lightUBO{
+    GPULight gpuLight[100];//max lights do later using shader io before init
+};
 uniform vec3 viewPos;
 uniform float albedo;
 uniform float metallic;
 uniform float roughness;
 uniform float ao;
-uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform samplerCube depthMap;
 uniform float far_plane;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
@@ -74,22 +75,22 @@ void main()
      F0 = mix(F0,albedo,metallic);
 
 	vec3 Lo = vec3(0.0f);
-	for(int i =0 ;i< NR_POINT_LIGHTS;++i)
+	for(int i =0 ;i< 3;++i)
 	{
     vec3 L ;
     float distance;
     if(normals)
     {
-        L = normalize (TBNinverse * pointLights[i].position- fragPos);
-        distance = length(TBNinverse * pointLights[i].position- fragPos);
+        L = normalize (TBNinverse * gpuLight[i].position.xyz- fragPos);
+        distance = length(TBNinverse * gpuLight[i].position.xyz- fragPos);
     }
     else{
-	    L = normalize (pointLights[i].position- fragPos);
-        distance = length(pointLights[i].position- fragPos);
+	    L = normalize (gpuLight[i].position.xyz- fragPos);
+        distance = length(gpuLight[i].position.xyz- fragPos);
     }
 		vec3 H = normalize (V+L);
 		float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = pointLights[i].color * attenuation;
+        vec3 radiance = gpuLight[i].color.xyz * attenuation;
         //vec3 radiance = vec3(23.47, 21.31, 20.79) * attenuation;
 
 		// calculate Cook-Terrence specular BRDF 
@@ -111,7 +112,7 @@ void main()
     float shadow = doshadows ? ShadowCalculation(FragPos) : 1.0; 
     vec3 color   = ambient + shadow * Lo; 
     //gamma correction done in glEnable sRGB
-    //FragColor = vec4(color,1.0f);
+    //FragColor = vec4(gpuLight[1].position);
     FragColor = vec4(vec3(color),1.0);
     //FragColor = vec4(pointLights[0].position,0.0f);
 }
@@ -155,7 +156,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 float ShadowCalculation(vec3 fragPos)
 {
     // get vector between fragment position and light position 
-    vec3 fragToLight = fragPos - pointLights[0].position; 
+    vec3 fragToLight = fragPos - gpuLight[0].position.xyz; 
     // ise the fragment to light vector to sample from the depth map    
     float closestDepth = texture(depthMap, fragToLight).r; 
     // it is currently in linear range between [0,1], let's re-transform it back to original depth value 

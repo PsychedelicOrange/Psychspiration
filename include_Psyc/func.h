@@ -22,6 +22,39 @@ unsigned int TextureFromFile(const char* path, const std::string& directory, boo
 unsigned int TextureEmbedded(const aiTexture* texture, std::string typeName);
 std::vector<std::string> split(const std::string& s, char delim);
 
+struct PointLight {
+    std::string name;
+    glm::vec3 position;
+    glm::vec3 color;
+    float power;
+    float constant;
+    float linear;
+    float quadratic;
+    float size;
+    float use_shadows;
+};
+struct GPULight {
+    glm::vec4 position;
+    glm::vec4 color;
+    unsigned int enabled;
+    float intensity;
+    float range;
+    float padding;
+};
+struct DirectionalLight {
+    glm::vec3 direction;
+    glm::vec3 color;
+};
+struct SpotLight {
+    glm::vec3 position;
+    glm::vec3 direction;
+    float angleInnerCone;
+    float angleOuterCone;
+    float constant;
+    float linear;
+    float quadratic;
+    glm::vec3 color;
+};
 
 class Shader
 {
@@ -658,6 +691,9 @@ public:
     std::vector<glm::vec3> location;
     std::vector<glm::vec3> scale;
     std::vector<glm::vec4> rotation;
+    std::vector<std::string> lightvec;
+    std::vector<PointLight> lightList;
+    unsigned int numLights;
     //std::vector<glm::vec4> rotation_axis;
     std::string scenePath;
     //Model* models;
@@ -672,7 +708,7 @@ public:
         if (!inf)
         {
             // Print an error and exit
-            std::cerr << "Uh oh, Sample.dat could not be opened for reading!" << std::endl;
+            std::cerr << "Uh oh, scene_prop.csv could not be opened for reading!" << std::endl;
             
         }
         while (inf)
@@ -692,6 +728,33 @@ public:
             scale.push_back(glm::vec3(std::stof(propvec[i + 8]), std::stof(propvec[i + 9]), std::stof(propvec[i + 10])));
 
         }
+        inf.close();
+        std::string lightPath = scenePath + "scene_lights.csv";
+        std::ifstream lightsFile{ lightPath };
+        std::string light_string;
+        if (!lightsFile)
+        {
+            std::cerr << "Uh oh, scene_lights.csv could not be opened for reading!" << std::endl;
+        }
+        while (lightsFile)
+        {
+            std::getline(lightsFile, light_string);
+        }
+        lightvec = split(light_string, ',');
+        std::cout << "Read number of models as " << lightvec.size() / 9;
+        for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
+        {
+            PointLight temp{};
+            temp.name = lightvec[i];
+            temp.position = glm::vec3(std::stof(lightvec[i + 1]), std::stof(lightvec[i + 2]), std::stof(lightvec[i + 3]));
+            temp.color = glm::vec3(std::stof(lightvec[i + 4]), std::stof(lightvec[i + 5]), std::stof(lightvec[i + 6]));
+            temp.power = std::stof(lightvec[i + 7]);
+            temp.size = std::stof(lightvec[i + 8]);
+            temp.use_shadows = std::stof(lightvec[i + 9]);
+            lightList.push_back(temp);
+        }
+        numLights = lightList.size();
+     
         /*
         for (int i = 0; i < rotation.size(); i++)
         {
@@ -735,9 +798,8 @@ public:
         }
         */
         // objetc transforms
-        
     }
-
+    
 
 };
 void drawScene(Scene scene, Shader ourShader,Model* models);
