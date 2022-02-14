@@ -99,9 +99,9 @@ int main()
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     //setLights(pbrShader);
-    Model bulb(User1->resourcePath+"bulb\\bulb1.glb");
-    Model axes(User1->resourcePath + "models\\helmet_with_lights.glb");
-    Scene scene(User1->resourcePath+"cull lights");
+    Model bulb(User1->resourcePath+"bulb\\bulb2.glb");
+    Model axes(User1->resourcePath + "models\\axes.glb");
+    Scene scene(User1->resourcePath+"sponza");
     Model* models{ new Model[scene.name.size()] };
     for (int i = 0; i < scene.name.size(); i++)
     {
@@ -206,6 +206,7 @@ int main()
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             drawScene(scene, pbrShader, models);
+            axes.Draw(pbrShader);
             //draw the bulbs
             glm::mat4 model1 = glm::mat4(1.0f);
             lightCubeShader.use();
@@ -215,7 +216,7 @@ int main()
             {
                 model1 = glm::mat4(1.0f);
                 model1 = glm::translate(model1, light[i].position);
-                model1 = glm::scale(model1, glm::vec3(0.08f)); // Make it a smaller cube
+                model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
                 bulb.Draw(lightCubeShader);

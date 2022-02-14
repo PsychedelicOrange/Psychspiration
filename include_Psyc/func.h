@@ -746,7 +746,7 @@ public:
         {
             PointLight temp{};
             temp.name = lightvec[i];
-            temp.position = glm::vec3(std::stof(lightvec[i + 1]), std::stof(lightvec[i + 2]), std::stof(lightvec[i + 3]));
+            temp.position = glm::vec3(std::stof(lightvec[i + 1]), std::stof(lightvec[i + 3]),-1* std::stof(lightvec[i + 2]));
             temp.color = glm::vec3(std::stof(lightvec[i + 4]), std::stof(lightvec[i + 5]), std::stof(lightvec[i + 6]));
             temp.power = std::stof(lightvec[i + 7]);
             temp.size = std::stof(lightvec[i + 8]);
