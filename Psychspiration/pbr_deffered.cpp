@@ -1,9 +1,16 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <FileIO.h>
+#include <Scene.h>
+#include <Settings.h>
+#include <Shader.h>
+#include <Camera.h>
+#include <FileIO.h>
+#include <Mesh.h>
+#include <Model.h>
 #include <func.h>
-#include<stb_image.h>
+#include <stb_image.h>
 #include <stb_image_write.h>
-#include <Settings_importer.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -15,9 +22,9 @@ void renderSphere();
 void renderQuad();
 
 // settings
+Settings User1;
 //const unsigned int SCR_WIDTH = 1920;
 //const unsigned int SCR_HEIGHT = 1080;
-Settings* User1 = new Settings();
 bool shadows = true; //toggle
 bool normals = true; //toggle
 bool forward = true;
@@ -26,8 +33,8 @@ bool normalsKeyPressed = false;
 bool forwardKeyPressed = false;
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
-float lastX = User1->SCR_WIDTH / 2.0f;
-float lastY = User1->SCR_HEIGHT / 2.0f;
+float lastX = User1.SCR_WIDTH / 2.0f;
+float lastY = User1.SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 // timing
@@ -38,7 +45,7 @@ void updatelightloc(std::string x, float deltaTime);
 // lighting
 std::vector<PointLight> light;
 unsigned int numLights;
-unsigned int maxLights{ 10 };
+unsigned int maxLights{ 100 };
 // maxLights = max(scene[i].numLights);
 
 int main()
@@ -60,7 +67,7 @@ int main()
     // glfw window creation
     // --------------------
     //GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
-    GLFWwindow* window = glfwCreateWindow(User1->SCR_WIDTH, User1->SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -94,21 +101,14 @@ int main()
     // build and compile our shader zprogram
     // ------------------------------------
 
-    Shader::shaderPath = User1->shaderPath;
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     //setLights(pbrShader);
-    Model bulb(User1->resourcePath+"bulb\\bulb2.glb");
-    Model axes(User1->resourcePath + "models\\axes.glb");
-    Scene scene(User1->resourcePath+"sponza");
-    Model* models{ new Model[scene.name.size()] };
-    for (int i = 0; i < scene.name.size(); i++)
-    {
-        std::cout << "Object in scene: " << scene.name[i] << std::endl;
-        const aiScene* assimpScene = models[i].getpath(scene.scenePath + scene.name[i] + ".glb");
-    }
-    float scale = 0.1;
+    Model bulb("resource\\bulb\\bulb2.glb");
+    Model axes("resource\\models\\axes.glb");
+    Scene scene(User1.resourcePath);
+    scene.load();
     // lights are stored in ubo // might increase performance compared to ssbo, also no need to change lights in shader
     setLights(scene);
     unsigned int lightUBO;
@@ -120,7 +120,7 @@ int main()
     
     struct GPULight* lights = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
     light = scene.lightList;
-    unsigned int numLights=scene.lightList.size();
+    numLights=scene.lightList.size();
     for (unsigned int i = 0; i < numLights; ++i) {
         //Fetching the light from the current scene
         lights[i].position = glm::vec4(light[i].position, 1.0f);
@@ -143,14 +143,14 @@ int main()
     unsigned int textureColorBufferMultiSampled;
     glGenTextures(1, &textureColorBufferMultiSampled);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
-    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA16F, User1->SCR_WIDTH, User1->SCR_HEIGHT, GL_TRUE);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGBA16F, User1.SCR_WIDTH, User1.SCR_HEIGHT, GL_TRUE);
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
     // create a (also multisampled) renderbuffer object for depth and stencil attachments
     unsigned int rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, User1->SCR_WIDTH, User1->SCR_HEIGHT);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, User1.SCR_WIDTH, User1.SCR_HEIGHT);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
@@ -165,7 +165,7 @@ int main()
     unsigned int screenTexture;
     glGenTextures(1, &screenTexture);
     glBindTexture(GL_TEXTURE_2D, screenTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, User1.SCR_WIDTH, User1.SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);	// we only need a color buffer
@@ -195,7 +195,7 @@ int main()
         glEnable(GL_DEPTH_TEST);
 
             pbrShader.use();
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)User1->SCR_WIDTH / (float)User1->SCR_HEIGHT, 0.1f, 100.0f);
+            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
             glm::mat4 view = camera.GetViewMatrix();
             pbrShader.setMat4("projection", projection);
             pbrShader.setMat4("view", view);
@@ -205,8 +205,9 @@ int main()
             pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
-            drawScene(scene, pbrShader, models);
-            axes.Draw(pbrShader);
+            pbrShader.setInt("numLights", numLights);
+            scene.draw(pbrShader);
+            //axes.Draw(pbrShader);
             //draw the bulbs
             glm::mat4 model1 = glm::mat4(1.0f);
             lightCubeShader.use();
@@ -223,7 +224,7 @@ int main()
             }
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
-        glBlitFramebuffer(0, 0, User1->SCR_WIDTH, User1->SCR_HEIGHT, 0, 0, User1->SCR_WIDTH, User1->SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBlitFramebuffer(0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, 0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
@@ -233,8 +234,8 @@ int main()
         hdrShader.use();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, screenTexture);
-        hdrShader.setInt("hdr", User1->hdr);
-        hdrShader.setFloat("exposure", User1->exposure);
+        hdrShader.setInt("hdr", User1.hdr);
+        hdrShader.setFloat("exposure", User1.exposure);
         renderQuad();
        
 
@@ -307,7 +308,7 @@ void processInput(GLFWwindow* window)
     }
     if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS)
     {
-        User1->update();
+        User1.update();
     }
     
 }

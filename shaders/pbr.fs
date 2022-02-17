@@ -35,6 +35,7 @@ uniform float roughness;
 uniform float ao;
 uniform samplerCube depthMap;
 uniform float far_plane;
+uniform int numLights;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
 float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometrySchlickGGX(float NdotV, float roughness);
@@ -50,8 +51,8 @@ void main()
     vec3 albedo     = texture(material.texture_diffuse1,TexCoords).rgb;
     float metallic  = texture(material.texture_roughmetal1,TexCoords).b;
     float roughness = texture(material.texture_roughmetal1,TexCoords).g;
-    float ao =1.0f;
-
+    float ao =0.03f;
+    vec3 ambient = albedo * ao;
     bool normals = (donormals && existnormals);
     vec3 N = vec3(0.0);
     vec3 V;
@@ -73,42 +74,49 @@ void main()
 
      vec3 F0 = vec3(0.04f);
      F0 = mix(F0,albedo,metallic);
-
 	vec3 Lo = vec3(0.0f);
-	for(int i =0 ;i< 3;++i)
+	for(int i =0 ;i< numLights;++i)
 	{
-    vec3 L ;
-    float distance;
-    if(normals)
-    {
-        L = normalize (TBNinverse * gpuLight[i].position.xyz- fragPos);
-        distance = length(TBNinverse * gpuLight[i].position.xyz- fragPos);
-    }
-    else{
-	    L = normalize (gpuLight[i].position.xyz- fragPos);
-        distance = length(gpuLight[i].position.xyz- fragPos);
-    }
-		vec3 H = normalize (V+L);
-		float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = gpuLight[i].color.xyz * attenuation;
-        //vec3 radiance = vec3(23.47, 21.31, 20.79) * attenuation;
+        vec3 L ;
+        
+        float distance = length(gpuLight[i].position.xyz- fragPos);
+       
+        if(normals)
+        {
+            L = normalize (TBNinverse * gpuLight[i].position.xyz- fragPos); // make it offline bro so it fast
+            distance = length(TBNinverse * gpuLight[i].position.xyz- fragPos);
+        }
+        else{
+	        L = normalize (gpuLight[i].position.xyz- fragPos);
+        }
+        float attenuation = 1.0 / (distance * distance); // attenuation based on inverse square law
+        if(distance<3.1)
+        {
+        attenuation *= (3.1-distance)/3.1; //sphere falloff
 
-		// calculate Cook-Terrence specular BRDF 
-		    // F
-		    vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
-            // D
-            float NDF = DistributionGGX(N, H, roughness); 
-            // G
-            float G   = GeometrySmith(N, V, L, roughness);       
-            vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
+        }
+        else{
+            continue;
+        }
+		    vec3 H = normalize (V+L);
+            vec3 radiance = gpuLight[i].intensity*gpuLight[i].color.xyz * attenuation*0.1f;
+            //vec3 radiance = vec3(23.47, 21.31, 20.79) * attenuation;
 
-        vec3 ks = F;
-        vec3 kd = vec3(1.0)- ks;
-        kd *= (1.0-metallic);
-        Lo += (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
+		    // calculate Cook-Terrence specular BRDF 
+		        // F
+		        vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
+                // D
+                float NDF = DistributionGGX(N, H, roughness); 
+                // G
+                float G   = GeometrySmith(N, V, L, roughness);       
+                vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
 
+            vec3 ks = F;
+            vec3 kd = vec3(1.0)- ks;
+            kd *= (1.0-metallic);
+            Lo += (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
+            
 	}
-    vec3 ambient = vec3(0.03) * albedo * ao;
     float shadow = doshadows ? ShadowCalculation(FragPos) : 1.0; 
     vec3 color   = ambient + shadow * Lo; 
     //gamma correction done in glEnable sRGB
