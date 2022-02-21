@@ -4,8 +4,7 @@
 #include<glm/glm.hpp>
 #include<vector>
 #include<string>
-
-
+#include<btBulletDynamicsCommon.h>
 struct PointLight {
     std::string name;
     glm::vec3 position;
@@ -29,19 +28,43 @@ struct GPULight {
 class Scene
 {
 public:
+    std::string sceneName; // name of folder containing scene
+    //models 
+    std::vector<Model*> models;
+    //model transforms and info 
     std::vector<std::string> propvec;
     std::vector<std::string> name;
     std::vector<glm::vec3> location;
     std::vector<glm::vec3> scale;
     std::vector<glm::vec4> rotation;
+    //lights
     std::vector<std::string> lightvec;
     std::vector<PointLight> lightList;
-    std::vector<Model*> models;
     unsigned int numLights;
-    //std::vector<glm::vec4> rotation_axis;
-    std::string sceneName;
-    //Model* models;
+    // physics 
+    //collision shapes
+    btAlignedObjectArray<btCollisionShape*> collisionShapes;
+    ///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
+    btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+
+    ///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
+    btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+
+    ///btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
+    btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
+
+    ///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
+    btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+
+    btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+
     Scene(std::string sceneName);
     void draw(Shader ourShader);
+    void setGravity();
+    void cleanupPhysics();
+    void cleanupModels();
+    void setDynamicRigidBody();
+    void setStaticRigidBody();
+    void doSim();
     Model* load();
 };

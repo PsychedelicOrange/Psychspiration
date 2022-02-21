@@ -58,3 +58,67 @@ Model* Scene::load()
         models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
 }
+void Scene::setStaticRigidBody()
+{
+    btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+    this->collisionShapes.push_back(groundShape);
+
+    btTransform groundTransform;
+    groundTransform.setIdentity();
+    groundTransform.setOrigin(btVector3(0, -56, 0));
+    btScalar mass(0.);
+    bool isDynamic = mass != 0.f;
+    btVector3 localInertia(0, 0, 0);
+    if (isDynamic)
+        groundShape->calculateLocalInertia(mass, localInertia);
+    
+    //motion state
+    btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+    btRigidBody* body = new btRigidBody(rbInfo);
+
+    //add the body to the dynamics world
+    this->dynamicsWorld->addRigidBody(body);
+}
+void Scene::setDynamicRigidBody()
+{
+    btCollisionShape* colShape = new btBoxShape(btVector3(btScalar(5.), btScalar(5.), btScalar(5.)));
+    this->collisionShapes.push_back(colShape);
+    btTransform startTransform;
+    startTransform.setIdentity();
+    btScalar mass(1.f);
+    startTransform.setOrigin(btVector3(2, 10, 0));
+    btVector3 localInertia(0, 0, 0);
+    bool isDynamic = mass != 0.f;
+    if (isDynamic)
+        colShape->calculateLocalInertia(mass, localInertia);
+    btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+    btRigidBody* body = new btRigidBody(rbInfo);
+    dynamicsWorld->addRigidBody(body);
+}
+void Scene::setGravity()
+{
+    dynamicsWorld->setGravity(btVector3(0, -10, 0));
+}
+void Scene::doSim()
+{
+    for (int i = 0; i < 150; i++)
+    {
+        for (int j = this->dynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--)
+        {
+            btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
+            btRigidBody* body = btRigidBody::upcast(obj);
+            btTransform trans;
+            if (body && body->getMotionState())
+            {
+                body->getMotionState()->getWorldTransform(trans);
+            }
+            else
+            {
+                trans = obj->getWorldTransform();
+            }
+            trans.getOpenGLMatrix();
+        }
+    }
+}

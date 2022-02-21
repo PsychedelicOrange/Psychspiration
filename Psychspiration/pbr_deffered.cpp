@@ -1,5 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <FileIO.h>
 #include <Scene.h>
 #include <Settings.h>
@@ -11,7 +13,7 @@
 #include <func.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
-
+#include <iostream>
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -23,14 +25,13 @@ void renderQuad();
 
 // settings
 Settings User1;
-//const unsigned int SCR_WIDTH = 1920;
-//const unsigned int SCR_HEIGHT = 1080;
 bool shadows = true; //toggle
 bool normals = true; //toggle
 bool forward = true;
 bool shadowsKeyPressed = false;
 bool normalsKeyPressed = false;
 bool forwardKeyPressed = false;
+
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = User1.SCR_WIDTH / 2.0f;
@@ -50,7 +51,6 @@ unsigned int maxLights{ 100 };
 
 int main()
 {
-    std::cout << " using version " << aiGetVersionMajor << "." << aiGetVersionMinor << " Assimp. " << std::endl;
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
