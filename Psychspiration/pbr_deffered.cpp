@@ -108,7 +108,7 @@ int main()
     Model bulb("resource\\bulb\\bulb2.glb");
     Model axes("resource\\models\\axes.glb");
     Scene scene(User1.resourcePath);
-    scene.load();
+    scene.loadModels();
     // lights are stored in ubo // might increase performance compared to ssbo, also no need to change lights in shader
     setLights(scene);
     unsigned int lightUBO;
@@ -206,7 +206,7 @@ int main()
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", numLights);
-            scene.draw(pbrShader);
+            scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);
             //draw the bulbs
             glm::mat4 model1 = glm::mat4(1.0f);

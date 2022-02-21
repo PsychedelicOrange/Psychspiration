@@ -1,5 +1,6 @@
 #pragma once
 #include <Model.h>
+#include <Object.h>
 #include<Shader.h>
 #include<glm/glm.hpp>
 #include<vector>
@@ -29,6 +30,7 @@ class Scene
 {
 public:
     std::string sceneName; // name of folder containing scene
+    std::vector<Object*> objects; // vector of objects
     //models 
     std::vector<Model*> models;
     //model transforms and info 
@@ -60,11 +62,12 @@ public:
 
     Scene(std::string sceneName);
     void draw(Shader ourShader);
+    void drawobj(Shader ourShader);
     void setGravity();
     void cleanupPhysics();
     void cleanupModels();
     void setDynamicRigidBody();
     void setStaticRigidBody();
     void doSim();
-    Model* load();
+    Model* loadModels();
 };

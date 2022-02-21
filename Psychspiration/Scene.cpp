@@ -8,7 +8,7 @@ Scene::Scene(std::string sceneName)
 {
     this->sceneName = sceneName;
     propvec = parse("resource\\" + sceneName + "\\scene_prop.csv");
-    std::cout <<std::endl<< "Read number of models as " << propvec.size() / 10;
+    std::cout << std::endl << "Read number of models as " << propvec.size() / 10;
     for (int i = 0; i < (propvec.size() - 10); i = i + 11)
     {
 
@@ -19,9 +19,21 @@ Scene::Scene(std::string sceneName)
         scale.push_back(glm::vec3(std::stof(propvec[i + 8]), std::stof(propvec[i + 9]), std::stof(propvec[i + 10])));
 
     }
+    glm::mat4 temptrans = glm::mat4(1.0f);
+    Object* tempobj;
+    for (int i = 0; i < name.size(); i++)
+    {
+        temptrans = glm::mat4(1.0f);
+        temptrans = glm::translate(temptrans, location[i]);
+        temptrans = glm::rotate(temptrans, rotation[i].x, glm::vec3(rotation[i].y, rotation[i].w, rotation[i].z));
+        temptrans = glm::scale(temptrans, scale[i]);
+        tempobj = new Object(temptrans);
+        tempobj->name = name[i];
+        this->objects.push_back(tempobj);
+    }
    
     lightvec = parse("resource\\" + sceneName+"\\scene_lights.csv");
-    std::cout << std::endl << "Read number of lights as " << lightvec.size() / 9;
+    std::cout << std::endl << " Read number of lights as " << lightvec.size() / 9;
     for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
     {
         PointLight temp{};
@@ -47,15 +59,23 @@ void Scene::draw(Shader ourShader)
         model[i] = glm::translate(model[i], glm::vec3(0, 0, 0));
         ourShader.use();
         ourShader.setMat4("model", model[i]);
-        (*models[i]).Draw(ourShader);
+        models[i]->Draw(ourShader);
     }
 }
-Model* Scene::load()
+void Scene::drawobj(Shader ourShader)
+{
+    for (int i = 0; i < name.size(); i++)
+    {
+        objects[i]->draw(ourShader);
+    }
+}
+Model* Scene::loadModels()
 {
     //Model* models{ new Model[scene.name.size()] };
     for (int i = 0; i < name.size(); i++)
     {   
-        models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
+        objects[i]->model = new Model("resource\\" + sceneName + "\\" + name[i] + ".glb");
+        //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
 }
 void Scene::setStaticRigidBody()
@@ -118,7 +138,6 @@ void Scene::doSim()
             {
                 trans = obj->getWorldTransform();
             }
-            trans.getOpenGLMatrix();
         }
     }
 }
