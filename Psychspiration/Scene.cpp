@@ -78,6 +78,8 @@ Model* Scene::loadModels()
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
 }
+/*
+ 
 void Scene::setStaticRigidBody()
 {
     btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
@@ -141,3 +143,4 @@ void Scene::doSim()
         }
     }
 }
+*/

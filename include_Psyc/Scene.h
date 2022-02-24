@@ -5,7 +5,6 @@
 #include<glm/glm.hpp>
 #include<vector>
 #include<string>
-#include<btBulletDynamicsCommon.h>
 struct PointLight {
     std::string name;
     glm::vec3 position;
@@ -44,6 +43,8 @@ public:
     std::vector<PointLight> lightList;
     unsigned int numLights;
     // physics 
+    
+    /*
     //collision shapes
     btAlignedObjectArray<btCollisionShape*> collisionShapes;
     ///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
@@ -59,7 +60,7 @@ public:
     btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
 
     btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
-
+    */
     Scene(std::string sceneName);
     void draw(Shader ourShader);
     void drawobj(Shader ourShader);
