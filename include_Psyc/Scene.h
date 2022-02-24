@@ -5,6 +5,7 @@
 #include<glm/glm.hpp>
 #include<vector>
 #include<string>
+#include <Physics.h>
 struct PointLight {
     std::string name;
     glm::vec3 position;
@@ -29,7 +30,7 @@ class Scene
 {
 public:
     std::string sceneName; // name of folder containing scene
-    std::vector<Object*> objects; // vector of objects
+    std::vector<Object*> objects; // vector of object pointers assigned in scene constructor 
     //models 
     std::vector<Model*> models;
     //model transforms and info 
@@ -43,7 +44,7 @@ public:
     std::vector<PointLight> lightList;
     unsigned int numLights;
     // physics 
-    
+    Physics physics;
     /*
     //collision shapes
     btAlignedObjectArray<btCollisionShape*> collisionShapes;
@@ -64,11 +65,7 @@ public:
     Scene(std::string sceneName);
     void draw(Shader ourShader);
     void drawobj(Shader ourShader);
-    void setGravity();
-    void cleanupPhysics();
     void cleanupModels();
-    void setDynamicRigidBody();
-    void setStaticRigidBody();
-    void doSim();
     Model* loadModels();
+    void loadPhysics();
 };

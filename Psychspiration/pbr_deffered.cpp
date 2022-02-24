@@ -115,9 +115,7 @@ int main()
     glGenBuffers(1, &lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
     glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
-
     GLint bufMask = GL_READ_WRITE;
-    
     struct GPULight* lights = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
     light = scene.lightList;
     numLights=scene.lightList.size();

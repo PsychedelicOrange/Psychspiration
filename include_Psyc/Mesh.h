@@ -26,9 +26,10 @@ public:
     std::vector<unsigned int> indices;
     std::vector<Texture>      textures;
     unsigned int VAO;
-
+    //physics 
+    float **AABB; // AABB[vec3(min),vec3(max)]
     // constructor
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, float** aabb);
     void Draw(Shader& shader);
 private:
     // render data 

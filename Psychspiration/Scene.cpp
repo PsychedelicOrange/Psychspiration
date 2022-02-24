@@ -77,6 +77,21 @@ Model* Scene::loadModels()
         objects[i]->model = new Model("resource\\" + sceneName + "\\" + name[i] + ".glb");
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
+    return nullptr;
+}
+void Scene::loadPhysics()
+{
+    for (int i = 0; i < objects.size(); i++)
+    {
+        if (objects[i]->name == "ground")
+        {
+            physics.setStaticRigidBody();
+        }
+        else
+        {
+            physics.setDynamicRigidBody();
+        }
+    }
 }
 /*
  

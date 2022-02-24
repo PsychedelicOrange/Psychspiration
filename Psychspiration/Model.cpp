@@ -30,7 +30,7 @@ const aiScene* Model::loadModel(const std::string& path)
     // read file via ASSIMP
     std::string relativePath = getRelativePath();
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace || aiProcess_GenBoundingBoxes);
     // check for errors
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
     {
@@ -117,6 +117,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
             vertex.TexCoords = glm::vec2(0.0f, 0.0f);
 
         vertices.push_back(vertex);
+
     }
 
     // now walk through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
@@ -190,7 +191,19 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         // return a mesh object created from the extracted mesh data
 
     }
-    return Mesh(vertices, indices, textures);
+    //float AABB[2][3];
+    float** AABB = new float*[2];
+    AABB[0] = new float [3];
+    AABB[1] = new float [3];
+    AABB[0][0] = mesh->mAABB.mMin.x;
+    AABB[0][1] = mesh->mAABB.mMin.y;
+    AABB[0][2] = mesh->mAABB.mMin.z;
+    AABB[1][0] = mesh->mAABB.mMin.x;
+    AABB[1][1] = mesh->mAABB.mMin.y;
+    AABB[1][2] = mesh->mAABB.mMin.z;
+
+    return Mesh(vertices, indices, textures,AABB);
+
 }
 
 // checks all material textures of a given type and loads the textures if they're not loaded yet.
