@@ -1,6 +1,7 @@
 #pragma once
 #include <Shader.h>
 #include <vector>
+#include <bullet/btBulletDynamicsCommon.h>
 struct Vertex {
     // position
     glm::vec3 Position;
@@ -28,6 +29,7 @@ public:
     unsigned int VAO;
     //physics 
     float **AABB; // AABB[vec3(min),vec3(max)]
+    btCollisionShape* colShape;
     // constructor
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, float** aabb);
     void Draw(Shader& shader);

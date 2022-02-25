@@ -109,7 +109,8 @@ int main()
     Model axes("resource\\models\\axes.glb");
     Scene scene(User1.resourcePath);
     scene.loadModels();
-    // lights are stored in ubo // might increase performance compared to ssbo, also no need to change lights in shader
+    scene.loadPhysics();
+    // lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
     setLights(scene);
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
@@ -178,7 +179,8 @@ int main()
     {
         // per-frame time logic
         // --------------------
-        
+        //scene.updatePhysics();
+
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

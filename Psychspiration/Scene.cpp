@@ -85,12 +85,19 @@ void Scene::loadPhysics()
     {
         if (objects[i]->name == "ground")
         {
-            physics.setStaticRigidBody();
+            physics.setStaticRigidBody(objects[i]);
         }
         else
         {
-            physics.setDynamicRigidBody();
+            physics.setDynamicRigidBody(objects[i]);
         }
+    }
+}
+void Scene::updatePhysics()
+{
+    for (int i = 0; i < objects.size(); i++)
+    {
+        physics.setTransforms(objects[i]);
     }
 }
 /*

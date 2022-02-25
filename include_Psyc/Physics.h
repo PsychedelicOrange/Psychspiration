@@ -20,6 +20,7 @@ class Physics {
 
 	btDiscreteDynamicsWorld* dynamicsWorld;
 
+	//constraint with all axis locked 
 	Physics();
 	void cleanupPhysics();
 	void cleanupModels();
@@ -27,7 +28,9 @@ class Physics {
 	void setStaticRigidBody(Object* obj);
 	void setGravity();
 	void assignBB();
-	void doSim();
+	void setTransforms(Object* obj);
+	void stepSim();
+	
 	btScalar* mat42bt(glm::mat4 mat);
 };
 

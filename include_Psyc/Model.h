@@ -4,7 +4,7 @@
 #include <assimp/scene.h>
 #include <string>
 #include <vector>
-
+#include <bullet/btBulletDynamicsCommon.h>
 class Model
 {
 public:
@@ -14,7 +14,8 @@ public:
     std::string directory;
     std::string format;
     bool gammaCorrection;
-
+    //physics
+    btRigidBody* rigidBody;
     // constructor, expects a filepath to a 3D model.
     Model(std::string const& path, bool gamma = false);
     Model();

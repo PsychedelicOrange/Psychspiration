@@ -1,6 +1,8 @@
 #include <Mesh.h>
 #include <vector>
 #include <glad/glad.h>
+#include <bullet/btBulletDynamicsCommon.h>
+
 // constructor
 Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, float** aabb)
 {

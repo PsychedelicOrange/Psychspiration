@@ -68,4 +68,5 @@ public:
     void cleanupModels();
     Model* loadModels();
     void loadPhysics();
+    void updatePhysics();
 };
