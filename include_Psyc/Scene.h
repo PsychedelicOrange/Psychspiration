@@ -69,4 +69,5 @@ public:
     Model* loadModels();
     void loadPhysics();
     void updatePhysics();
+    void printdetail();
 };

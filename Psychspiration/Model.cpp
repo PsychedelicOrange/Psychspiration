@@ -240,10 +240,10 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
     }
     for (int i = 0; i < textures.size(); i++)
     {
-        std::cout << i << "'st Texture id , path , type = ";
-        std::cout << textures[i].id << " ";
-        std::cout << textures[i].type << " ";
-        std::cout << textures[i].path << std::endl;
+       // std::cout << i << "'st Texture id , path , type = ";
+       // std::cout << textures[i].id << " ";
+       // std::cout << textures[i].type << " ";
+       // std::cout << textures[i].path << std::endl;
     }
     return textures;
 }

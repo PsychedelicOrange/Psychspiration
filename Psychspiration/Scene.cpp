@@ -79,6 +79,13 @@ Model* Scene::loadModels()
     }
     return nullptr;
 }
+void Scene::printdetail()
+{
+    for (int i = 0; i < objects.size(); i++)
+    {
+        objects[i]->printobj();
+    }
+}
 void Scene::loadPhysics()
 {
     for (int i = 0; i < objects.size(); i++)

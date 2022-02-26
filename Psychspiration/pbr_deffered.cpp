@@ -67,7 +67,7 @@ int main()
     // glfw window creation
     // --------------------
     //GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
-    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "LearnOpenGL", 0, NULL);
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -100,16 +100,26 @@ int main()
     //stbi_set_flip_vertically_on_load(true);
     // build and compile our shader zprogram
     // ------------------------------------
-
+    //Shader matcapShader("matcap.vs", "matcap.fs", "0");
+    Shader wireShader("model_simple.vs", "model_simple.fs", "0");
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
     Model axes("resource\\models\\axes.glb");
+
+    glm::mat4 tabletrans{ 1.0f };
+    tabletrans = glm::translate(tabletrans, glm::vec3(0,0,0));
+    tabletrans = glm::scale(tabletrans, glm::vec3(1));
+    Object table((std::string)("table"),new Model("resource\\models\\table_applied.glb"),tabletrans);
+    wireShader.setMat4("model", tabletrans);
+    table.printobj();
+
     Scene scene(User1.resourcePath);
     scene.loadModels();
-    scene.loadPhysics();
+    scene.printdetail();
+    //scene.loadPhysics();
     // lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
     setLights(scene);
     unsigned int lightUBO;
@@ -189,7 +199,7 @@ int main()
         processInput(window);
         // render
         // ------
-        glClearColor(0,0,0, 1.0f);
+        glClearColor(1,1,1, 1.0f);
         glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
@@ -206,7 +216,7 @@ int main()
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", numLights);
-            scene.drawobj(pbrShader);
+            scene.draw(pbrShader);
             //axes.Draw(pbrShader);
             //draw the bulbs
             glm::mat4 model1 = glm::mat4(1.0f);
@@ -222,6 +232,13 @@ int main()
                 lightCubeShader.setMat4("model", model1);
                 bulb.Draw(lightCubeShader);
             }
+            wireShader.use();
+            wireShader.setMat4("projection", projection);
+            wireShader.setMat4("view", view);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            table.draw(wireShader);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
         glBlitFramebuffer(0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, 0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
