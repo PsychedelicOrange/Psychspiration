@@ -106,22 +106,24 @@ int main()
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     //setLights(pbrShader);
-    Model bulb("resource\\bulb\\bulb2.glb");
-    Model axes("resource\\models\\axes.glb");
-
+    //Model bulb("resource\\bulb\\bulb2.glb");
+    //Model axes("resource\\models\\axes.glb");
+    /*
     glm::mat4 tabletrans{ 1.0f };
     tabletrans = glm::translate(tabletrans, glm::vec3(0,0,0));
     tabletrans = glm::scale(tabletrans, glm::vec3(1));
     Object table((std::string)("table"),new Model("resource\\models\\table_applied.glb"),tabletrans);
     wireShader.setMat4("model", tabletrans);
     table.printobj();
+    */
 
     Scene scene(User1.resourcePath);
-    scene.loadModels();
     scene.printdetail();
+    //scene.loadModels();
+    //scene.printdetail();
     //scene.loadPhysics();
     // lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
-    setLights(scene);
+    //setLights(scene);
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
@@ -216,7 +218,7 @@ int main()
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", numLights);
-            scene.draw(pbrShader);
+            scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);
             //draw the bulbs
             glm::mat4 model1 = glm::mat4(1.0f);
@@ -230,13 +232,14 @@ int main()
                 model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
-                bulb.Draw(lightCubeShader);
+                //bulb.Draw(lightCubeShader);
             }
             wireShader.use();
             wireShader.setMat4("projection", projection);
             wireShader.setMat4("view", view);
+
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            table.draw(wireShader);
+            //table.draw(wireShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);

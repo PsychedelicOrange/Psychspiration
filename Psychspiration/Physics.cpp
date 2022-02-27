@@ -21,7 +21,7 @@ void Physics::setStaticRigidBody(Object* obj)
 
     btTransform groundTransform;
     groundTransform.setIdentity();
-    groundTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
+   // groundTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
     //= obj->model->compShape 
     btScalar halfX[3];// setting all meshes as static body
     for (int i = 0; i < obj->model->meshes.size(); i++)
@@ -62,7 +62,7 @@ void Physics::setDynamicRigidBody(Object* obj)
 
     btTransform startTransform;
     startTransform.setIdentity();
-    startTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
+    //startTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
     btScalar halfX[3];
 
     //make and add all collision shapes to compound shape
@@ -132,7 +132,7 @@ void Physics::setTransforms(Object* obj)
     }
     std::cout<<obj->name<<" : \t"<< float(trans.getOrigin().getX())<<" , "<< float(trans.getOrigin().getY()) << " , " << float(trans.getOrigin().getZ())<<"\n";
     // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-    trans.getOpenGLMatrix(glm::value_ptr(obj->transform));
+   // trans.getOpenGLMatrix(glm::value_ptr(obj->transform));
 }
 btScalar* Physics::mat42bt(glm::mat4 mat)
 {

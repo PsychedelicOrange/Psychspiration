@@ -8,32 +8,13 @@ Scene::Scene(std::string sceneName)
 {
     this->sceneName = sceneName;
     propvec = parse("resource\\" + sceneName + "\\scene_prop.csv");
-    std::cout << std::endl << "Read number of models as " << propvec.size() / 10;
-    for (int i = 0; i < (propvec.size() - 10); i = i + 11)
+    for (int i = 0; i < (propvec.size() - 16); i = i + 17)
     {
-
-        //std::cout << i << " ";
-        name.push_back(propvec[i]);
-        rotation.push_back(glm::vec4(std::stof(propvec[i + 1]), std::stof(propvec[i + 2]), -1 * std::stof(propvec[i + 3]), std::stof(propvec[i + 4])));
-        location.push_back(glm::vec3(std::stof(propvec[i + 5]), std::stof(propvec[i + 7]), -1 * std::stof(propvec[i + 6])));
-        scale.push_back(glm::vec3(std::stof(propvec[i + 8]), std::stof(propvec[i + 9]), std::stof(propvec[i + 10])));
-
-    }
-    glm::mat4 temptrans = glm::mat4(1.0f);
-    Object* tempobj;
-    for (int i = 0; i < name.size(); i++)
-    {
-        temptrans = glm::mat4(1.0f);
-        temptrans = glm::translate(temptrans, location[i]);
-        temptrans = glm::rotate(temptrans, rotation[i].x, glm::vec3(rotation[i].y, rotation[i].w, rotation[i].z));
-        temptrans = glm::scale(temptrans, scale[i]);
-        tempobj = new Object(temptrans);
-        tempobj->name = name[i];
-        this->objects.push_back(tempobj);
+        objects.push_back(new Object(propvec[i],new Model("resource\\" + sceneName + "\\" + propvec[i] + ".glb"), getmat4_csv(i)));
     }
    
     lightvec = parse("resource\\" + sceneName+"\\scene_lights.csv");
-    std::cout << std::endl << " Read number of lights as " << lightvec.size() / 9;
+    std::cout << std::endl << "\n   Number of lights: " << lightvec.size() / 9;
     for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
     {
         PointLight temp{};
@@ -47,6 +28,7 @@ Scene::Scene(std::string sceneName)
     }
     numLights = lightList.size();
 }
+/*
 void Scene::draw(Shader ourShader)
 {
     std::vector<glm::mat4> model;
@@ -62,29 +44,37 @@ void Scene::draw(Shader ourShader)
         models[i]->Draw(ourShader);
     }
 }
+*/
 void Scene::drawobj(Shader ourShader)
 {
-    for (int i = 0; i < name.size(); i++)
+
+    for (int i = 0; i < objects.size(); i++)
     {
+        
         objects[i]->draw(ourShader);
     }
 }
+/*
 Model* Scene::loadModels()
 {
     //Model* models{ new Model[scene.name.size()] };
-    for (int i = 0; i < name.size(); i++)
+    
+    for (int i = 0; i < objects.size(); i++)
     {   
         objects[i]->model = new Model("resource\\" + sceneName + "\\" + name[i] + ".glb");
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
     return nullptr;
 }
+*/
 void Scene::printdetail()
 {
+    std::cout << std::endl << "Scene read: " << sceneName << "\n   Number of Object: " << objects.size();
     for (int i = 0; i < objects.size(); i++)
     {
         objects[i]->printobj();
     }
+
 }
 void Scene::loadPhysics()
 {
@@ -106,6 +96,16 @@ void Scene::updatePhysics()
     {
         physics.setTransforms(objects[i]);
     }
+}
+glm::mat4 Scene::getmat4_csv(int i){
+    //glm::mat4* mat = new glm::mat4(0.0f);
+    
+    glm::mat4 mat =  glm::mat4(stof(propvec[i+1]), stof(propvec[i + 2]), stof(propvec[i + 3]), stof(propvec[i + 4]),
+        stof(propvec[i + 5]),stof(propvec[i+6]), stof(propvec[i + 7]), stof(propvec[i + 8]),
+        stof(propvec[i + 9]), stof(propvec[i + 10]), stof(propvec[i + 11]), stof(propvec[i + 12]),
+        stof(propvec[i + 13]), stof(propvec[i + 14]), stof(propvec[i + 15]), stof(propvec[i + 16]));
+    
+    return mat;
 }
 /*
  
