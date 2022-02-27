@@ -25,6 +25,5 @@ void Object::printobj()
     for (int i=0; i < this->model->meshes.size(); i++)
     {
         std::cout<< " Mesh "<< i<<":\n   No of Textures: "<<this->model->meshes[i].textures.size();
-        std::cout <<"\n   generated AABB: " << this->model->meshes[i].textures.size();
     }
 }

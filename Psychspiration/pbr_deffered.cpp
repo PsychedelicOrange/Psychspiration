@@ -106,14 +106,14 @@ int main()
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     //setLights(pbrShader);
-    //Model bulb("resource\\bulb\\bulb2.glb");
-    //Model axes("resource\\models\\axes.glb");
+    Model bulb("resource\\bulb\\bulb2.glb");
+    Model axes("resource\\models\\axes.glb");
     /*
     glm::mat4 tabletrans{ 1.0f };
     tabletrans = glm::translate(tabletrans, glm::vec3(0,0,0));
     tabletrans = glm::scale(tabletrans, glm::vec3(1));
-    Object table((std::string)("table"),new Model("resource\\models\\table_applied.glb"),tabletrans);
-    wireShader.setMat4("model", tabletrans);
+    Object table((std::string)("table"),new Model("resource\\phytest\\Sphere.glb"),tabletrans);
+    //wireShader.setMat4("model", tabletrans);
     table.printobj();
     */
 
@@ -201,7 +201,8 @@ int main()
         processInput(window);
         // render
         // ------
-        glClearColor(1,1,1, 1.0f);
+       // glClearColor(1,1,1, 1.0f);
+        glClearColor(0, 0, 0, 1.0f);
         glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
@@ -232,7 +233,7 @@ int main()
                 model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
-                //bulb.Draw(lightCubeShader);
+                bulb.Draw(lightCubeShader);
             }
             wireShader.use();
             wireShader.setMat4("projection", projection);

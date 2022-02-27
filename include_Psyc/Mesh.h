@@ -28,10 +28,9 @@ public:
     std::vector<Texture>      textures;
     unsigned int VAO;
     //physics 
-    float **AABB; // AABB[vec3(min),vec3(max)]
     btCollisionShape* colShape;
     // constructor
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, float** aabb);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
     void Draw(Shader& shader);
 private:
     // render data 

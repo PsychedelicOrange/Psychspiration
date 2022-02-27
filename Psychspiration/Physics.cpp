@@ -31,7 +31,7 @@ void Physics::setStaticRigidBody(Object* obj)
         for (int j = 0; j < 3; j++)
         {
             //shape using AABB of meshes 
-            halfX[j] = (obj->model->meshes[i].AABB[1][j] - obj->model->meshes[i].AABB[0][j]) / 2;
+         //   halfX[j] = (obj->model->meshes[i].AABB[1][j] - obj->model->meshes[i].AABB[0][j]) / 2;
         }
         colShape = new btBoxShape(btVector3(halfX[0], halfX[1], halfX[2]));
         collisionShapes.push_back(colShape);
@@ -71,7 +71,7 @@ void Physics::setDynamicRigidBody(Object* obj)
         for (int j = 0; j < 3; j++)
         {
             //shape using AABB of meshes 
-            halfX[j] = (obj->model->meshes[i].AABB[1][j] - obj->model->meshes[i].AABB[0][j]) / 2;
+            //halfX[j] = (obj->model->meshes[i].AABB[1][j] - obj->model->meshes[i].AABB[0][j]) / 2;
         }
         btCollisionShape* colShape = new btBoxShape(btVector3(halfX[0], halfX[1], halfX[2]));
         collisionShapes.push_back(colShape);

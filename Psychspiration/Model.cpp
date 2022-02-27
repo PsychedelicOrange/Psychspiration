@@ -26,12 +26,12 @@ void Model::Draw(Shader& shader)
 }
 const aiScene* Model::loadModel(const std::string& path)
 {
-    std::cout << "inside loadmodel()" << std::endl;
+    //std::cout << "inside loadmodel()\t no of meshes: " << std::endl;
     // read file via ASSIMP
     std::string relativePath = getRelativePath();
     Assimp::Importer importer;
     //std::cout << relativePath + path;
-    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace || aiProcess_GenBoundingBoxes);
+    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace );
     // check for errors
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
     {
@@ -192,18 +192,9 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         // return a mesh object created from the extracted mesh data
 
     }
-    //float AABB[2][3];
-    float** AABB = new float*[2];
-    AABB[0] = new float [3];
-    AABB[1] = new float [3];
-    AABB[0][0] = mesh->mAABB.mMin.x;
-    AABB[0][1] = mesh->mAABB.mMin.y;
-    AABB[0][2] = mesh->mAABB.mMin.z;
-    AABB[1][0] = mesh->mAABB.mMin.x;
-    AABB[1][1] = mesh->mAABB.mMin.y;
-    AABB[1][2] = mesh->mAABB.mMin.z;
+    
 
-    return Mesh(vertices, indices, textures,AABB);
+    return Mesh(vertices, indices, textures);
 
 }
 
