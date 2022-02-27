@@ -7,9 +7,18 @@ void Object::draw(Shader ourShader)
     ourShader.setMat4("model", this->transform);
     this->model->Draw(ourShader);
 }
-Object::Object(glm::mat4 transform)
+void Object::drawHulls(Shader ourShader)
+{
+    ourShader.use();
+    ourShader.setMat4("model", this->transform);
+    for (int i = 0; i < hulls.size(); i++)
+    {
+        hulls[i].model->Draw(ourShader);
+    }
+}
+Object::Object(std::string name)
 {   
-    this->transform = transform;
+    this->name = name;
 }
 Object::Object(std::string name,Model* model,glm::mat4 transform)
 {

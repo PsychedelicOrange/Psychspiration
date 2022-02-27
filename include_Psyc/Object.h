@@ -3,13 +3,28 @@
 #include<Shader.h>
 #include<string>
 #include<vector>
-class Object {
-public:
-	std::string name;
+struct hull {
 	Model* model;
 	glm::mat4 transform;
+	hull(Model* model, glm::mat4 transform)
+	{
+		this->model = model;
+		this->transform = transform;
+	}
+};
+class Object {
+public:
+	//meta
+	std::string name;
+	//graphics
+	Model* model;
+	glm::mat4 transform;
+	//physics
+	bool dynamic=0;
+	std::vector<hull> hulls;
 	void printobj();
 	void draw(Shader ourShader);
-	Object(glm::mat4 transform = glm::mat4(1.0f));
+	void drawHulls(Shader ourShader);
+	Object(std::string name);
 	Object(std::string name, Model* model, glm::mat4 transform);
 };

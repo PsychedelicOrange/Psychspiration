@@ -31,8 +31,6 @@ class Scene
 public:
     std::string sceneName; // name of folder containing scene
     std::vector<Object*> objects; // vector of object pointers assigned in scene constructor 
-    //models 
-    std::vector<Model*> models;
     //model transforms and info 
     std::vector<std::string> propvec;
     std::vector<std::string> name;
@@ -48,8 +46,11 @@ public:
     //void draw(Shader ourShader);
     void drawobj(Shader ourShader);
     void cleanupModels();
-    Model* loadModels();
+    void loadModels();
     void loadPhysics();
+    void loadHulls();
+    int find(std::string t);
+    void drawHulls(Shader ourShader);
     void updatePhysics();
     void printdetail();
     glm::mat4 getmat4_csv(int i);

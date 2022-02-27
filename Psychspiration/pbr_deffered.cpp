@@ -118,11 +118,14 @@ int main()
     */
 
     Scene scene(User1.resourcePath);
+    scene.loadModels();
+    scene.loadHulls();
     scene.printdetail();
-    //scene.loadModels();
+
     //scene.printdetail();
     //scene.loadPhysics();
-    // lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
+
+    //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
     //setLights(scene);
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
@@ -201,8 +204,8 @@ int main()
         processInput(window);
         // render
         // ------
-       // glClearColor(1,1,1, 1.0f);
-        glClearColor(0, 0, 0, 1.0f);
+        glClearColor(1,1,1, 1.0f);
+       // glClearColor(0, 0, 0, 1.0f);
         glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
@@ -220,6 +223,8 @@ int main()
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", numLights);
             scene.drawobj(pbrShader);
+
+            //scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);
             //draw the bulbs
             glm::mat4 model1 = glm::mat4(1.0f);
@@ -240,7 +245,7 @@ int main()
             wireShader.setMat4("view", view);
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            //table.draw(wireShader);
+            scene.drawHulls(wireShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);

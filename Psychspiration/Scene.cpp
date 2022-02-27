@@ -10,9 +10,12 @@ Scene::Scene(std::string sceneName)
     propvec = parse("resource\\" + sceneName + "\\scene_prop.csv");
     for (int i = 0; i < (propvec.size() - 16); i = i + 17)
     {
-        objects.push_back(new Object(propvec[i],new Model("resource\\" + sceneName + "\\" + propvec[i] + ".glb"), getmat4_csv(i)));
+        name.push_back(propvec[i]);
+        transforms.push_back(getmat4_csv(i));
+        //objects.push_back(new Object(propvec[i]));
+        //objects.push_back(new Object(propvec[i],new Model("resource\\" + sceneName + "\\" + propvec[i] + ".glb"), getmat4_csv(i)));
     }
-   
+    
     lightvec = parse("resource\\" + sceneName+"\\scene_lights.csv");
     std::cout << std::endl << "\n   Number of lights: " << lightvec.size() / 9;
     for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
@@ -50,23 +53,40 @@ void Scene::drawobj(Shader ourShader)
 
     for (int i = 0; i < objects.size(); i++)
     {
-        
         objects[i]->draw(ourShader);
     }
 }
-/*
-Model* Scene::loadModels()
+void Scene::drawHulls(Shader ourShader)
 {
-    //Model* models{ new Model[scene.name.size()] };
-    
     for (int i = 0; i < objects.size(); i++)
+    {
+        objects[i]->drawHulls(ourShader);
+    }
+}
+
+void Scene::loadModels()
+{
+    //Model* models{ new Model[scene.name.size()] };   
+    for (int i = 0; i < name.size(); i++)
     {   
-        objects[i]->model = new Model("resource\\" + sceneName + "\\" + name[i] + ".glb");
+        if (name[i][0] != '_')
+            objects.push_back(new Object(name[i], new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"), transforms[i]));
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
-    return nullptr;
 }
-*/
+void Scene::loadHulls()
+{
+    for (int i = 0; i < name.size(); i++)
+    {
+        if (name[i][0] == '_')
+        {
+            std::vector<std::string> temp = split(name[i], '_');
+            int k = find(temp[1]);
+            objects[k]->hulls.push_back(hull(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"),transforms[i]));
+        }
+    }
+}
+
 void Scene::printdetail()
 {
     std::cout << std::endl << "Scene read: " << sceneName << "\n   Number of Object: " << objects.size();
@@ -78,16 +98,13 @@ void Scene::printdetail()
 }
 void Scene::loadPhysics()
 {
+    loadHulls();
     for (int i = 0; i < objects.size(); i++)
     {
-        if (objects[i]->name == "ground")
-        {
+        if (!objects[i]->dynamic)
             physics.setStaticRigidBody(objects[i]);
-        }
         else
-        {
             physics.setDynamicRigidBody(objects[i]);
-        }
     }
 }
 void Scene::updatePhysics()
@@ -106,6 +123,15 @@ glm::mat4 Scene::getmat4_csv(int i){
         stof(propvec[i + 13]), stof(propvec[i + 14]), stof(propvec[i + 15]), stof(propvec[i + 16]));
     
     return mat;
+}
+int Scene::find(std::string t)
+{
+    for (int i = 0; i < objects.size(); i++)
+    {
+        if (t == objects[i]->name)
+            return i;
+    }
+    std::cout << "ERROR:: HULL COULD'NT FIND GRAPHIC MODEL";
 }
 /*
  

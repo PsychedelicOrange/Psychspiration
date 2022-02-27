@@ -1,4 +1,5 @@
 #include <Physics.h>
+#include <Mesh.h> // for vertex struct 
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 Physics::Physics() {
@@ -21,30 +22,25 @@ void Physics::setStaticRigidBody(Object* obj)
 
     btTransform groundTransform;
     groundTransform.setIdentity();
-   // groundTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
+    // groundTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
     //= obj->model->compShape 
-    btScalar halfX[3];// setting all meshes as static body
+    Mesh* t_mesh;
     for (int i = 0; i < obj->model->meshes.size(); i++)
     {
+        t_mesh = &obj->model->meshes[i];
         btCollisionShape* colShape = obj->model->meshes[i].colShape;
 
-        for (int j = 0; j < 3; j++)
-        {
-            //shape using AABB of meshes 
-         //   halfX[j] = (obj->model->meshes[i].AABB[1][j] - obj->model->meshes[i].AABB[0][j]) / 2;
-        }
-        colShape = new btBoxShape(btVector3(halfX[0], halfX[1], halfX[2]));
+        auto mesh = new btTriangleIndexVertexArray((int)t_mesh->indices.size() / 3, (int*)&(t_mesh->indices[0]), 3 * sizeof(unsigned int),t_mesh->vertices.size(),(btScalar* )&(t_mesh->vertices[0]), sizeof(Vertex));
+  
+        colShape = new btBvhTriangleMeshShape(mesh, false);
+
         collisionShapes.push_back(colShape);
-       
 
         compoundShape->addChildShape(groundTransform,colShape);
  
     }
     btScalar mass =  0 ;
-    btTransform principal;
-    btVector3 inertia;
     btVector3 localInertia(0, 0, 0);
-    compoundShape->calculateLocalInertia(mass, localInertia);
 
     //motion state
     btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
