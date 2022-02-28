@@ -3,7 +3,6 @@
 std::vector<std::string> split(const std::string& s, char delim);
 void Settings::update()
 {
-	
 	std::vector<std::string> settings = parse("Settings.csv");
     SCR_WIDTH = stoi(settings[0]);
     SCR_HEIGHT = stoi(settings[1]);
@@ -14,4 +13,5 @@ void Settings::update()
     MSAA = stoi(settings[5]);
     AF = stoi(settings[6]);
 }
+
 

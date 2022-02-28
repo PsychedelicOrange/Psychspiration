@@ -31,7 +31,6 @@ class Physics {
 	void setTransforms(Object* obj);
 	void stepSim();
 	
-	btScalar* mat42bt(glm::mat4 mat);
 };
 
 

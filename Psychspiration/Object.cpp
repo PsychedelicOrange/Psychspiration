@@ -4,15 +4,18 @@
 void Object::draw(Shader ourShader)
 {
     ourShader.use();
-    ourShader.setMat4("model", this->transform);
+    //this->transform = glm::inverse(this->transform);
+    //ourShader.setMat4("model", this->transform);
+    ourShader.setMat4("model", (this->transform));
     this->model->Draw(ourShader);
 }
 void Object::drawHulls(Shader ourShader)
 {
     ourShader.use();
-    ourShader.setMat4("model", this->transform);
+    
     for (int i = 0; i < hulls.size(); i++)
     {
+        ourShader.setMat4("model", (this->transform)*(this->hulls[i].transform) );// * this->transform);
         hulls[i].model->Draw(ourShader);
     }
 }
@@ -34,5 +37,11 @@ void Object::printobj()
     for (int i=0; i < this->model->meshes.size(); i++)
     {
         std::cout<< " Mesh "<< i<<":\n   No of Textures: "<<this->model->meshes[i].textures.size();
+    }
+    std::cout << "\n Hulls:\n No of Hulls: " << this->hulls.size() << "\n";
+
+    for (int i = 0; i < hulls.size(); i++)
+    {
+        std::cout <<"hull: "<<i<<":\n " <<glm::to_string(this->hulls[i].transform);
     }
 }

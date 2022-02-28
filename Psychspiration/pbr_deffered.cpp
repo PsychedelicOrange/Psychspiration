@@ -14,6 +14,8 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include <iostream>
+#include <glm/gtx/string_cast.hpp>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -31,7 +33,7 @@ bool forward = true;
 bool shadowsKeyPressed = false;
 bool normalsKeyPressed = false;
 bool forwardKeyPressed = false;
-
+bool play = false;
 // camera
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = User1.SCR_WIDTH / 2.0f;
@@ -120,8 +122,8 @@ int main()
     Scene scene(User1.resourcePath);
     scene.loadModels();
     scene.loadHulls();
+    scene.loadPhysics();
     scene.printdetail();
-
     //scene.printdetail();
     //scene.loadPhysics();
 
@@ -194,7 +196,9 @@ int main()
     {
         // per-frame time logic
         // --------------------
-        //scene.updatePhysics();
+        if (play)
+            scene.physics.stepSim();
+        scene.updatePhysics();
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -272,7 +276,7 @@ int main()
         glfwPollEvents();
     }
 
-
+  
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
@@ -335,6 +339,11 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS)
     {
         User1.update();
+        
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    {
+        play = true;
     }
     
 }

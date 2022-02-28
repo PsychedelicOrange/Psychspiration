@@ -355,6 +355,7 @@ unsigned int Model::TextureEmbedded(const aiTexture * texture, std::string typeN
 
     if (components_per_pixel == 3)
     {
+        std::cout << "hello";
         if (typeName == "texture_normal" || typeName == "texture_specular" || typeName == "texture_roughmetal")
         {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data);

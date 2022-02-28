@@ -10,6 +10,11 @@ Scene::Scene(std::string sceneName)
     propvec = parse("resource\\" + sceneName + "\\scene_prop.csv");
     for (int i = 0; i < (propvec.size() - 16); i = i + 17)
     {
+        std::cout << propvec[i]<<"\n";
+    }
+
+    for (int i = 0; i < (propvec.size() - 16); i = i + 17)
+    {
         name.push_back(propvec[i]);
         transforms.push_back(getmat4_csv(i));
         //objects.push_back(new Object(propvec[i]));
@@ -18,6 +23,10 @@ Scene::Scene(std::string sceneName)
     
     lightvec = parse("resource\\" + sceneName+"\\scene_lights.csv");
     std::cout << std::endl << "\n   Number of lights: " << lightvec.size() / 9;
+    for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
+    {
+        std::cout << lightvec[i];
+    }
     for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
     {
         PointLight temp{};
@@ -70,6 +79,7 @@ void Scene::loadModels()
     for (int i = 0; i < name.size(); i++)
     {   
         if (name[i][0] != '_')
+
             objects.push_back(new Object(name[i], new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"), transforms[i]));
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
@@ -82,6 +92,7 @@ void Scene::loadHulls()
         {
             std::vector<std::string> temp = split(name[i], '_');
             int k = find(temp[1]);
+            objects[k]->dynamic = true;
             objects[k]->hulls.push_back(hull(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"),transforms[i]));
         }
     }

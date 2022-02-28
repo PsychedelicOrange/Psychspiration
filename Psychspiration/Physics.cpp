@@ -22,7 +22,7 @@ void Physics::setStaticRigidBody(Object* obj)
 
     btTransform groundTransform;
     groundTransform.setIdentity();
-    // groundTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
+    groundTransform.setFromOpenGLMatrix(&(obj->transform[0][0]));
     //= obj->model->compShape 
     Mesh* t_mesh;
     for (int i = 0; i < obj->model->meshes.size(); i++)
@@ -57,22 +57,19 @@ void Physics::setDynamicRigidBody(Object* obj)
     btCompoundShape* compoundShape = new btCompoundShape();
 
     btTransform startTransform;
-    startTransform.setIdentity();
-    //startTransform.setFromOpenGLMatrix(mat42bt(obj->transform));
-    btScalar halfX[3];
+    startTransform.setFromOpenGLMatrix(&(obj->transform[0][0]));
+    btTransform* hullTransform;
 
     //make and add all collision shapes to compound shape
-    for (int i = 0; i < obj->model->meshes.size(); i++)
+    btConvexHullShape* colShape;
+    for (int i = 0; i < obj->hulls.size(); i++)
     {
-        for (int j = 0; j < 3; j++)
-        {
-            //shape using AABB of meshes 
-            //halfX[j] = (obj->model->meshes[i].AABB[1][j] - obj->model->meshes[i].AABB[0][j]) / 2;
-        }
-        btCollisionShape* colShape = new btBoxShape(btVector3(halfX[0], halfX[1], halfX[2]));
-        collisionShapes.push_back(colShape);
+        colShape = new btConvexHullShape((btScalar*)&(obj->hulls[i].model->meshes[0].vertices[0]),obj->hulls[i].model->meshes[0].vertices.size(), sizeof(Vertex));
 
-        compoundShape->addChildShape(startTransform, colShape);
+        collisionShapes.push_back(colShape);
+        hullTransform = new btTransform();
+        hullTransform->setFromOpenGLMatrix(&(obj->hulls[i].transform[0][0]));
+        compoundShape->addChildShape(*hullTransform, colShape);
         
     }
     //btScalar* mass = new btScalar[compoundShape->getNumChildShapes()]{ 1 };
@@ -128,18 +125,5 @@ void Physics::setTransforms(Object* obj)
     }
     std::cout<<obj->name<<" : \t"<< float(trans.getOrigin().getX())<<" , "<< float(trans.getOrigin().getY()) << " , " << float(trans.getOrigin().getZ())<<"\n";
     // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-   // trans.getOpenGLMatrix(glm::value_ptr(obj->transform));
-}
-btScalar* Physics::mat42bt(glm::mat4 mat)
-{
-    //  A pointer to a 16 element array (12 rotation(row major padded on the right by 1), and 3 translation 
-    btScalar* x= new btScalar[16];
-    for (size_t i = 0; i < 4; i++)
-    {
-        x[0 + 4 * i] = mat[i][0];
-        x[1 + 4 * i] = mat[i][1];
-        x[2 + 4 * i] = mat[i][2];
-        x[3 + 4 * i] = mat[i][3];
-    }
-    return x;
+    trans.getOpenGLMatrix(&obj->transform[0][0]);
 }
