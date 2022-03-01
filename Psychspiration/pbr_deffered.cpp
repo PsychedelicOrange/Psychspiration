@@ -197,8 +197,12 @@ int main()
         // per-frame time logic
         // --------------------
         if (play)
+        {
             scene.physics.stepSim();
-        scene.updatePhysics();
+            scene.updatePhysics();
+            play = false;
+        }
+         
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;

@@ -11,6 +11,7 @@ void Object::draw(Shader ourShader)
 }
 void Object::drawHulls(Shader ourShader)
 {
+    debug = false;
     ourShader.use();
     
     for (int i = 0; i < hulls.size(); i++)

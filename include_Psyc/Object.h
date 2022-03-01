@@ -25,6 +25,7 @@ public:
 	void printobj();
 	void draw(Shader ourShader);
 	void drawHulls(Shader ourShader);
+	bool debug;
 	Object(std::string name);
 	Object(std::string name, Model* model, glm::mat4 transform);
 };
