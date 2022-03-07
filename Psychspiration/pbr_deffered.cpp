@@ -50,6 +50,7 @@ std::vector<PointLight> light;
 unsigned int numLights;
 unsigned int maxLights{ 100 };
 // maxLights = max(scene[i].numLights);
+Scene* activeScene;
 
 int main()
 {
@@ -68,8 +69,9 @@ int main()
 
     // glfw window creation
     // --------------------
-    //GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", glfwGetPrimaryMonitor(), NULL);
-    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
+    int* count= new int;
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
+    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -107,6 +109,7 @@ int main()
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
+    Shader simpleDepthShader("pointshadow.vs", "pointshadow.fs", "pointshadow.gs");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
     Model axes("resource\\models\\axes.glb");
@@ -126,9 +129,32 @@ int main()
     scene.printdetail();
     //scene.printdetail();
     //scene.loadPhysics();
+    // create depth cubemap texture
+    const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
+    unsigned int depthCubemap;
+    glGenTextures(1, &depthCubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+    for (unsigned int i = 0; i < 6; i++)
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    pbrShader.use();
+    pbrShader.setInt("depthMap", 11);
+    // attach depth texture as FBO's depth buffer
+    unsigned int depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    
     //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
-    //setLights(scene);
+    setLights(scene);
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
@@ -151,7 +177,7 @@ int main()
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     // configure floating point framebuffer
- // ------------------------------------
+    // ------------------------------------
     unsigned int postFBO;
     glGenFramebuffers(1, &postFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
@@ -212,14 +238,46 @@ int main()
         processInput(window);
         // render
         // ------
+        glClearColor(0, 0, 0, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+        // -----------------------------------------------
+        /*float near_plane = 1.f;
+        float far_plane = 25.0f;*/
+        float near_plane = 0.1f;
+        float far_plane = 100.0f;
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+        std::vector<glm::mat4> shadowTransforms;
+            
+            shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[0].position, scene.lightList[0].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[0].position, scene.lightList[0].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[0].position, scene.lightList[0].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[0].position, scene.lightList[0].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[0].position, scene.lightList[0].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+            shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[0].position, scene.lightList[0].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        
+        // 1. render scene to depth cubemap
+       // --------------------------------
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        simpleDepthShader.use();
+        for (unsigned int i = 0; i < 6; ++i)
+            simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+        simpleDepthShader.setFloat("far_plane", far_plane);
+        simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
+        scene.drawobj(simpleDepthShader);
+
         glClearColor(1,1,1, 1.0f);
        // glClearColor(0, 0, 0, 1.0f);
+        glViewport(0, 0, User1.SCR_WIDTH ,User1.SCR_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
             pbrShader.use();
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
+            glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
             glm::mat4 view = camera.GetViewMatrix();
             pbrShader.setMat4("projection", projection);
             pbrShader.setMat4("view", view);
@@ -230,8 +288,11 @@ int main()
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", numLights);
+            pbrShader.setFloat("far_plane", far_plane);
+            glActiveTexture(GL_TEXTURE11);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
             scene.drawobj(pbrShader);
-
+            glActiveTexture(GL_TEXTURE0);
             //scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);
             //draw the bulbs
@@ -261,7 +322,7 @@ int main()
         glBlitFramebuffer(0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, 0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
+        //glDisable(GL_DEPTH_TEST);
         //post processing
         //------------------------------------------------------------------------------------------------------------------------
         
@@ -515,29 +576,29 @@ void renderSphere()
     glBindVertexArray(sphereVAO);
     glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 }
-void setLights(Shader ourShader)
-{
-    // be sure to activate shader when setting uniforms/drawing objects
-    ourShader.use();
-    ourShader.setInt("depthMap", 11);
-    // point light 1
-   // ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-
-    ourShader.setVec3("pointLights[0].color", 23.47, 21.31, 20.79);
-    ourShader.setFloat("pointLights[0].constant", 1.0f);
-    ourShader.setFloat("pointLights[0].linear", 0.09);
-    ourShader.setFloat("pointLights[0].quadratic", 0.032);
-    //spotlight
-    ourShader.setVec3("spotLight.color", 1, 1, 1);
-    ourShader.setFloat("spotLight.constant", 1.0f);
-    ourShader.setFloat("spotLight.linear", 0.09);
-    ourShader.setFloat("spotLight.quadratic", 0.032);
-    ourShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-    ourShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-    //materials
-    ourShader.setFloat("material.shininess", 256.0f);
-
-}
+//void setLights(Shader ourShader)
+//{
+//    // be sure to activate shader when setting uniforms/drawing objects
+//    ourShader.use();
+//    ourShader.setInt("depthMap", 11);
+//    // point light 1
+//   // ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
+//
+//    ourShader.setVec3("pointLights[0].color", 23.47, 21.31, 20.79);
+//    ourShader.setFloat("pointLights[0].constant", 1.0f);
+//    ourShader.setFloat("pointLights[0].linear", 0.09);
+//    ourShader.setFloat("pointLights[0].quadratic", 0.032);
+//    //spotlight
+//    ourShader.setVec3("spotLight.color", 1, 1, 1);
+//    ourShader.setFloat("spotLight.constant", 1.0f);
+//    ourShader.setFloat("spotLight.linear", 0.09);
+//    ourShader.setFloat("spotLight.quadratic", 0.032);
+//    ourShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+//    ourShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+//    //materials
+//    ourShader.setFloat("material.shininess", 256.0f);
+//
+//}
 void setLights(Scene scene)
 {
     
