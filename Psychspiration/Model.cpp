@@ -266,7 +266,7 @@ std::vector<Texture> Model::loadMaterialTexturesEmbedded(aiMaterial* mat, const 
             textured.id = TextureEmbedded(texture, typeName);
             //textured.id = hi();
             textured.type = typeName;
-            std::cout << std::endl << "Type : " << textured.type;
+            //std::cout << std::endl << "Type : " << textured.type;
             textured.path = "embedded";
             textures.push_back(textured);
 
@@ -279,13 +279,13 @@ std::vector<Texture> Model::loadMaterialTexturesEmbedded(aiMaterial* mat, const 
 
     }
 
-    for (int i = 0; i < textures.size(); i++)
+   /* for (int i = 0; i < textures.size(); i++)
     {
         std::cout << i << "'st Texture id , path , type = ";
         std::cout << textures[i].id << " ";
         std::cout << textures[i].type << " ";
         std::cout << textures[i].path << std::endl;
-    }
+    }*/
 
 
     return textures;
@@ -319,7 +319,8 @@ unsigned int Model::TextureFromFile(const char* path, const std::string& directo
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
+        if (GLAD_GL_EXT_texture_filter_anisotropic)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
         stbi_image_free(data);
     }
     else
@@ -355,7 +356,7 @@ unsigned int Model::TextureEmbedded(const aiTexture * texture, std::string typeN
 
     if (components_per_pixel == 3)
     {
-        std::cout << "hello";
+       // std::cout << "hello";
         if (typeName == "texture_normal" || typeName == "texture_specular" || typeName == "texture_roughmetal")
         {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data);
@@ -381,8 +382,8 @@ unsigned int Model::TextureEmbedded(const aiTexture * texture, std::string typeN
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
-
+    if(GLAD_GL_EXT_texture_filter_anisotropic)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
     stbi_image_free(image_data);
     return textureID;
 

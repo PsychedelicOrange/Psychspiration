@@ -22,11 +22,11 @@ Scene::Scene(std::string sceneName)
     }
     
     lightvec = parse("resource\\" + sceneName+"\\scene_lights.csv");
-    std::cout << std::endl << "\n   Number of lights: " << lightvec.size() / 9;
-    for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
+    std::cout << "Number of lights: " << lightvec.size() / 9<<std::endl;
+    /*for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
     {
         std::cout << lightvec[i];
-    }
+    }*/
     for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
     {
         PointLight temp{};
