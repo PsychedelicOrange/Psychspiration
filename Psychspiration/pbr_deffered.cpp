@@ -51,7 +51,7 @@ unsigned int numLights;
 unsigned int maxLights{ 100 };
 // maxLights = max(scene[i].numLights);
 Scene* activeScene;
-
+struct GPULight* lights;
 int main()
 {
     // glfw: initialize and configure
@@ -97,7 +97,7 @@ int main()
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     //glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -125,20 +125,40 @@ int main()
     Scene scene(User1.resourcePath);
     setLights(scene);
     scene.loadModels();
-    
     //scene.loadHulls();
     //scene.loadPhysics();
     //scene.printdetail();
     //scene.printdetail();
     //scene.loadPhysics();
+    //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
+    unsigned int lightUBO;
+    glGenBuffers(1, &lightUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+    glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
+    GLint bufMask = GL_READ_WRITE;
+    lights = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
+
+    for (unsigned int i = 0; i < numLights; ++i) {
+        //Fetching the light from the current scene
+        lights[i].position = glm::vec4(light[i].position, 1.0f);
+        lights[i].color = glm::vec4(light[i].color, 1.0f);
+        lights[i].enabled = 1;
+        lights[i].intensity = light[i].power;
+        lights[i].range = light[i].size;
+        //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
+    }
+    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
     // create depth cubemap texture
-    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    const unsigned int SHADOW_MAP_MAX_SIZE = 1024;
+    //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    const unsigned int SHADOW_MAP_MAX_SIZE = 256;
     unsigned int depthCubemap;
     glGenTextures(1, &depthCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
     glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE, 6 * numLights, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    std::cout << glGetError();
+    
         //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     glTexParameterf(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //linear
@@ -163,33 +183,10 @@ int main()
     //glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, 6*numLights);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: depthMap Framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     
-    //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
-    unsigned int lightUBO;
-    glGenBuffers(1, &lightUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
-    glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
-    GLint bufMask = GL_READ_WRITE;
-    struct GPULight* lights = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
-    light = scene.lightList;
-    numLights=scene.lightList.size();
-    for (unsigned int i = 0; i < numLights; ++i) {
-        //Fetching the light from the current scene
-        lights[i].position = glm::vec4(light[i].position, 1.0f);
-        lights[i].color = glm::vec4(light[i].color, 1.0f);
-        lights[i].enabled = 1;
-        lights[i].intensity = light[i].power;
-        lights[i].range = light[i].size;
-        //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
-    }
-    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
+    
     // configure floating point framebuffer
     // ------------------------------------
     unsigned int postFBO;
@@ -230,7 +227,7 @@ int main()
         std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, 1.f, 25.f);
+    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, 1.f, 25.f);
     std::vector<glm::mat4> shadowTransforms;
     for (int i = 0; i < numLights; i++)
     {
@@ -241,7 +238,7 @@ int main()
         shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
     }
-    std::cout << glGetError();
+    
 
     // render loop
     // -----------
@@ -276,10 +273,10 @@ int main()
         //float far_plane = 100.0f;
         
       
-        
+         
         // 1. render scene to depth cubemap
        // --------------------------------
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
         simpleDepthShader.use();
@@ -663,4 +660,10 @@ void renderQuad()
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
+}
+void updateLightBuffer(unsigned int lightubo)
+{
+    glBindBuffer(GL_UNIFORM_BUFFER, lightubo);
+    int size = sizeof(lights);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, size, &lights);
 }
