@@ -11,6 +11,7 @@
 #include <Mesh.h>
 #include <Model.h>
 #include <func.h>
+#include <TimerQueryAsync.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include <iostream>
@@ -52,6 +53,7 @@ unsigned int maxLights{ 100 };
 // maxLights = max(scene[i].numLights);
 Scene* activeScene;
 struct GPULight* lights;
+    
 int main()
 {
     // glfw: initialize and configure
@@ -70,8 +72,8 @@ int main()
     // glfw window creation
     // --------------------
     int* count= new int;
-    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
-    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
+    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -125,8 +127,8 @@ int main()
     Scene scene(User1.resourcePath);
     setLights(scene);
     scene.loadModels();
-    //scene.loadHulls();
-    //scene.loadPhysics();
+    scene.loadHulls();
+    scene.loadPhysics();
     //scene.printdetail();
     //scene.printdetail();
     //scene.loadPhysics();
@@ -151,9 +153,9 @@ int main()
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    // create depth cubemap texture
+    // create depth cubemap texture 
     //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    const unsigned int SHADOW_MAP_MAX_SIZE = 256;
+    const unsigned int SHADOW_MAP_MAX_SIZE = 1024;
     unsigned int depthCubemap;
     glGenTextures(1, &depthCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
@@ -238,10 +240,13 @@ int main()
         shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
     }
-    
-
+    simpleDepthShader.use();
+    for (unsigned int i = 0; i < 6 * numLights; ++i)
+        simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+    TimerQueryAsync timer(5);
     // render loop
     // -----------
+    bool shadowUpdate = true;
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
@@ -271,27 +276,32 @@ int main()
         float far_plane = 25.0f;
         //float near_plane = 0.1f;
         //float far_plane = 100.0f;
-        
-      
-         
+        timer.Begin();
         // 1. render scene to depth cubemap
-       // --------------------------------
+        // --------------------------------
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
         simpleDepthShader.use();
-        for (unsigned int i = 0; i < 6*numLights; ++i)
-            simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         simpleDepthShader.setFloat("far_plane", far_plane);
         simpleDepthShader.setInt("numLights", numLights);
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        for (int i = 0; i < numLights; i++)
-        {
-            simpleDepthShader.setInt("iLight", i);
-            scene.drawobj(simpleDepthShader);
-        }
+        scene.drawobj(simpleDepthShader);
+       
+         
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        timer.End();
+        try
+        {
+            std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000;
+        }
+        catch (const std::bad_optional_access& e)
+        {
+            std::cout << e.what() << "\n";
+        }
+        timer.Begin();
+            
         //glClearColor(1,1,1, 1.0f);
         glClearColor(0, 0, 0, 1.0f);
         glViewport(0, 0, User1.SCR_WIDTH ,User1.SCR_HEIGHT);
@@ -337,7 +347,7 @@ int main()
             wireShader.setMat4("view", view);
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            scene.drawHulls(wireShader);
+            //scene.drawHulls(wireShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);
@@ -356,7 +366,15 @@ int main()
         hdrShader.setFloat("exposure", User1.exposure);
         glDisable(GL_DEPTH_TEST);
         renderQuad();
-       
+        timer.End();
+        try
+        {
+            std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000;
+        }
+        catch (const std::bad_optional_access& e)
+        {
+            std::cout << e.what() << "\n";
+        }
 
        
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
