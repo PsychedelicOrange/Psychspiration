@@ -27,5 +27,6 @@ public:
 	void drawHulls(Shader ourShader);
 	bool debug;
 	Object(std::string name);
-	Object(std::string name, Model* model, glm::mat4 transform);
+	Object(std::string name, Model* model, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)));
+	glm::mat4 getTransform();
 };

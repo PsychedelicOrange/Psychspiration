@@ -16,7 +16,7 @@
 #include <stb_image_write.h>
 #include <iostream>
 #include <glm/gtx/string_cast.hpp>
-
+#include <chrono>
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -72,8 +72,8 @@ int main()
     // glfw window creation
     // --------------------
     int* count= new int;
-    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
-    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
+    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -114,7 +114,9 @@ int main()
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
-    Model axes("resource\\models\\axes.glb");
+    Object helmet((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
+    //glm::mat4 helmetTrans{ 1.0f; }
+    //Model axes("resource\\models\\axes.glb");
     /*
     glm::mat4 tabletrans{ 1.0f };
     tabletrans = glm::translate(tabletrans, glm::vec3(0,0,0));
@@ -123,15 +125,25 @@ int main()
     //wireShader.setMat4("model", tabletrans);
     table.printobj();
     */
-
+    TimerQueryAsync timer(5);
+    std::chrono::steady_clock clock;
+    std::chrono::time_point start = clock.now();
     Scene scene(User1.resourcePath);
     setLights(scene);
     scene.loadModels();
-    scene.loadHulls();
-    scene.loadPhysics();
+    //scene.setScale(0.1);
+    std::chrono::time_point end = clock.now();
+    std::cout << "\nLoad scene: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "[s]\n";
+   
+    //scene.loadHulls();
+    //scene.loadPhysics();
     //scene.printdetail();
     //scene.printdetail();
     //scene.loadPhysics();
+
+    //PointLight lightOne("partho's Light",glm::vec3(0,0,1),10);
+    //light.push_back(lightOne);
+    //numLights = light.size();
     //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
@@ -228,22 +240,23 @@ int main()
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, 1.f, 25.f);
+    float near_plane = 0.1f;
+    float far_plane = 100.0f;
+    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, near_plane, far_plane);
     std::vector<glm::mat4> shadowTransforms;
     for (int i = 0; i < numLights; i++)
     {
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
     }
     simpleDepthShader.use();
     for (unsigned int i = 0; i < 6 * numLights; ++i)
         simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-    TimerQueryAsync timer(5);
+    
     // render loop
     // -----------
     bool shadowUpdate = true;
@@ -253,8 +266,10 @@ int main()
         // --------------------
         if (play)
         {
-            scene.physics.stepSim();
-            scene.updatePhysics();
+            //scene.physics.stepSim();
+            //scene.updatePhysics();
+            //helmet.transform = glm::rotate(helmet.transform,(float)glm::radians(deltaTime*90),glm::vec3(0,1,0));
+            far_plane += 1;
             play = false;
         }
          
@@ -272,10 +287,9 @@ int main()
 
 
         // -----------------------------------------------
-        float near_plane = 1.f;
-        float far_plane = 25.0f;
-        //float near_plane = 0.1f;
-        //float far_plane = 100.0f;
+        //float near_plane = 1.f;
+        //float far_plane = 25.0f;
+        
         timer.Begin();
         // 1. render scene to depth cubemap
         // --------------------------------
@@ -288,7 +302,7 @@ int main()
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
         scene.drawobj(simpleDepthShader);
-       
+        helmet.draw(simpleDepthShader);
          
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         timer.End();
@@ -325,6 +339,7 @@ int main()
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             scene.drawobj(pbrShader);
+            helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
             //scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);
@@ -348,6 +363,7 @@ int main()
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             //scene.drawHulls(wireShader);
+            //helmet.draw(pbrShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);

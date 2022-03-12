@@ -2,19 +2,59 @@ import bpy, os
 from bpy_extras.io_utils import axis_conversion
 from mathutils import Matrix
 import mathutils
+from subprocess import Popen, CREATE_NEW_CONSOLE,PIPE,STDOUT
+import json
+#globals
+    # get path to render output (usually /tmp\)
+tempFolder = os.path.abspath (bpy.context.scene.render.filepath)
+temp = tempFolder+r'/textures'
+#settings
 
-# get the current selection
-selection = bpy.context.selected_objects
-# axis conversion
+compress_textures = True # make sure texture  file names do not contain 'jpg' or 'png' in filename ( for compressed )
+scene_metadata = True
+keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
+#functions
 
-def get_opengl(mat):
+def to_dds(name1,name2): # opens batch script to convert textures to dds 
+    #print(r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat'+temp_in+' '+temp_out2)    
+    p = Popen([r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat',tempFolder,name1,name2],creationflags=CREATE_NEW_CONSOLE)
+    p.wait()
+def editglTF(name):# edit gltf to support dds textures 
+    name = name + '.gltf'
+    path = os.path.join (tempFolder, name)
+    model = open(path,mode='r')
+    model_gltf = json.load(model)
+    model.close()
+    if(keep_both_textures):
+        with open(ob.name+'_uncompressed','w') as f:
+            json.dump(model_gltf,f)
+    model_gltf.update({"extensionsUsed":["MSFT_texture_dds"]})
+    model_gltf.update({"extenionsRequired":["MSFT_texture_dds"]})
+    for i in model_gltf['images']:
+        name_initial = i['uri']
+        i['uri'] = i['uri'].replace('jpg','dds')
+        i['uri']= i['uri'].replace('png','dds')
+        name_after = i['uri']
+        to_dds(name_initial,name_after)
+        i['mimeType'].replace('jpeg','vnd-ms.dds')
+        i['mimeType'].replace('png','vnd-ms.dds')
+    #p = Popen(['del',r'\textures\*.png'],creationflags=CREATE_NEW_CONSOLE)
+    #p = Popen(['del',r'\textures\*.jpg'],creationflags=CREATE_NEW_CONSOLE)
+    for index,texture in enumerate(model_gltf['textures']):
+        texture.update({'extensions':{'MSFT_texture_dds':{'source':index}}})
+    model = open(path,'w')
+    json.dump(model_gltf,model)
+    model.close()
+    
+def get_opengl(mat): # axis conversion
     global_matrix = axis_conversion(to_forward="-Z", to_up="Y").to_4x4()
     return (global_matrix@ mat @ global_matrix.inverted()).transposed()
+    
+# get the current selection
+selection = bpy.context.selected_objects
 # initialize a blank result variable
 result = ""
 result_lights=""
-# get path to render output (usually /tmp\)
-tempFolder = os.path.abspath (bpy.context.scene.render.filepath)
 # make a filename
 filename = os.path.join (tempFolder, "scene_prop.csv")
 filename2 = os.path.join (tempFolder, "scene_lights.csv")
@@ -28,17 +68,16 @@ for ob in scene.objects:
     # make the current object active and select it
     bpy.context.view_layer.objects.active = ob
     ob.select_set(True)
+    
     obj = bpy.context.object
     # make sure that we only export meshes
     if ob.type == 'MESH':
         # export the currently selected object to its own file based on its name
         ob.rotation_mode = 'AXIS_ANGLE'
         ob.rotation_mode = 'XYZ'
-        
-        bpy.ops.export_scene.gltf(filepath=bpy.context.scene.render.filepath+"{}".format(ob.name),use_selection=True,export_format='GLB',export_colors=False,export_tangents=True)
-
-        #transform = matrix_world.transposed()
-        #transform_hull = matrix_local.transposed()
+        bpy.ops.export_scene.gltf(filepath=bpy.context.scene.render.filepath+"{}".format(ob.name),use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = 'textures')
+        if(compress_textures):
+            editglTF(ob.name)
         # write the selected object's name and dimensions to a string
         result += ob.name
         result += ","

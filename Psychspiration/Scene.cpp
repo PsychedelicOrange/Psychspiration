@@ -80,7 +80,7 @@ void Scene::loadModels()
     {   
         if (name[i][0] != '_')
 
-            objects.push_back(new Object(name[i], new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"), transforms[i]));
+            objects.push_back(new Object(name[i], new Model("resource\\" + sceneName + "\\" + name[i] + ".gltf"), transforms[i]));
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
 }
@@ -210,3 +210,10 @@ void Scene::doSim()
     }
 }
 */
+void Scene::setScale(float scale)
+{
+    for (int i = 0; i < objects.size(); i++)
+    {
+        objects[i]->transform = glm::scale(objects[i]->transform, glm::vec3(scale));
+    }
+}

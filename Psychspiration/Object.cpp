@@ -24,12 +24,16 @@ Object::Object(std::string name)
 {   
     this->name = name;
 }
-Object::Object(std::string name,Model* model,glm::mat4 transform)
+Object::Object(std::string name,Model* model,glm::mat4 transform )
 {
     this->model = model;
     this->name = name;
     this->transform = transform;
     
+}
+glm::mat4 Object::getTransform()
+{
+    return transform;
 }
 void Object::printobj()
 {

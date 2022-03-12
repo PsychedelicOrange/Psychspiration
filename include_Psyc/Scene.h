@@ -16,6 +16,18 @@ struct PointLight {
     float quadratic;
     float size;
     float use_shadows;
+    PointLight() {}
+    PointLight(std::string name, glm::vec3 position, float power, float size = 100.f, glm::vec3 color = glm::vec3(1.f),bool use_shadows = true)
+    {
+        this->name= name ;
+        this->position = position;
+        this->power = power;
+        this->size = size;
+        this->color = color;
+        this->constant = this->linear = this->quadratic = 0;
+        this->use_shadows = use_shadows;
+
+    }
 };
 struct GPULight {
     glm::vec4 position;
@@ -41,8 +53,9 @@ public:
     unsigned int numLights;
     // physics 
     Physics physics;
-  
+    void setScale(float scale);
     Scene(std::string sceneName);
+    Scene();
     //void draw(Shader ourShader);
     void drawobj(Shader ourShader);
     void cleanupModels();

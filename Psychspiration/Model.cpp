@@ -2,6 +2,8 @@
 #include <FileIO.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
+#include <assimp/pbrmaterial.h>
+#include <gli/gli.hpp>
 #include <stb_image.h>
 #include <glad/glad.h>
 #include <iostream>
@@ -167,7 +169,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 
         std::vector<Texture> roughmetalMaps = loadMaterialTextures(material, aiTextureType_UNKNOWN, "texture_roughmetal");
-        textures.insert(heightMaps.end(), roughmetalMaps.begin(), roughmetalMaps.end());
+        textures.insert(textures.end(), roughmetalMaps.begin(), roughmetalMaps.end());
 
     }
     //
@@ -232,13 +234,14 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
     }
     for (int i = 0; i < textures.size(); i++)
     {
-       // std::cout << i << "'st Texture id , path , type = ";
-       // std::cout << textures[i].id << " ";
-       // std::cout << textures[i].type << " ";
-       // std::cout << textures[i].path << std::endl;
+        std::cout << i << "'st Texture id , path , type = ";
+        std::cout << textures[i].id << " ";
+        std::cout << textures[i].type << " ";
+        std::cout << textures[i].path << std::endl;
     }
     return textures;
 }
+
 
 
 std::vector<Texture> Model::loadMaterialTexturesEmbedded(aiMaterial* mat, const aiScene* scene, aiTextureType type, std::string typeName)
@@ -299,37 +302,159 @@ unsigned int Model::TextureFromFile(const char* path, const std::string& directo
     glGenTextures(1, &textureID);
     //stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
-    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+    std::string format = filename.substr(filename.find_last_of('.'), filename.length());
+    if (format == ".dds") {
+        gli::texture Texture = gli::load(filename);
+        if (Texture.empty())
+            return 0;
+        //std::cout << "hello";
+        gli::gl GL(gli::gl::PROFILE_GL33);
+        gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
+        GLenum Target = GL.translate(Texture.target());
+        std::cout << Texture.levels()<<" mips, "<< Texture.faces()<<" faces, "<<Texture.layers()<<"\n";
+        GLuint TextureName = 0;
+        glGenTextures(1, &TextureName);
+        glBindTexture(Target, TextureName);
+        glTexParameteri(Target, GL_TEXTURE_BASE_LEVEL, Texture.base_level());
+        glTexParameteri(Target, GL_TEXTURE_MAX_LEVEL, Texture.max_level());
+        glTexParameteri(Target, GL_TEXTURE_SWIZZLE_R, Format.Swizzles[0]);
+        glTexParameteri(Target, GL_TEXTURE_SWIZZLE_G, Format.Swizzles[1]);
+        glTexParameteri(Target, GL_TEXTURE_SWIZZLE_B, Format.Swizzles[2]);
+        glTexParameteri(Target, GL_TEXTURE_SWIZZLE_A, Format.Swizzles[3]);
+        glTexParameteri(Target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(Target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(Target, GL_TEXTURE_MAX_ANISOTROPY, 4);
+        glm::tvec3<GLsizei> const Extent(Texture.extent());
+        GLsizei const FaceTotal = static_cast<GLsizei>(Texture.layers() * Texture.faces());
 
-    if (data)
-    {
-        GLenum format;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
+        switch (Texture.target())
+        {
+        case gli::TARGET_1D:
+            glTexStorage1D(
+                Target, static_cast<GLint>(Texture.levels()), Format.Internal, Extent.x);
+            break;
+        case gli::TARGET_1D_ARRAY:
+        case gli::TARGET_2D:
+        case gli::TARGET_CUBE:
+            glTexStorage2D(
+                Target, static_cast<GLint>(Texture.levels()), Format.Internal,
+                Extent.x, Texture.target() == gli::TARGET_2D ? Extent.y : FaceTotal);
+            break;
+        case gli::TARGET_2D_ARRAY:
+        case gli::TARGET_3D:
+        case gli::TARGET_CUBE_ARRAY:
+            glTexStorage3D(
+                Target, static_cast<GLint>(Texture.levels()), Format.Internal,
+                Extent.x, Extent.y,
+                Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal);
+            break;
+        default:
+            assert(0);
+            break;
+        }
 
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+        for (std::size_t Layer = 0; Layer < Texture.layers(); ++Layer)
+            for (std::size_t Face = 0; Face < Texture.faces(); ++Face)
+                for (std::size_t Level = 0; Level < Texture.levels(); ++Level)
+                {
+                    GLsizei const LayerGL = static_cast<GLsizei>(Layer);
+                    glm::tvec3<GLsizei> Extent(Texture.extent(Level));
+                    Target = gli::is_target_cube(Texture.target())
+                        ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + Face)
+                        : Target;
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        if (GLAD_GL_EXT_texture_filter_anisotropic)
+                    switch (Texture.target())
+                    {
+                    case gli::TARGET_1D:
+                        if (gli::is_compressed(Texture.format()))
+                            glCompressedTexSubImage1D(
+                                Target, static_cast<GLint>(Level), 0, Extent.x,
+                                Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                                Texture.data(Layer, Face, Level));
+                        else
+                            glTexSubImage1D(
+                                Target, static_cast<GLint>(Level), 0, Extent.x,
+                                Format.External, Format.Type,
+                                Texture.data(Layer, Face, Level));
+                        break;
+                    case gli::TARGET_1D_ARRAY:
+                    case gli::TARGET_2D:
+                    case gli::TARGET_CUBE:
+                        if (gli::is_compressed(Texture.format()))
+                            glCompressedTexSubImage2D(
+                                Target, static_cast<GLint>(Level),
+                                0, 0,
+                                Extent.x,
+                                Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
+                                Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                                Texture.data(Layer, Face, Level));
+                        else
+                            glTexSubImage2D(
+                                Target, static_cast<GLint>(Level),
+                                0, 0,
+                                Extent.x,
+                                Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
+                                Format.External, Format.Type,
+                                Texture.data(Layer, Face, Level));
+                        break;
+                    case gli::TARGET_2D_ARRAY:
+                    case gli::TARGET_3D:
+                    case gli::TARGET_CUBE_ARRAY:
+                        if (gli::is_compressed(Texture.format()))
+                            glCompressedTexSubImage3D(
+                                Target, static_cast<GLint>(Level),
+                                0, 0, 0,
+                                Extent.x, Extent.y,
+                                Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                                Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                                Texture.data(Layer, Face, Level));
+                        else
+                            glTexSubImage3D(
+                                Target, static_cast<GLint>(Level),
+                                0, 0, 0,
+                                Extent.x, Extent.y,
+                                Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                                Format.External, Format.Type,
+                                Texture.data(Layer, Face, Level));
+                        break;
+                    default: assert(0); break;
+                    }
+                }
+        return TextureName;
+
+    }
+    else {
+        unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+
+        if (data)
+        {
+            GLenum format;
+            if (nrComponents == 1)
+                format = GL_RED;
+            else if (nrComponents == 3)
+                format = GL_RGB;
+            else if (nrComponents == 4)
+                format = GL_RGBA;
+
+            glBindTexture(GL_TEXTURE_2D, textureID);
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);
-        stbi_image_free(data);
-    }
-    else
-    {
-        // std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
-    }
+            stbi_image_free(data);
+        }
+        else
+        {
+            // std::cout << "Texture failed to load at path: " << path << std::endl;
+            stbi_image_free(data);
+        }
 
-    return textureID;
+        return textureID;
+    }
 }
 unsigned int Model::TextureEmbedded(const aiTexture * texture, std::string typeName)
 {
