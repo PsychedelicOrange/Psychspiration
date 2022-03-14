@@ -114,7 +114,7 @@ int main()
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
-    Object helmet((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
+    //Object helmet((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
     //glm::mat4 helmetTrans{ 1.0f; }
     //Model axes("resource\\models\\axes.glb");
     /*
@@ -302,7 +302,7 @@ int main()
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
         scene.drawobj(simpleDepthShader);
-        helmet.draw(simpleDepthShader);
+        //helmet.draw(simpleDepthShader);
          
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         timer.End();
@@ -339,7 +339,7 @@ int main()
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             scene.drawobj(pbrShader);
-            helmet.draw(pbrShader);
+            //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
             //scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);

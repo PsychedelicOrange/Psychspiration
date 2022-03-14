@@ -5,3 +5,5 @@ magick convert Default_mettalicRoughness.jpg -separate -swap 0,2 -combine result
 
 powershell and batch convert
 compressonatorcli -fd BC7 "<folder path>" "<child folder of output>"
+
+No mip maps generated in Encode with GPU !! cause black roads bug from san andreas 
