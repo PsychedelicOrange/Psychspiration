@@ -60,6 +60,7 @@ public:
     void drawobj(Shader ourShader);
     void cleanupModels();
     void loadModels();
+    void loadObject();
     void loadPhysics();
     void loadHulls();
     int find(std::string t);

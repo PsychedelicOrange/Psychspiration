@@ -9,7 +9,8 @@ import json
 tempFolder = os.path.abspath (bpy.context.scene.render.filepath)
 temp = tempFolder+r'/textures'
 #settings
-
+export_models = True
+export_models_metadata = True
 compress_textures = True # make sure texture  file names do not contain 'jpg' or 'png' in filename ( for compressed )
 scene_metadata = True
 keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
@@ -30,18 +31,21 @@ def editglTF(name):# edit gltf to support dds textures
             json.dump(model_gltf,f)
     model_gltf.update({"extensionsUsed":["MSFT_texture_dds"]})
     model_gltf.update({"extenionsRequired":["MSFT_texture_dds"]})
-    for i in model_gltf['images']:
-        name_initial = i['uri']
-        i['uri'] = i['uri'].replace('jpg','dds')
-        i['uri']= i['uri'].replace('png','dds')
-        name_after = i['uri']
-        to_dds(name_initial,name_after)
-        i['mimeType'].replace('jpeg','vnd-ms.dds')
-        i['mimeType'].replace('png','vnd-ms.dds')
-    #p = Popen(['del',r'\textures\*.png'],creationflags=CREATE_NEW_CONSOLE)
-    #p = Popen(['del',r'\textures\*.jpg'],creationflags=CREATE_NEW_CONSOLE)
-    for index,texture in enumerate(model_gltf['textures']):
-        texture.update({'extensions':{'MSFT_texture_dds':{'source':index}}})
+    print(name)
+    if('images' in model_gltf):
+        for i in model_gltf['images']:
+            name_initial = i['uri']
+            i['uri'] = i['uri'].replace('jpg','dds')
+            i['uri']= i['uri'].replace('png','dds')
+            name_after = i['uri']
+            to_dds(name_initial,name_after)
+            i['mimeType'].replace('jpeg','vnd-ms.dds')
+            i['mimeType'].replace('png','vnd-ms.dds')
+        #p = Popen(['del',r'\textures\*.png'],creationflags=CREATE_NEW_CONSOLE)
+        #p = Popen(['del',r'\textures\*.jpg'],creationflags=CREATE_NEW_CONSOLE)
+    if('textures' in model_gltf):
+        for index,texture in enumerate(model_gltf['textures']):
+            texture.update({'extensions':{'MSFT_texture_dds':{'source':index}}})
     model = open(path,'w')
     json.dump(model_gltf,model)
     model.close()
@@ -64,6 +68,7 @@ os.makedirs(os.path.dirname(filename2), exist_ok=True)
 bpy.ops.object.select_all(action='DESELECT')    
 # loop through all the objects in the scene
 scene = bpy.context.scene
+
 for ob in scene.objects:
     # make the current object active and select it
     bpy.context.view_layer.objects.active = ob
@@ -75,9 +80,10 @@ for ob in scene.objects:
         # export the currently selected object to its own file based on its name
         ob.rotation_mode = 'AXIS_ANGLE'
         ob.rotation_mode = 'XYZ'
-        bpy.ops.export_scene.gltf(filepath=bpy.context.scene.render.filepath+"{}".format(ob.name),use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = 'textures')
-        if(compress_textures):
-            editglTF(ob.name)
+        if(export_models):
+            bpy.ops.export_scene.gltf(filepath=bpy.context.scene.render.filepath+"{}".format(ob.name),use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = 'textures')
+            if(compress_textures):
+                editglTF(ob.name)
         # write the selected object's name and dimensions to a string
         result += ob.name
         result += ","
@@ -115,13 +121,14 @@ for ob in scene.objects:
             result_lights +="{}".format(round(use_shadows,5))
             result_lights +=","
             ob.select_set(False)
-    
-# open a file to write to
-file = open(filename, "w")
-# write the data to file
-file.write(result)
-# close the file
-file.close()
+
+if(export_models_metadata):    
+    # open a file to write to
+    file = open(filename, "w")
+    # write the data to file
+    file.write(result)
+    # close the file
+    file.close()
 # writing lights
 file2 = open(filename2,"w")
 file2.write(result_lights)

@@ -17,12 +17,14 @@
 #include <iostream>
 #include <glm/gtx/string_cast.hpp>
 #include <chrono>
+#include <thread>
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void setLights(Shader ourShader);
 void setLights(Scene scene);
+void asyncLoad(Scene* scene);
 void renderSphere();
 void renderQuad();
 
@@ -114,8 +116,7 @@ int main()
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
-    //Object helmet((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
-    //glm::mat4 helmetTrans{ 1.0f; }
+    
     //Model axes("resource\\models\\axes.glb");
     /*
     glm::mat4 tabletrans{ 1.0f };
@@ -125,18 +126,30 @@ int main()
     //wireShader.setMat4("model", tabletrans);
     table.printobj();
     */
-    TimerQueryAsync timer(5);
-    std::chrono::steady_clock clock;
-    std::chrono::time_point start = clock.now();
+    //TimerQueryAsync timer(5);
+    //Scene scene(User1.resourcePath);
+    
     Scene scene(User1.resourcePath);
+    TimerQueryAsync timer(5);
     setLights(scene);
     scene.loadModels();
+    
+    //std::thread asyncSceneLoad(asyncLoad, &scene);
+  /*
+    std::chrono::steady_clock clock;
+    std::chrono::time_point start = clock.now();
+    
+    setLights(scene);
+    scene.loadModels();
+    //Scene sceneLoading("loading");
+    
     //scene.setScale(0.1);
     std::chrono::time_point end = clock.now();
     std::cout << "\nLoad scene: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "[s]\n";
-   
+   */
     //scene.loadHulls();
     //scene.loadPhysics();
+    
     //scene.printdetail();
     //scene.printdetail();
     //scene.loadPhysics();
@@ -256,7 +269,8 @@ int main()
     simpleDepthShader.use();
     for (unsigned int i = 0; i < 6 * numLights; ++i)
         simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-    
+    simpleDepthShader.setFloat("far_plane", far_plane);
+    simpleDepthShader.setInt("numLights", numLights);
     // render loop
     // -----------
     bool shadowUpdate = true;
@@ -266,13 +280,19 @@ int main()
         // --------------------
         if (play)
         {
+            //load helmet async
+            std::cout << "before thread";
+            std::thread t1(&Scene::loadObject,scene);
+            t1.join();
+            //scene.loadObject();
+            //Object* helmet = new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
+            //glm::mat4 helmetTrans{ 1.0f };
             //scene.physics.stepSim();
             //scene.updatePhysics();
             //helmet.transform = glm::rotate(helmet.transform,(float)glm::radians(deltaTime*90),glm::vec3(0,1,0));
-            far_plane += 1;
             play = false;
         }
-         
+       
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -297,8 +317,6 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
         simpleDepthShader.use();
-        simpleDepthShader.setFloat("far_plane", far_plane);
-        simpleDepthShader.setInt("numLights", numLights);
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
         scene.drawobj(simpleDepthShader);
@@ -308,7 +326,7 @@ int main()
         timer.End();
         try
         {
-            std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000;
+            std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
@@ -362,7 +380,7 @@ int main()
             wireShader.setMat4("view", view);
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            //scene.drawHulls(wireShader);
+            scene.drawHulls(wireShader);
             //helmet.draw(pbrShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -385,7 +403,7 @@ int main()
         timer.End();
         try
         {
-            std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000;
+            std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
@@ -538,6 +556,51 @@ void updatelightloc(std::string x, float deltaTime)
     }
 
 }
+
+void setLights(Scene scene)
+{
+    
+    numLights = scene.numLights;
+    light = scene.lightList;
+    
+}
+
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
+void updateLightBuffer(unsigned int lightubo)
+{
+    glBindBuffer(GL_UNIFORM_BUFFER, lightubo);
+    int size = sizeof(lights);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, size, &lights);
+}
 // renders (and builds at first invocation) a sphere
 // -------------------------------------------------
 unsigned int sphereVAO = 0;
@@ -633,71 +696,4 @@ void renderSphere()
 
     glBindVertexArray(sphereVAO);
     glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
-}
-//void setLights(Shader ourShader)
-//{
-//    // be sure to activate shader when setting uniforms/drawing objects
-//    ourShader.use();
-//    ourShader.setInt("depthMap", 11);
-//    // point light 1
-//   // ourShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-//
-//    ourShader.setVec3("pointLights[0].color", 23.47, 21.31, 20.79);
-//    ourShader.setFloat("pointLights[0].constant", 1.0f);
-//    ourShader.setFloat("pointLights[0].linear", 0.09);
-//    ourShader.setFloat("pointLights[0].quadratic", 0.032);
-//    //spotlight
-//    ourShader.setVec3("spotLight.color", 1, 1, 1);
-//    ourShader.setFloat("spotLight.constant", 1.0f);
-//    ourShader.setFloat("spotLight.linear", 0.09);
-//    ourShader.setFloat("spotLight.quadratic", 0.032);
-//    ourShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-//    ourShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
-//    //materials
-//    ourShader.setFloat("material.shininess", 256.0f);
-//
-//}
-void setLights(Scene scene)
-{
-    
-    numLights = scene.numLights;
-    light = scene.lightList;
-    
-}
-
-// renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
-void renderQuad()
-{
-    if (quadVAO == 0)
-    {
-        float quadVertices[] = {
-            // positions        // texture Coords
-            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-        };
-        // setup plane VAO
-        glGenVertexArrays(1, &quadVAO);
-        glGenBuffers(1, &quadVBO);
-        glBindVertexArray(quadVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    }
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-}
-void updateLightBuffer(unsigned int lightubo)
-{
-    glBindBuffer(GL_UNIFORM_BUFFER, lightubo);
-    int size = sizeof(lights);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, size, &lights);
 }

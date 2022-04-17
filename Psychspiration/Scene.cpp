@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <thread>
 Scene::Scene(std::string sceneName)
 {
     this->sceneName = sceneName;
@@ -84,6 +85,12 @@ void Scene::loadModels()
         //models.push_back(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"));
     }
 }
+void Scene::loadObject()
+{
+    glm::mat4 helmetTrans{ 1.0f };
+    Object* helmet = new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"),helmetTrans);
+    objects.push_back(helmet);
+}
 void Scene::loadHulls()
 {
     for (int i = 0; i < name.size(); i++)
@@ -93,7 +100,7 @@ void Scene::loadHulls()
             std::vector<std::string> temp = split(name[i], '_');
             int k = find(temp[1]);
             objects[k]->dynamic = true;
-            objects[k]->hulls.push_back(hull(new Model("resource\\" + sceneName + "\\" + name[i] + ".glb"),transforms[i]));
+            objects[k]->hulls.push_back(hull(new Model("resource\\" + sceneName + "\\" + name[i] + ".gltf"),transforms[i]));
         }
     }
 }
