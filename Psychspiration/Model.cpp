@@ -7,7 +7,7 @@
 #include <stb_image.h>
 #include <glad/glad.h>
 #include <iostream>
-Model::Model(std::string const& path, bool gamma ) : gammaCorrection(gamma)
+Model::Model(std::string const& path,unsigned int* pbo, bool gamma ) : gammaCorrection(gamma)
 {
     loadModel(path);
 }
@@ -303,10 +303,26 @@ unsigned int Model::TextureFromFile(const char* path, const std::string& directo
     //stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
     std::string format = filename.substr(filename.find_last_of('.'), filename.length());
+    
+    //copy data into pbo 
+    //Model* helmet = new Model();
+
+    //glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeoftexture, pointer_to_data, GL_STREAM_DRAW);
+    //GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
     if (format == ".dds") {
+        //glGenBuffers(1, pbo);
+        //glBindBuffer(GL_PIXEL_UNPACK_BUFFER, *pbo);
         gli::texture Texture = gli::load(filename);
+        //glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+        // creating pbo 
+        // unsigned int pbo;
+    
+        //glBufferData(GL_PIXEL_UNPACK_BUFFER, sizeoftexture, pointer_to_data, GL_STREAM_DRAW);
+        //GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+
         if (Texture.empty())
             return 0;
+        
         //std::cout << "hello";
         gli::gl GL(gli::gl::PROFILE_GL33);
         gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());

@@ -1,5 +1,5 @@
-#include<Scene.h>
-#include<FileIO.h>
+#include <Scene.h>
+#include <FileIO.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
 #include <sstream>
@@ -223,4 +223,8 @@ void Scene::setScale(float scale)
     {
         objects[i]->transform = glm::scale(objects[i]->transform, glm::vec3(scale));
     }
+}
+void Scene::setUpEvents(EventHandler* eventHandler)
+{
+    //eventHandler->registerCallback("SpawnObject", &Scene::loadObject,this);
 }

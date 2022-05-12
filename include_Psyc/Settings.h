@@ -1,4 +1,5 @@
 #pragma once
+#include <EventHandler.h>
 #include <vector>
 #include <string>
 
@@ -17,8 +18,9 @@ public:
 	unsigned int MSAA;
 	unsigned int AF;
 	void update();
-	Settings()
+	Settings(EventHandler* eventHandler)
 	{
 		update();
+		eventHandler->registerCallback("Update_Settings", [=]() {update(); });
 	}
 };

@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <EventHandler.h>
 #include <FileIO.h>
 #include <Scene.h>
 #include <Settings.h>
@@ -10,10 +11,12 @@
 #include <FileIO.h>
 #include <Mesh.h>
 #include <Model.h>
+#include <Player.h>
 #include <func.h>
 #include <TimerQueryAsync.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
+#include <functional>
 #include <iostream>
 #include <glm/gtx/string_cast.hpp>
 #include <chrono>
@@ -21,15 +24,20 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow* window);
+void processHoldKeys(GLFWwindow* window);
 void setLights(Shader ourShader);
 void setLights(Scene scene);
 void asyncLoad(Scene* scene);
 void renderSphere();
 void renderQuad();
 
+//Event Handler
+EventHandler* eventHandler = new EventHandler();
+
 // settings
-Settings User1;
+Settings User1(eventHandler);
 bool shadows = true; //toggle
 bool normals = true; //toggle
 bool forward = true;
@@ -38,13 +46,13 @@ bool normalsKeyPressed = false;
 bool forwardKeyPressed = false;
 bool play = false;
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(eventHandler,glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = User1.SCR_WIDTH / 2.0f;
 float lastY = User1.SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 // timing
-float deltaTime = 0.0f;
+//float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 void updatelightloc(std::string x, float deltaTime);
 
@@ -55,7 +63,8 @@ unsigned int maxLights{ 100 };
 // maxLights = max(scene[i].numLights);
 Scene* activeScene;
 struct GPULight* lights;
-    
+
+//Player* player = new Player(eventHandler);
 int main()
 {
     // glfw: initialize and configure
@@ -86,6 +95,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window,key_callback);
     //glfwWindowHint(GLFW_SAMPLES, 8);
 
     // tell GLFW to capture our mouse
@@ -133,7 +143,8 @@ int main()
     TimerQueryAsync timer(5);
     setLights(scene);
     scene.loadModels();
-    
+    Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
+    scene.objects.push_back(player->obj);
     //std::thread asyncSceneLoad(asyncLoad, &scene);
   /*
     std::chrono::steady_clock clock;
@@ -257,7 +268,7 @@ int main()
     float far_plane = 100.0f;
     glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, near_plane, far_plane);
     std::vector<glm::mat4> shadowTransforms;
-    for (int i = 0; i < numLights; i++)
+    for (unsigned int i = 0; i < numLights; i++)
     {
         shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
@@ -271,6 +282,9 @@ int main()
         simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
     simpleDepthShader.setFloat("far_plane", far_plane);
     simpleDepthShader.setInt("numLights", numLights);
+
+    //eventHandler->registerCallback("Hello", &Scene::loadObject , &scene);
+    player->setUpEvents();
     // render loop
     // -----------
     bool shadowUpdate = true;
@@ -294,11 +308,12 @@ int main()
         }
        
 
-        float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
+        float currentFrame = (float)glfwGetTime();
+        eventHandler->deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         // input
         // -----
+        processHoldKeys(window);
         processInput(window);
         // render
         // ------
@@ -426,30 +441,33 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
+void processHoldKeys(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.ProcessKeyboard(FORWARD, eventHandler->deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.ProcessKeyboard(BACKWARD, eventHandler->deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.ProcessKeyboard(LEFT, eventHandler->deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.ProcessKeyboard(RIGHT, eventHandler->deltaTime);
+}
 void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        updatelightloc("forward", deltaTime);
+        updatelightloc("forward", eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        updatelightloc("backward", deltaTime);
+        updatelightloc("backward", eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        updatelightloc("left", deltaTime);
+        updatelightloc("left", eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        updatelightloc("right", deltaTime);
+        updatelightloc("right", eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        updatelightloc("up", deltaTime);
+        updatelightloc("up", eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        updatelightloc("down", deltaTime);
+        updatelightloc("down", eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !shadowsKeyPressed)
     {
         shadows = !shadows;
@@ -477,11 +495,6 @@ void processInput(GLFWwindow* window)
     {
         forwardKeyPressed = false;
     }
-    if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS)
-    {
-        User1.update();
-        
-    }
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
     {
         play = true;
@@ -505,16 +518,16 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
     if (firstMouse)
     {
-        lastX = xpos;
-        lastY = ypos;
+        lastX = (float)xpos;
+        lastY = (float)ypos;
         firstMouse = false;
     }
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+    float xoffset = (float)(xpos - lastX);
+    float yoffset = (float)(lastY - ypos); // reversed since y-coordinates go from bottom to top
 
-    lastX = xpos;
-    lastY = ypos;
+    lastX = (float)xpos;
+    lastY = (float)ypos;
 
     camera.ProcessMouseMovement(xoffset, yoffset);
 }
@@ -523,9 +536,36 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll(yoffset);
+    camera.ProcessMouseScroll((float)yoffset);
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_W && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("Camera_Move_Forward");
+    }
+    if (key == GLFW_KEY_A && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("Camera_Move_Left");
+    }
+    if (key == GLFW_KEY_S && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("Camera_Move_Backward");
+    }
+    if (key == GLFW_KEY_D && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("Camera_Move_Right");
+    }
+    if (key == GLFW_KEY_E && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("Player_Move_Forward");
+    }
+    if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("Update_Settings");
+    }
+}
 void updatelightloc(std::string x, float deltaTime)
 {
     float speed = 1;
@@ -622,7 +662,7 @@ void renderSphere()
 
         const unsigned int X_SEGMENTS = 64;
         const unsigned int Y_SEGMENTS = 64;
-        const float PI = 3.14159265359;
+        const float PI = (float)3.14159265359;
         for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
         {
             for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)

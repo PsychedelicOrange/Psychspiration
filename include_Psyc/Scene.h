@@ -1,4 +1,5 @@
 #pragma once
+#include <EventHandler.h>
 #include <Model.h>
 #include <Object.h>
 #include<Shader.h>
@@ -57,6 +58,7 @@ public:
     Scene(std::string sceneName);
     Scene();
     //void draw(Shader ourShader);
+    void setUpEvents(EventHandler* eventHandler);
     void drawobj(Shader ourShader);
     void cleanupModels();
     void loadModels();

@@ -1,13 +1,19 @@
 #include <Camera.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw , float pitch ) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+Camera::Camera(EventHandler* eventHandler,glm::vec3 position, glm::vec3 up, float yaw , float pitch ) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
 {
+    this->eventHandler = eventHandler;
     Position = position;
     WorldUp = up;
     Yaw = yaw;
     Pitch = pitch;
     Camera::updateCameraVectors();
+    // doesnt fucking work
+    /*eventHandler->registerCallback("Camera_Move_Forward", [=]() {Position += Front * MovementSpeed * eventHandler->deltaTime; });
+    eventHandler->registerCallback("Camera_Move_Backward", [=]() {Position -= Front * MovementSpeed * eventHandler->deltaTime; });
+    eventHandler->registerCallback("Camera_Move_Left", [=]() {Position -= Right * MovementSpeed * eventHandler->deltaTime; });
+    eventHandler->registerCallback("Camera_Move_Right", [=]() {Position += Right* MovementSpeed * eventHandler->deltaTime; });*/
 }
 // returns the view matrix calculated using Euler Angles and the LookAt Matrix
 glm::mat4 Camera::GetViewMatrix()
@@ -16,7 +22,7 @@ glm::mat4 Camera::GetViewMatrix()
 }
 
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
+void Camera::ProcessKeyboard(Camera_Movement direction,float deltaTime)
 {
     float velocity = MovementSpeed * deltaTime;
     if (direction == FORWARD)

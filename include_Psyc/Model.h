@@ -16,8 +16,9 @@ public:
     bool gammaCorrection;
     //physics
     btRigidBody* rigidBody;
-    // constructor, expects a filepath to a 3D model.
-    Model(std::string const& path, bool gamma = false);
+    
+    // constructor, expects a filepath to the 3D model.
+    Model(std::string const& path, unsigned int* pbo = nullptr, bool gamma = false);
     Model();
     const aiScene* getpath(std::string path);
     void Draw(Shader& shader);

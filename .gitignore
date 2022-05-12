@@ -9,3 +9,4 @@ Settings.csv
 include/
 Psychspiration/Psychspiration.vcxproj
 Psychspiration/Psychspiration.vcxproj.filters
+/models
