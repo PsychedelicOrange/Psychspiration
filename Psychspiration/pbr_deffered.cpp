@@ -85,6 +85,7 @@ int main()
     int* count= new int;
     //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
     GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
+    eventHandler->setWindow(window);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -128,6 +129,7 @@ int main()
     Model bulb("resource\\bulb\\bulb2.glb");
     
     //Model axes("resource\\models\\axes.glb");
+
     /*
     glm::mat4 tabletrans{ 1.0f };
     tabletrans = glm::translate(tabletrans, glm::vec3(0,0,0));
@@ -136,6 +138,7 @@ int main()
     //wireShader.setMat4("model", tabletrans);
     table.printobj();
     */
+
     //TimerQueryAsync timer(5);
     //Scene scene(User1.resourcePath);
     
@@ -313,13 +316,13 @@ int main()
         lastFrame = currentFrame;
         // input
         // -----
+        player->ProcessKeyboard();
         processHoldKeys(window);
         processInput(window);
         // render
         // ------
         glClearColor(0, 0, 0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
         // -----------------------------------------------
         //float near_plane = 1.f;

@@ -19,16 +19,17 @@ public:
 	}
 	void ProcessKeyboard()
 	{
-		glm::vec3 translate{0.f}; // do the inheritance wala thing wwe dont want GLFWwindow here we want it in eventHandler	
+		glm::vec3 translate{0.f}; // do the inheritance wala thing we dont want GLFWwindow here we want it in eventHandler	
 		float velocity = 1.0f * eventHandler->deltaTime;
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		if (glfwGetKey(eventHandler->window, GLFW_KEY_W) == GLFW_PRESS)
 			translate.x +=  velocity;
-		if (direction == BACKWARD)
+		if (glfwGetKey(eventHandler->window, GLFW_KEY_S) == GLFW_PRESS)
 			translate.x -= velocity;
-		if (direction == LEFT)
+		if (glfwGetKey(eventHandler->window, GLFW_KEY_A) == GLFW_PRESS)
 			translate.y -=  velocity;
-		if (direction == RIGHT)
+		if (glfwGetKey(eventHandler->window, GLFW_KEY_D) == GLFW_PRESS)
 			translate.y += velocity;
+		obj->transform = glm::translate(obj->getTransform(), translate);
 	}
 	void setUpEvents()
 	{

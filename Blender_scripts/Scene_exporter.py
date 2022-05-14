@@ -17,7 +17,7 @@ keep_both_textures = False # dont delete uncompressed textures and keep a separa
 #functions
 
 def to_dds(name1,name2): # opens batch script to convert textures to dds 
-    #print(r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat'+temp_in+' '+temp_out2)    
+    #print(r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat'+tempFolder+' '+name1+' '+name2)    
     p = Popen([r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat',tempFolder,name1,name2],creationflags=CREATE_NEW_CONSOLE)
     p.wait()
 def editglTF(name):# edit gltf to support dds textures 
@@ -37,7 +37,8 @@ def editglTF(name):# edit gltf to support dds textures
             name_initial = i['uri']
             i['uri'] = i['uri'].replace('jpg','dds')
             i['uri']= i['uri'].replace('png','dds')
-            name_after = i['uri']
+            #name_after = i['uri']
+            print(name_after)
             to_dds(name_initial,name_after)
             i['mimeType'].replace('jpeg','vnd-ms.dds')
             i['mimeType'].replace('png','vnd-ms.dds')
@@ -87,12 +88,12 @@ for ob in scene.objects:
         # write the selected object's name and dimensions to a string
         result += ob.name
         result += ","
-        if(ob.name[0] == '_'):
+        if(ob.name[0] == '_'): # Names starting with _ are convex hulls 
             for i in get_opengl(ob.matrix_local):
                 for j in i:
                     result += "{}".format(round(j,5))
                     result += ","
-        else:
+        else: 
             for i in get_opengl(ob.matrix_world):
                 for j in i:
                     result += "{}".format(round(j,5))
