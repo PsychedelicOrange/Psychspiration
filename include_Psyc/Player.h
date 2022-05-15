@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 #include <Object.h>
-#include <EventHandler.h>
+#include <Window.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <functional>
@@ -17,17 +17,17 @@ public:
 		this->obj = obj;
 		this->eventHandler = eventHandler;
 	}
-	void ProcessKeyboard()
+	void ProcessKeyboard(GLFWwindow* window)
 	{
 		glm::vec3 translate{0.f}; // do the inheritance wala thing we dont want GLFWwindow here we want it in eventHandler	
 		float velocity = 1.0f * eventHandler->deltaTime;
-		if (glfwGetKey(eventHandler->window, GLFW_KEY_W) == GLFW_PRESS)
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 			translate.x +=  velocity;
-		if (glfwGetKey(eventHandler->window, GLFW_KEY_S) == GLFW_PRESS)
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 			translate.x -= velocity;
-		if (glfwGetKey(eventHandler->window, GLFW_KEY_A) == GLFW_PRESS)
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 			translate.y -=  velocity;
-		if (glfwGetKey(eventHandler->window, GLFW_KEY_D) == GLFW_PRESS)
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 			translate.y += velocity;
 		obj->transform = glm::translate(obj->getTransform(), translate);
 	}

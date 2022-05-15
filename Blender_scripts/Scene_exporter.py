@@ -6,8 +6,10 @@ from subprocess import Popen, CREATE_NEW_CONSOLE,PIPE,STDOUT
 import json
 #globals
     # get path to render output (usually /tmp\)
-tempFolder = os.path.abspath (bpy.context.scene.render.filepath)
-temp = tempFolder+r'/textures'
+rootPath = os.path.abspath (bpy.context.scene.render.filepath)
+ModelPath = rootPath +r'/Models'
+ScenePath = rootPath + r'/Scenes'
+TexturePath = rootPath+r'/Textures'
 #settings
 export_models = True
 export_models_metadata = True
@@ -15,14 +17,22 @@ compress_textures = True # make sure texture  file names do not contain 'jpg' or
 scene_metadata = True
 keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
 #functions
-
+def get_export_name(dup_name):
+    rfound = dup_name.rfind('.')
+    if rfound==-1:
+        return dup_name   
+    else:
+        return dup_name[0:rfound]
 def to_dds(name1,name2): # opens batch script to convert textures to dds 
-    #print(r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat'+tempFolder+' '+name1+' '+name2)    
-    p = Popen([r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat',tempFolder,name1,name2],creationflags=CREATE_NEW_CONSOLE)
-    p.wait()
+    _name1 = name1[name1.rfind('/'):]
+    _name2 = name2[name2.rfind('/'):]
+    print(r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat'+TexturePath+' '+_name1+' '+_name2)
+    if(not os.path.exists(TexturePath+_name2)):
+        p = Popen([r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat',TexturePath,_name1,_name2],creationflags=CREATE_NEW_CONSOLE)
+        p.wait()
 def editglTF(name):# edit gltf to support dds textures 
     name = name + '.gltf'
-    path = os.path.join (tempFolder, name)
+    path = os.path.join (ModelPath, name)
     model = open(path,mode='r')
     model_gltf = json.load(model)
     model.close()
@@ -37,8 +47,8 @@ def editglTF(name):# edit gltf to support dds textures
             name_initial = i['uri']
             i['uri'] = i['uri'].replace('jpg','dds')
             i['uri']= i['uri'].replace('png','dds')
-            #name_after = i['uri']
-            print(name_after)
+            name_after = i['uri']
+            #print(name_after)
             to_dds(name_initial,name_after)
             i['mimeType'].replace('jpeg','vnd-ms.dds')
             i['mimeType'].replace('png','vnd-ms.dds')
@@ -61,11 +71,15 @@ selection = bpy.context.selected_objects
 result = ""
 result_lights=""
 # make a filename
-filename = os.path.join (tempFolder, "scene_prop.csv")
-filename2 = os.path.join (tempFolder, "scene_lights.csv")
+blendname = bpy.path.basename(bpy.context.blend_data.filepath)
+blendname = blendname[:blendname.rfind('.')]
+filename = os.path.join (ScenePath,blendname +'.csv')
+filename2 = os.path.join (ScenePath,blendname+'_lights.csv')
+filename3 = os.path.join (ModelPath, '.ignore')
 # confirm path exists
 os.makedirs(os.path.dirname(filename), exist_ok=True)
 os.makedirs(os.path.dirname(filename2), exist_ok=True)
+os.makedirs(os.path.dirname(filename3), exist_ok=True)
 bpy.ops.object.select_all(action='DESELECT')    
 # loop through all the objects in the scene
 scene = bpy.context.scene
@@ -81,12 +95,18 @@ for ob in scene.objects:
         # export the currently selected object to its own file based on its name
         ob.rotation_mode = 'AXIS_ANGLE'
         ob.rotation_mode = 'XYZ'
-        if(export_models):
-            bpy.ops.export_scene.gltf(filepath=bpy.context.scene.render.filepath+"{}".format(ob.name),use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = 'textures')
+        export_name = get_export_name(ob.name)
+        filepath_object=bpy.context.scene.render.filepath+'\Models\\'+"{}".format(export_name)
+        print(filepath_object+'.gltf')
+        print(os.path.exists(filepath_object+'.gltf'))
+        if(export_models and not os.path.exists(filepath_object+'.gltf')):
+            bpy.ops.export_scene.gltf(filepath=filepath_object,use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = '..\Textures')
             if(compress_textures):
                 editglTF(ob.name)
         # write the selected object's name and dimensions to a string
         result += ob.name
+        result += ","
+        result += export_name
         result += ","
         if(ob.name[0] == '_'): # Names starting with _ are convex hulls 
             for i in get_opengl(ob.matrix_local):

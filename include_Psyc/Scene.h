@@ -27,7 +27,6 @@ struct PointLight {
         this->color = color;
         this->constant = this->linear = this->quadratic = 0;
         this->use_shadows = use_shadows;
-
     }
 };
 struct GPULight {
@@ -41,32 +40,40 @@ struct GPULight {
 
 class Scene
 {
+//importer 
+   
 public:
+    //engine
+    EventHandler* eventHandler;
+    //ResourceManager* resourceManager;
+
     std::string sceneName; // name of folder containing scene
-    std::vector<Object*> objects; // vector of object pointers assigned in scene constructor 
-    //model transforms and info 
+    std::vector<Object*> objects; // vector of object pointers  
+     //model transforms and info 
     std::vector<std::string> propvec;
     std::vector<std::string> name;
+    std::vector<std::string> model_paths;
     std::vector<glm::mat4> transforms;
     //lights
     std::vector<std::string> lightvec;
-    std::vector<PointLight> lightList;
+    std::vector<PointLight> lightList; // vector of lights 
     unsigned int numLights;
     // physics 
-    Physics physics;
+    Physics* physics;
     void setScale(float scale);
-    Scene(std::string sceneName);
+    Scene(std::string sceneName,Physics* physics,EventHandler* eventHandler);
     Scene();
     //void draw(Shader ourShader);
     void setUpEvents(EventHandler* eventHandler);
-    void drawobj(Shader ourShader);
-    void cleanupModels();
-    void loadModels();
-    void loadObject();
-    void loadPhysics();
-    void loadHulls();
+    
+    void populateObjects();
+    void loadObjects();
+    void drawObjects(Shader ourShader);
+
+    void populateHulls();
     int find(std::string t);
     void drawHulls(Shader ourShader);
+    void setPhysics();
     void updatePhysics();
     void printdetail();
     glm::mat4 getmat4_csv(int i);

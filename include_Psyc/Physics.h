@@ -1,6 +1,7 @@
 #pragma once
 #include <Object.h>
 #include <bullet/btBulletDynamicsCommon.h>
+
 class Physics {
 	public:
 	//collision shapes
@@ -22,8 +23,10 @@ class Physics {
 
 	//constraint with all axis locked 
 	Physics();
+	
 	void cleanupPhysics();
 	void cleanupModels();
+	void setObject(Object* obj);
 	void setDynamicRigidBody(Object* obj);
 	void setStaticRigidBody(Object* obj);
 	void setGravity();

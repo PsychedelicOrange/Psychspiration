@@ -22,10 +22,8 @@ void Mesh::Draw(Shader& shader)
     unsigned int heightNr = 1;
     unsigned int roughmetalNr = 1;
 
-
     for (unsigned int i = 0; i < (textures.size()); i++)
     {
-
         // retrieve texture number (the N in diffuse_textureN)
         std::string number;
         std::string name = textures[i].type;

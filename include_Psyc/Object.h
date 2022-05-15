@@ -1,11 +1,19 @@
 #pragma once
 #include<Model.h>
+#include<ModelManager.h>
 #include<Shader.h>
 #include<string>
 #include<vector>
+
 struct hull {
 	Model* model;
+	std::string path;
 	glm::mat4 transform;
+	hull(std::string path, glm::mat4 transform)
+	{
+		this->path = path;
+		this->transform = transform;
+	}
 	hull(Model* model, glm::mat4 transform)
 	{
 		this->model = model;
@@ -14,19 +22,32 @@ struct hull {
 };
 class Object {
 public:
+	//engine
+	ModelManager* modelManager;
 	//meta
 	std::string name;
+	bool debug;
 	//graphics
+	std::string path;
 	Model* model;
 	glm::mat4 transform;
 	//physics
-	bool dynamic=0;
-	std::vector<hull> hulls;
-	void printobj();
+	bool dynamic;
+	std::vector<hull*> hulls;
+	
+	void load();
+	void loadHulls();
+
+	void setPhysics();
+	
 	void draw(Shader ourShader);
 	void drawHulls(Shader ourShader);
-	bool debug;
+
+	
+	void printobj();
+
 	Object(std::string name);
-	Object(std::string name, Model* model, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)));
+	Object(std::string name, std::string path, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)), bool dynamic = 0);
+	Object(std::string name, Model* model, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)), bool dynamic =0);
 	glm::mat4 getTransform();
 };

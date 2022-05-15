@@ -1,6 +1,8 @@
 #pragma once
 #include <Mesh.h>
+#include <TextureManager.h>
 #include <Shader.h>
+#include <Texture.h>
 #include <assimp/scene.h>
 #include <string>
 #include <vector>
@@ -8,7 +10,7 @@
 class Model
 {
 public:
-    // model data 
+    // model data
     std::vector<Texture> textures_loaded;	// stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     std::vector<Mesh> meshes;
     std::string directory;
@@ -16,7 +18,6 @@ public:
     bool gammaCorrection;
     //physics
     btRigidBody* rigidBody;
-    
     // constructor, expects a filepath to the 3D model.
     Model(std::string const& path, unsigned int* pbo = nullptr, bool gamma = false);
     Model();
@@ -30,6 +31,4 @@ private:
     Mesh processMesh(aiMesh* mesh, const aiScene* scene);
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
     std::vector<Texture> loadMaterialTexturesEmbedded(aiMaterial* mat, const aiScene* scene, aiTextureType type, std::string typeName);
-    unsigned int TextureFromFile(const char* path, const std::string& directory);
-    unsigned int TextureEmbedded(const aiTexture* texture, std::string typeName);
 };

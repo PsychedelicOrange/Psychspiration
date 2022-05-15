@@ -3,8 +3,6 @@
 #include <unordered_map>
 #include <functional>
 #include <iostream>
-#include <GLFW/glfw3.h>
-
 class EventHandler
 {
 //public:
@@ -24,13 +22,8 @@ class EventHandler
 //    }
 public:
 	float deltaTime;
-	GLFWwindow* window;
 	EventHandler() {
 		deltaTime = 0;
-	}
-	void setWindow(GLFWwindow* window)
-	{
-		this->window = window;
 	}
 	std::unordered_map < std::string, std::function<void()>> controlTable;
 	void registerCallback(std::string action, std::function<void()> callback)

@@ -1,6 +1,38 @@
 #include <Object.h>
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
+Object::Object(std::string name)
+{
+    this->name = name;
+}
+Object::Object(std::string name, std::string path, glm::mat4 transform, bool dynamic)
+{
+    this->name = name;
+    this->path = path;
+    this->transform = transform;
+    this->dynamic = dynamic;
+}
+Object::Object(std::string name, Model* model, glm::mat4 transform, bool dynamic)
+{
+    this->model = model;
+    this->name = name;
+    this->transform = transform;
+    this->dynamic = dynamic;
+}
+
+void Object::load()
+{
+    this->model = new Model("Resources/Models/" + this->path + ".gltf");
+    //this->model = resourceManager->getModel(this->path);
+}
+void Object::loadHulls()
+{
+    for (int i = 0; i < hulls.size(); i++)
+    {
+        this->hulls[i]->model = new Model("Resources/Models/"+this->hulls[i]->path + ".gltf");
+        //this->hulls[i]->model = resourceManager->getModel(this->hulls[i]->path);
+    }
+}
 void Object::draw(Shader ourShader)
 {
     ourShader.use();
@@ -16,21 +48,11 @@ void Object::drawHulls(Shader ourShader)
     
     for (int i = 0; i < hulls.size(); i++)
     {
-        ourShader.setMat4("model", (this->transform)*(this->hulls[i].transform) );// * this->transform);
-        hulls[i].model->Draw(ourShader);
+        ourShader.setMat4("model", (this->transform)*(this->hulls[i]->transform) );// * this->transform);
+        hulls[i]->model->Draw(ourShader);
     }
 }
-Object::Object(std::string name)
-{   
-    this->name = name;
-}
-Object::Object(std::string name,Model* model,glm::mat4 transform )
-{
-    this->model = model;
-    this->name = name;
-    this->transform = transform;
-    
-}
+
 glm::mat4 Object::getTransform()
 {
     return transform;
@@ -41,12 +63,12 @@ void Object::printobj()
     std::cout << " Model:\n   No of meshes: " << this->model->meshes.size() << "\n";
     for (int i=0; i < this->model->meshes.size(); i++)
     {
-        std::cout<< " Mesh "<< i<<":\n   No of Textures: "<<this->model->meshes[i].textures.size();
+        std::cout<< " Mesh "<< i<<":\n No of Textures: "<<this->model->meshes[i].textures.size();
     }
     std::cout << "\n Hulls:\n No of Hulls: " << this->hulls.size() << "\n";
 
     for (int i = 0; i < hulls.size(); i++)
     {
-        std::cout <<"hull: "<<i<<":\n " <<glm::to_string(this->hulls[i].transform);
+        std::cout <<"hull: "<<i<<":\n " <<glm::to_string(this->hulls[i]->transform);
     }
 }

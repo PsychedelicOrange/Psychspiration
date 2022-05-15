@@ -1,5 +1,6 @@
 #pragma once
 #include <Shader.h>
+#include <Texture.h>
 #include <vector>
 #include <bullet/btBulletDynamicsCommon.h>
 struct Vertex {
@@ -13,11 +14,6 @@ struct Vertex {
     glm::vec3 Tangent;
     // bitangent
     glm::vec3 Bitangent;
-};
-struct Texture {
-    unsigned int id;
-    std::string type;
-    std::string path;
 };
 
 class Mesh {

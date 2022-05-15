@@ -25,7 +25,16 @@ Physics::Physics() {
     
     dynamicsWorld= new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 }
-
+void Physics::setObject(Object* obj)
+{
+    if (!obj->dynamic)
+        setStaticRigidBody(obj);
+    else
+    {
+        obj->loadHulls();
+        setDynamicRigidBody(obj);
+    }
+}
 
 void Physics::setStaticRigidBody(Object* obj)
 {
@@ -75,11 +84,11 @@ void Physics::setDynamicRigidBody(Object* obj)
     btConvexHullShape* colShape;
     for (int i = 0; i < obj->hulls.size(); i++)
     {
-        colShape = new btConvexHullShape((btScalar*)&(obj->hulls[i].model->meshes[0].vertices[0]),obj->hulls[i].model->meshes[0].vertices.size(), sizeof(Vertex));
+        colShape = new btConvexHullShape((btScalar*)&(obj->hulls[i]->model->meshes[0].vertices[0]),obj->hulls[i]->model->meshes[0].vertices.size(), sizeof(Vertex));
         //colShape->setLocalScaling(btVector3(obj->hulls[i].transform[0][0], obj->hulls[i].transform[1][1], obj->hulls[i].transform[2][2]));
         collisionShapes.push_back(colShape);
         hullTransform = new btTransform();
-        hullTransform->setFromOpenGLMatrix(&(obj->hulls[i].transform[0][0]));
+        hullTransform->setFromOpenGLMatrix(&(obj->hulls[i]->transform[0][0]));
         compoundShape->addChildShape(*hullTransform, colShape);
         
     }

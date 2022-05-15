@@ -1,5 +1,6 @@
+#pragma once
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <Window.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <EventHandler.h>
@@ -33,9 +34,9 @@ void asyncLoad(Scene* scene);
 void renderSphere();
 void renderQuad();
 
-//Event Handler
+//Engine classes
 EventHandler* eventHandler = new EventHandler();
-
+//ModelManager* resourceManager = new Model();
 // settings
 Settings User1(eventHandler);
 bool shadows = true; //toggle
@@ -50,7 +51,8 @@ Camera camera(eventHandler,glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = User1.SCR_WIDTH / 2.0f;
 float lastY = User1.SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
-
+//Physics
+Physics* physics = new Physics();
 // timing
 //float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -85,7 +87,6 @@ int main()
     int* count= new int;
     //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
     GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
-    eventHandler->setWindow(window);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -142,12 +143,18 @@ int main()
     //TimerQueryAsync timer(5);
     //Scene scene(User1.resourcePath);
     
-    Scene scene(User1.resourcePath);
-    TimerQueryAsync timer(5);
+    Scene scene(User1.resourcePath,physics,eventHandler);
+    scene.loadObjects();
     setLights(scene);
-    scene.loadModels();
-    Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
-    scene.objects.push_back(player->obj);
+
+    TimerQueryAsync timer(5);
+    
+   /* Object* object = new Object("testobj", "plane");
+    object->load();
+    physics->setObject(object);*/
+    
+    //Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
+    //scene.objects.push_back(player->obj);
     //std::thread asyncSceneLoad(asyncLoad, &scene);
   /*
     std::chrono::steady_clock clock;
@@ -287,7 +294,7 @@ int main()
     simpleDepthShader.setInt("numLights", numLights);
 
     //eventHandler->registerCallback("Hello", &Scene::loadObject , &scene);
-    player->setUpEvents();
+    //player->setUpEvents();
     // render loop
     // -----------
     bool shadowUpdate = true;
@@ -299,8 +306,8 @@ int main()
         {
             //load helmet async
             std::cout << "before thread";
-            std::thread t1(&Scene::loadObject,scene);
-            t1.join();
+            //std::thread t1(&Scene::loadObject,scene);
+           // t1.join();
             //scene.loadObject();
             //Object* helmet = new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
             //glm::mat4 helmetTrans{ 1.0f };
@@ -316,7 +323,7 @@ int main()
         lastFrame = currentFrame;
         // input
         // -----
-        player->ProcessKeyboard();
+        //player->ProcessKeyboard();
         processHoldKeys(window);
         processInput(window);
         // render
@@ -337,7 +344,7 @@ int main()
         simpleDepthShader.use();
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        scene.drawobj(simpleDepthShader);
+        scene.drawObjects(simpleDepthShader);
         //helmet.draw(simpleDepthShader);
          
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -374,7 +381,7 @@ int main()
             pbrShader.setFloat("far_plane", far_plane);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-            scene.drawobj(pbrShader);
+            scene.drawObjects(pbrShader);
             //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
             //scene.drawobj(pbrShader);
@@ -427,8 +434,6 @@ int main()
         {
             std::cout << e.what() << "\n";
         }
-
-       
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
