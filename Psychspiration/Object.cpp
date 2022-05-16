@@ -5,10 +5,11 @@ Object::Object(std::string name)
 {
     this->name = name;
 }
-Object::Object(std::string name, std::string path, glm::mat4 transform, bool dynamic)
+Object::Object(std::string name, std::string path,ModelManager* modelManager,  glm::mat4 transform, bool dynamic)
 {
     this->name = name;
     this->path = path;
+    this->modelManager = modelManager;
     this->transform = transform;
     this->dynamic = dynamic;
 }
@@ -22,15 +23,16 @@ Object::Object(std::string name, Model* model, glm::mat4 transform, bool dynamic
 
 void Object::load()
 {
-    this->model = new Model("Resources/Models/" + this->path + ".gltf");
-    //this->model = resourceManager->getModel(this->path);
+    //this->model = new Model("Resources/Models/" + this->path + ".gltf");
+    //this->model->textureManager = textureManager;
+    this->model = modelManager->getModel(this->path);
 }
 void Object::loadHulls()
 {
     for (int i = 0; i < hulls.size(); i++)
     {
-        this->hulls[i]->model = new Model("Resources/Models/"+this->hulls[i]->path + ".gltf");
-        //this->hulls[i]->model = resourceManager->getModel(this->hulls[i]->path);
+        //this->hulls[i]->model = new Model("Resources/Models/"+this->hulls[i]->path + ".gltf");
+        this->hulls[i]->model = modelManager->getModel(this->hulls[i]->path);
     }
 }
 void Object::draw(Shader ourShader)

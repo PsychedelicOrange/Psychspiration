@@ -102,7 +102,7 @@ for ob in scene.objects:
         if(export_models and not os.path.exists(filepath_object+'.gltf')):
             bpy.ops.export_scene.gltf(filepath=filepath_object,use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = '..\Textures')
             if(compress_textures):
-                editglTF(ob.name)
+                editglTF(export_name)
         # write the selected object's name and dimensions to a string
         result += ob.name
         result += ","

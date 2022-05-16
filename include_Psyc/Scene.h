@@ -1,5 +1,6 @@
 #pragma once
 #include <EventHandler.h>
+#include <ModelManager.h>
 #include <Model.h>
 #include <Object.h>
 #include<Shader.h>
@@ -45,7 +46,7 @@ class Scene
 public:
     //engine
     EventHandler* eventHandler;
-    //ResourceManager* resourceManager;
+    ModelManager* modelManager;
 
     std::string sceneName; // name of folder containing scene
     std::vector<Object*> objects; // vector of object pointers  
@@ -61,7 +62,7 @@ public:
     // physics 
     Physics* physics;
     void setScale(float scale);
-    Scene(std::string sceneName,Physics* physics,EventHandler* eventHandler);
+    Scene(std::string sceneName,Physics* physics,EventHandler* eventHandler, ModelManager* modelManager);
     Scene();
     //void draw(Shader ourShader);
     void setUpEvents(EventHandler* eventHandler);

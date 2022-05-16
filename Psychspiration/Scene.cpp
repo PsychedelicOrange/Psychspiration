@@ -5,11 +5,12 @@
 #include <sstream>
 #include <iostream>
 #include <thread>
-Scene::Scene(std::string sceneName, Physics* physics,EventHandler* eventHandler)
+Scene::Scene(std::string sceneName, Physics* physics,EventHandler* eventHandler,ModelManager* modelManager)
 {
     this->sceneName = sceneName;
     this->physics = physics;
     this->eventHandler = eventHandler;
+    this->modelManager = modelManager;
     propvec = parse("Resources\\Scenes\\" + sceneName + ".csv");
     for (int i = 0; i < (propvec.size() - 17); i = i + 18)
     {
@@ -46,7 +47,7 @@ void Scene::populateObjects()
     for (int i = 0; i < name.size(); i++)
     {
         if (name[i][0] != '_')
-            objects.push_back(new Object(name[i], model_paths[i], transforms[i]));
+            objects.push_back(new Object(name[i], model_paths[i],modelManager, transforms[i]));
     }
     populateHulls();
 }

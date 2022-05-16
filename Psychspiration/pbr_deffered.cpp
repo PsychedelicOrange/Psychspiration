@@ -12,6 +12,7 @@
 #include <FileIO.h>
 #include <Mesh.h>
 #include <Model.h>
+#include <ModelManager.h>
 #include <Player.h>
 #include <func.h>
 #include <TimerQueryAsync.h>
@@ -35,8 +36,9 @@ void renderSphere();
 void renderQuad();
 
 //Engine classes
-EventHandler* eventHandler = new EventHandler();
-//ModelManager* resourceManager = new Model();
+EventHandler* eventHandler = new EventHandler();;
+
+
 // settings
 Settings User1(eventHandler);
 bool shadows = true; //toggle
@@ -52,7 +54,7 @@ float lastX = User1.SCR_WIDTH / 2.0f;
 float lastY = User1.SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 //Physics
-Physics* physics = new Physics();
+
 // timing
 //float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -118,12 +120,27 @@ int main()
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
     //stbi_set_flip_vertically_on_load(true);
+    
+    ModelManager* modelManager;
+    //TextureManager* textureManager;
+    Physics* physics;
+
+    // what the fuck do you call this thing again ?
+    
+    modelManager = new ModelManager();
+    //textureManager = Model::textureManager;
+    physics = new Physics();
+
+    // set all static member variables here
+    //Model::textureManager = textureManager;
+
     // build and compile our shader zprogram
     // ------------------------------------
     //Shader matcapShader("matcap.vs", "matcap.fs", "0");
     Shader wireShader("model_simple.vs", "model_simple.fs", "0");
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
+    Shader pbrShader_instanced("vertex_invertex_instanced.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     //setLights(pbrShader);
@@ -139,45 +156,38 @@ int main()
     //wireShader.setMat4("model", tabletrans);
     table.printobj();
     */
-
-    //TimerQueryAsync timer(5);
+    TimerQueryAsync timer(5);
     //Scene scene(User1.resourcePath);
     
-    Scene scene(User1.resourcePath,physics,eventHandler);
+    Scene scene(User1.resourcePath,physics,eventHandler,modelManager);
     scene.loadObjects();
     setLights(scene);
 
-    TimerQueryAsync timer(5);
-    
-   /* Object* object = new Object("testobj", "plane");
-    object->load();
-    physics->setObject(object);*/
-    
     //Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
     //scene.objects.push_back(player->obj);
-    //std::thread asyncSceneLoad(asyncLoad, &scene);
-  /*
-    std::chrono::steady_clock clock;
-    std::chrono::time_point start = clock.now();
-    
-    setLights(scene);
-    scene.loadModels();
-    //Scene sceneLoading("loading");
-    
-    //scene.setScale(0.1);
-    std::chrono::time_point end = clock.now();
-    std::cout << "\nLoad scene: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "[s]\n";
-   */
-    //scene.loadHulls();
-    //scene.loadPhysics();
-    
-    //scene.printdetail();
-    //scene.printdetail();
-    //scene.loadPhysics();
 
-    //PointLight lightOne("partho's Light",glm::vec3(0,0,1),10);
-    //light.push_back(lightOne);
-    //numLights = light.size();
+    int instanceCount = 1000;
+    Object* myobject = new Object("myobject", scene.objects[1]->model);
+    //std::vector <glm::mat4> modelMatrices(1000);
+    glm::mat4* modelMatrices = new glm::mat4[instanceCount];
+    glm::vec3 translate{ 0 };
+    glm::mat4 transform{ 1 };
+    
+    for (int i = 0; i < instanceCount; i++)
+    {
+        //modelMatrices.push_back(glm::translate(transform, translate));
+        modelMatrices[i] = glm::translate(transform, translate);
+        translate += glm::vec3{1, 0, 0};
+        //std::cout << "\n" << glm::to_string(transform);
+    }
+
+    GLuint uboModelMatrices;
+    glGenBuffers(1, &uboModelMatrices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * instanceCount, modelMatrices, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
     //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
@@ -207,7 +217,7 @@ int main()
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
     glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE, 6 * numLights, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     
-        //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+  //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     glTexParameterf(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //linear
     glTexParameterf(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST); //linear
@@ -219,6 +229,8 @@ int main()
     glTexParameterf(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAX_LEVEL, 0);
     pbrShader.use();
     pbrShader.setInt("depthMap", 11);
+    pbrShader_instanced.use();
+    pbrShader_instanced.setInt("depthMap", 11);
     // attach depth texture as FBO's depth buffer
     unsigned int depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
@@ -383,6 +395,21 @@ int main()
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             scene.drawObjects(pbrShader);
             //helmet.draw(pbrShader);
+            glActiveTexture(GL_TEXTURE0);
+            pbrShader_instanced.use();
+            pbrShader_instanced.setMat4("projection", projection);
+            pbrShader_instanced.setMat4("view", view);
+            pbrShader_instanced.setVec3("viewPos", camera.Position);
+            pbrShader_instanced.setVec3("spotLight.position", camera.Position);
+            pbrShader_instanced.setVec3("spotLight.direction", camera.Front);
+            pbrShader_instanced.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
+            pbrShader_instanced.setInt("donormals", normals); // enable/disable normals by pressing '2'
+            pbrShader_instanced.setBool("existnormals", 1);
+            pbrShader_instanced.setInt("numLights", numLights);
+            pbrShader_instanced.setFloat("far_plane", far_plane);
+            glActiveTexture(GL_TEXTURE11);
+            glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
+            myobject->model->DrawInstanced(pbrShader_instanced,instanceCount);
             glActiveTexture(GL_TEXTURE0);
             //scene.drawobj(pbrShader);
             //axes.Draw(pbrShader);

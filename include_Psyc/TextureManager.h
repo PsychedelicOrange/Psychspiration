@@ -7,5 +7,5 @@ class TextureManager
 public:
 	std::unordered_map<std::string, Texture*> Textures;
 	Texture* getTexture(std::string path);
-	
+	Texture* getTextureEmbedded(const aiTexture* path, std::string typeName);
 };

@@ -1,5 +1,4 @@
 #include <ModelManager.h>
-
 Model* ModelManager::getModel(std::string path)
 {
 	auto search = Models.find(path);

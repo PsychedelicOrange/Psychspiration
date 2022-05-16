@@ -24,6 +24,7 @@ class Object {
 public:
 	//engine
 	ModelManager* modelManager;
+	//TextureManager* textureManager;
 	//meta
 	std::string name;
 	bool debug;
@@ -47,7 +48,7 @@ public:
 	void printobj();
 
 	Object(std::string name);
-	Object(std::string name, std::string path, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)), bool dynamic = 0);
+	Object(std::string name, std::string path,ModelManager* modelManager, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)), bool dynamic = 0);
 	Object(std::string name, Model* model, glm::mat4 transform = glm::mat4(glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1)), bool dynamic =0);
 	glm::mat4 getTransform();
 };

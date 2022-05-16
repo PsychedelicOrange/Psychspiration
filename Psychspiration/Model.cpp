@@ -5,6 +5,7 @@
 #include <assimp/pbrmaterial.h>
 #include <stb_image.h>
 #include <iostream>
+TextureManager Model::textureManager{};
 Model::Model(std::string const& path,unsigned int* pbo, bool gamma ) : gammaCorrection(gamma)
 {
     loadModel(path);
@@ -23,6 +24,11 @@ void Model::Draw(Shader& shader)
 {
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(shader);
+}
+void Model::DrawInstanced(Shader& shader, int instanceCount)
+{
+    for (unsigned int i = 0; i < meshes.size(); i++)
+        meshes[i].DrawInstanced(shader,instanceCount);
 }
 const aiScene* Model::loadModel(const std::string& path)
 {
@@ -208,7 +214,8 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
         aiString str;
         mat->GetTexture(type, i, &str);
         
-        Texture* t = new Texture (str.C_Str());
+        //Texture* t = new Texture (str.C_Str());
+        Texture* t = textureManager.getTexture(str.C_Str());
         t->type=typeName;
         textures.push_back(*(t));
         //// check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
@@ -233,13 +240,13 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
         //    textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
         //}
     }
-    for (int i = 0; i < textures.size(); i++)
+    /*for (int i = 0; i < textures.size(); i++)
     {
         std::cout << i << "'st Texture id , path , type = ";
         std::cout << textures[i].id << " ";
         std::cout << textures[i].type << " ";
         std::cout << textures[i].path << std::endl;
-    }
+    }*/
     return textures;
 }
 
@@ -267,8 +274,9 @@ std::vector<Texture> Model::loadMaterialTexturesEmbedded(aiMaterial* mat, const 
 
         if (auto texture = scene->GetEmbeddedTexture(texture_file.C_Str())) {
 
-            Texture x(texture, typeName);
-            textures.push_back(x);
+            //Texture x(texture, typeName);
+            //textures.push_back(x);
+            textures.push_back(*textureManager.getTextureEmbedded(texture, typeName));
             //textured.id = TextureEmbedded(texture, typeName);
             ////textured.id = hi();
             //textured.type = typeName;
