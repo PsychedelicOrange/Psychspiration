@@ -1,55 +1,93 @@
 #include <Scene.h>
 #include <FileIO.h>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <map>
 #include <thread>
+#include <json.hpp>
+using Json = nlohmann::json;
+glm::mat4 getmat4_json(Json temp)
+{
+    float temp_arr[16];
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            temp_arr[4*i+j] = temp[i][j].get<float>();
+        }
+    }
+    return glm::make_mat4(temp_arr);
+}
+glm::vec3 getvec3_json(Json temp)
+{
+    float temp_arr[3];
+    for (int i = 0; i < 3; i++)
+    {
+        temp_arr[i] = temp[i].get<float>();
+    }
+    return glm::make_vec3(temp_arr);
+}
+glm::vec3 convvec3_blender(glm::vec3 temp)
+{
+    float tempo = -1 * temp.y;
+    temp.y = temp.z;
+    temp.z = tempo;
+    return temp;
+}
 Scene::Scene(std::string sceneName, Physics* physics,EventHandler* eventHandler,ModelManager* modelManager)
 {
     this->sceneName = sceneName;
     this->physics = physics;
     this->eventHandler = eventHandler;
     this->modelManager = modelManager;
-    propvec = parse("Resources\\Scenes\\" + sceneName + ".csv");
-    for (int i = 0; i < (propvec.size() - 17); i = i + 18)
-    {
-        std::cout << propvec[i]<<"\n";
-    }
-
-    for (int i = 0; i < (propvec.size() - 17); i = i + 18)
-    {
-        name.push_back(propvec[i]);
-        model_paths.push_back(propvec[i + 1]);
-        transforms.push_back(getmat4_csv(i+1));
-    }
     
-    lightvec = parse("Resources\\Scenes\\" + sceneName+"_lights.csv");
-    std::cout << "Number of lights: " << lightvec.size() / 9<<std::endl;
+     
+    Json sceneData = Json::parse(getStringFromDisk("Resources\\Scenes\\" + sceneName + ".scene"));
+    // yet to implemnt hull loading yet
+    for(auto& object : sceneData["objects"])
+    { 
+            objects.push_back(new Object(object["name"].get<std::string>(),object["export_name"].get<std::string>(),modelManager,getmat4_json(object["transform"])));
+    }
 
-    for (int i = 0; i < (lightvec.size() - 9); i = i + 10)
+    for (auto& light : sceneData["lights"])
     {
-        PointLight temp{};
-        temp.name = lightvec[i];
-        temp.position = glm::vec3(std::stof(lightvec[i + 1]), std::stof(lightvec[i + 3]), -1 * std::stof(lightvec[i + 2]));
-        temp.color = glm::vec3(std::stof(lightvec[i + 4]), std::stof(lightvec[i + 5]), std::stof(lightvec[i + 6]));
-        temp.power = std::stof(lightvec[i + 7]);
-        temp.size = std::stof(lightvec[i + 8]);
-        temp.use_shadows = std::stof(lightvec[i + 9]);
-        lightList.push_back(temp);
+        lightList.push_back( PointLight(light["name"].get<std::string>(),convvec3_blender(getvec3_json(light["location"])),
+            light["power"].get<float>(),light["range"].get<float>(), getvec3_json(light["color"]),light["use_shadow"].get<bool>()));
     }
     numLights = lightList.size();
-    this->populateObjects();
+    std::cout << glm::to_string(lightList[0].position);
 }
 
-void Scene::populateObjects()
+void Scene::getInstanceCount()
 {
-    for (int i = 0; i < name.size(); i++)
+        std::string temp = objects[0]->path;
+        //int indexCount = 0;
+        int count = 1;
+        for (int i = 0; i < objects.size(); i++)
+        {
+            if (temp == objects[i]->path)
+            {
+                count++;
+            }
+            else
+            {
+                temp == objects[i]->path;
+                objects[i - 1]->model->instanceCount = count;
+                objectInstances.push_back({ i - 1});
+            }
+        }
+}
+void Scene::makeHAB()
+{
+    glm::mat4** instancedTransforms = new glm::mat4 * [objectInstances.size()];
+    for (int i = 0; i < objectInstances.size(); i++)
     {
-        if (name[i][0] != '_')
-            objects.push_back(new Object(name[i], model_paths[i],modelManager, transforms[i]));
+        instancedTransforms[i] = (glm::mat4*)std::vector<glm::mat4>(transforms.begin(), transforms.begin() + objectInstances[i]).data();
     }
-    populateHulls();
 }
 void Scene::loadObjects()
 {
@@ -68,6 +106,10 @@ void Scene::drawObjects(Shader ourShader)
     {
         objects[i]->draw(ourShader);
     }
+}
+void Scene::drawObjectsInstanced(Shader ourShader)
+{
+    
 }
 void Scene::drawHulls(Shader ourShader)
 {
@@ -101,30 +143,6 @@ void Scene::printdetail()
 
 }
 
-glm::mat4 Scene::getmat4_csv(int i){
-    //glm::mat4* mat = new glm::mat4(0.0f);
-    
-    glm::mat4 mat =  glm::mat4(stof(propvec[i+1]), stof(propvec[i + 2]), stof(propvec[i + 3]), stof(propvec[i + 4]),
-        stof(propvec[i + 5]),stof(propvec[i+6]), stof(propvec[i + 7]), stof(propvec[i + 8]),
-        stof(propvec[i + 9]), stof(propvec[i + 10]), stof(propvec[i + 11]), stof(propvec[i + 12]),
-        stof(propvec[i + 13]), stof(propvec[i + 14]), stof(propvec[i + 15]), stof(propvec[i + 16]));
-    
-    return mat;
-}
-void Scene::populateHulls()
-{
-    std::vector<std::string> temp;
-    for (int i = 0; i < name.size(); i++)
-    {
-        if (name[i][0] == '_')
-        {
-            temp = split(name[i], '_');
-            int k = find(temp[1]);
-            objects[k]->dynamic = true;
-            objects[k]->hulls.push_back(new hull(model_paths[i], transforms[i]));
-        }
-    }
-}
 
 int Scene::find(std::string t)
 {

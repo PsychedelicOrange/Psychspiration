@@ -10,6 +10,15 @@ rootPath = os.path.abspath (bpy.context.scene.render.filepath)
 ModelPath = rootPath +r'/Models'
 ScenePath = rootPath + r'/Scenes'
 TexturePath = rootPath+r'/Textures'
+data = {
+    'objects':[
+
+        ],
+    'lights':[
+
+        ]
+    
+    }
 #settings
 export_models = True
 export_models_metadata = True
@@ -64,7 +73,19 @@ def editglTF(name):# edit gltf to support dds textures
 def get_opengl(mat): # axis conversion
     global_matrix = axis_conversion(to_forward="-Z", to_up="Y").to_4x4()
     return (global_matrix@ mat @ global_matrix.inverted()).transposed()
-    
+def convertmattolist(mat):
+    lmao = []
+    for i in mat:
+        lmaopart=[]
+        for j in i:
+            lmaopart.append(j)
+        lmao.append(lmaopart)
+    return lmao
+def convertvectolist(vec):
+    lmao = []
+    for i in vec:
+        lmao.append(i)
+    return lmao            
 # get the current selection
 selection = bpy.context.selected_objects
 # initialize a blank result variable
@@ -73,14 +94,15 @@ result_lights=""
 # make a filename
 blendname = bpy.path.basename(bpy.context.blend_data.filepath)
 blendname = blendname[:blendname.rfind('.')]
-filename = os.path.join (ScenePath,blendname +'.csv')
-filename2 = os.path.join (ScenePath,blendname+'_lights.csv')
+#filename = os.path.join (ScenePath,blendname +'.csv')
+#filename2 = os.path.join (ScenePath,blendname+'_lights.csv')
+filename = os.path.join (ScenePath,blendname +'.scene')
 filename3 = os.path.join (ModelPath, '.ignore')
 # confirm path exists
 os.makedirs(os.path.dirname(filename), exist_ok=True)
-os.makedirs(os.path.dirname(filename2), exist_ok=True)
+#os.makedirs(os.path.dirname(filename2), exist_ok=True)
 os.makedirs(os.path.dirname(filename3), exist_ok=True)
-bpy.ops.object.select_all(action='DESELECT')    
+bpy.ops.object.select_all(action='DESELECT')
 # loop through all the objects in the scene
 scene = bpy.context.scene
 
@@ -88,7 +110,6 @@ for ob in scene.objects:
     # make the current object active and select it
     bpy.context.view_layer.objects.active = ob
     ob.select_set(True)
-    
     obj = bpy.context.object
     # make sure that we only export meshes
     if ob.type == 'MESH':
@@ -104,53 +125,28 @@ for ob in scene.objects:
             if(compress_textures):
                 editglTF(export_name)
         # write the selected object's name and dimensions to a string
-        result += ob.name
-        result += ","
-        result += export_name
-        result += ","
         if(ob.name[0] == '_'): # Names starting with _ are convex hulls 
-            for i in get_opengl(ob.matrix_local):
-                for j in i:
-                    result += "{}".format(round(j,5))
-                    result += ","
-        else: 
-            for i in get_opengl(ob.matrix_world):
-                for j in i:
-                    result += "{}".format(round(j,5))
-                    result += ","
+            data['objects'].append({'name':ob.name,'export_name':export_name,'transform':convertmattolist(get_opengl(ob.matrix_local))})
+        else:
+            data['objects'].append({'name':ob.name,'export_name':export_name,'transform':convertmattolist(get_opengl(ob.matrix_world))})
+                    
         ob.select_set(False)
     # deselect the object and move on to another if any more are left
     if obj.type == 'LIGHT':
-            print("light detect")
-            loc = obj.location
-            power = obj.data.energy
-            color = obj.data.color
-            use_shadows = obj.data.use_shadow
-            range = obj.data.cutoff_distance
-            result_lights+=obj.data.name
-            result_lights += ","
-            for i in loc:
-               result_lights += "{}".format(round(i,5))
-               result_lights += ","
-            for i in color:
-                result_lights += "{}".format(round(i,5))
-                result_lights += ","
-            result_lights +="{}".format(round(power,5))
-            result_lights +=","
-            result_lights +="{}".format(round(range,5))
-            result_lights +=","
-            result_lights +="{}".format(round(use_shadows,5))
-            result_lights +=","
-            ob.select_set(False)
+        print("light detect")
+        data['lights'].append({'name':obj.data.name,'location':convertvectolist(obj.location),'color':convertvectolist(obj.data.color),'power':obj.data.energy,'range':obj.data.cutoff_distance,'use_shadow':obj.data.use_shadow})
+        ob.select_set(False)
 
-if(export_models_metadata):    
+if(export_models_metadata):
+    json_string = json.dumps(data)
+    #print(json_string)    
     # open a file to write to
     file = open(filename, "w")
     # write the data to file
-    file.write(result)
+    file.write(json_string)
     # close the file
     file.close()
 # writing lights
-file2 = open(filename2,"w")
-file2.write(result_lights)
-file2.close()
+#file2 = open(filename2,"w")
+#file2.write(result_lights)
+#file2.close()

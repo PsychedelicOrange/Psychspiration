@@ -8,26 +8,29 @@ std::vector<std::string> split(const std::string& s, char delim) {
     std::vector<std::string> result;
     std::stringstream ss(s);
     std::string item;
-
     while (getline(ss, item, delim)) {
         result.push_back(item);
     }
     return result;
 }
+std::string getStringFromDisk(std::string path)
+{
+	std::fstream file{ getRelativePath() + path };
+	std::string prop;
+	if (!file)
+	{   // Print an error and exit
+		std::cerr << "Uh oh, \" " << path << "\" could not be opened for reading!" << std::endl;
+	}
+	while (file)
+	{
+		std::getline(file, prop);
+	}
+	file.close();
+	return prop;
+}
 std::vector<std::string> parse(std::string path)
 {
-    std::fstream file{getRelativePath() + path};
-    std::string prop;
-    if (!file)
-    {   // Print an error and exit
-        std::cerr << "Uh oh, \" "<<path<<"\" could not be opened for reading!" << std::endl;
-    }
-    while (file)
-    {
-        std::getline(file, prop);
-    }
-    file.close();
-    return split(prop, ',');
+    return split(getStringFromDisk(path), ',');
 }
 std::string getRelativePath()
 {

@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 
-
 class Settings {
 public:
 	unsigned int SCR_WIDTH;

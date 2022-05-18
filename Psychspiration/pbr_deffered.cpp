@@ -160,6 +160,8 @@ int main()
     //Scene scene(User1.resourcePath);
     
     Scene scene(User1.resourcePath,physics,eventHandler,modelManager);
+    //scene.getInstanceCount();
+
     scene.loadObjects();
     setLights(scene);
 

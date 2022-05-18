@@ -50,8 +50,10 @@ public:
 
     std::string sceneName; // name of folder containing scene
     std::vector<Object*> objects; // vector of object pointers  
+    std::vector<int> objectInstances; // < last ith object of objvec with same model , index of unique instanced model in the hugeassbuffer>
+    
      //model transforms and info 
-    std::vector<std::string> propvec;
+    std::vector<std::string> objvec;
     std::vector<std::string> name;
     std::vector<std::string> model_paths;
     std::vector<glm::mat4> transforms;
@@ -68,8 +70,11 @@ public:
     void setUpEvents(EventHandler* eventHandler);
     
     void populateObjects();
+    void getInstanceCount();
+    void makeHAB();
     void loadObjects();
     void drawObjects(Shader ourShader);
+    void drawObjectsInstanced(Shader ourShader);
 
     void populateHulls();
     int find(std::string t);
