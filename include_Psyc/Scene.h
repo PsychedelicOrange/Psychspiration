@@ -47,16 +47,12 @@ public:
     //engine
     EventHandler* eventHandler;
     ModelManager* modelManager;
+    glm::mat4* instancedTransforms; // huge ass buffer
 
     std::string sceneName; // name of folder containing scene
-    std::vector<Object*> objects; // vector of object pointers  
-    std::vector<int> objectInstances; // < last ith object of objvec with same model , index of unique instanced model in the hugeassbuffer>
+    std::vector<Object*> objects; // vector of object pointers 
+    std::vector<Model*> uniqueModels; // vector of unique model
     
-     //model transforms and info 
-    std::vector<std::string> objvec;
-    std::vector<std::string> name;
-    std::vector<std::string> model_paths;
-    std::vector<glm::mat4> transforms;
     //lights
     std::vector<std::string> lightvec;
     std::vector<PointLight> lightList; // vector of lights 

@@ -42,6 +42,7 @@ public:
 	void setPhysics();
 	
 	void draw(Shader ourShader);
+	void drawInstanced(Shader ourShader);
 	void drawHulls(Shader ourShader);
 
 	

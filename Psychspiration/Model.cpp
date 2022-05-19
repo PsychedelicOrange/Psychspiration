@@ -25,8 +25,10 @@ void Model::Draw(Shader& shader)
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(shader);
 }
-void Model::DrawInstanced(Shader& shader, int instanceCount)
+void Model::DrawInstanced(Shader& shader)
 {
+    /*shader.use();
+    shader.setInt("instanceOffset", this->instanceOffset);*/
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].DrawInstanced(shader,instanceCount);
 }

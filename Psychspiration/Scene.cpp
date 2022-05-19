@@ -64,31 +64,27 @@ Scene::Scene(std::string sceneName, Physics* physics,EventHandler* eventHandler,
 
 void Scene::getInstanceCount()
 {
-        std::string temp = objects[0]->path;
-        //int indexCount = 0;
-        int count = 1;
-        for (int i = 0; i < objects.size(); i++)
-        {
-            if (temp == objects[i]->path)
-            {
-                count++;
-            }
-            else
-            {
-                temp == objects[i]->path;
-                objects[i - 1]->model->instanceCount = count;
-                objectInstances.push_back({ i - 1});
-            }
-        }
+      
 }
 void Scene::makeHAB()
 {
-    glm::mat4** instancedTransforms = new glm::mat4 * [objectInstances.size()];
-    for (int i = 0; i < objectInstances.size(); i++)
+    instancedTransforms = new glm::mat4 [objects.size()];
+    std::string prev_string = objects[0]->path;
+    objects[0]->model->instanceOffset = 0;
+    uniqueModels.push_back(objects[0]->model);
+    for (int i = 0; i < objects.size(); i++)
     {
-        instancedTransforms[i] = (glm::mat4*)std::vector<glm::mat4>(transforms.begin(), transforms.begin() + objectInstances[i]).data();
+        instancedTransforms[i] = objects[i]->transform;
+        if (prev_string != objects[i]->path || i >= objects.size())
+        {
+            uniqueModels.push_back(objects[i]->model);
+            objects[i]->model->instanceOffset = i;
+            objects[i - 1]->model->instanceCount = objects[i]->model->instanceOffset - objects[i - 1]->model->instanceOffset;
+            prev_string = objects[i]->path;
+        }
     }
 }
+
 void Scene::loadObjects()
 {
     for (int i = 0; i < objects.size(); i++)
@@ -102,6 +98,7 @@ void Scene::loadObjects()
 }
 void Scene::drawObjects(Shader ourShader)
 {
+
     for (int i = 0; i < objects.size(); i++)
     {
         objects[i]->draw(ourShader);
@@ -109,7 +106,19 @@ void Scene::drawObjects(Shader ourShader)
 }
 void Scene::drawObjectsInstanced(Shader ourShader)
 {
+    /*for (int i = 0; i < objects.size();i+=0)
+    {
+        objects[i]->drawInstanced(ourShader);
+        i += objects[i]->model->instanceCount;
+    }*/
+    ourShader.use();
     
+    for (int i = 0; i < uniqueModels.size(); i++)
+    {
+        ourShader.setInt("instanceOffset",uniqueModels[i]->instanceOffset);
+        uniqueModels[i]->DrawInstanced(ourShader);
+    }
+    //drawObjectInstanced(ourShader, 0);
 }
 void Scene::drawHulls(Shader ourShader)
 {

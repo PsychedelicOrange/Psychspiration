@@ -14,6 +14,7 @@ public:
     //engine 
     static TextureManager textureManager;
     int instanceCount;
+    int instanceOffset;
     // model data
     std::vector<Texture> textures_loaded;	// stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     std::vector<Mesh> meshes;
@@ -27,7 +28,7 @@ public:
     Model();
     const aiScene* getpath(std::string path);
     void Draw(Shader& shader);
-    void DrawInstanced(Shader& shader, int instanceCount);
+    void DrawInstanced(Shader& shader);
 private:
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
     const aiScene* loadModel(const std::string& path);

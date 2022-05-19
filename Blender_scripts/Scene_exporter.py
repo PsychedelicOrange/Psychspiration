@@ -138,6 +138,7 @@ for ob in scene.objects:
         ob.select_set(False)
 
 if(export_models_metadata):
+    data['objects'].sort(key = lambda x: x['export_name'])
     json_string = json.dumps(data)
     #print(json_string)    
     # open a file to write to

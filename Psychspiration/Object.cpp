@@ -43,6 +43,15 @@ void Object::draw(Shader ourShader)
     ourShader.setMat4("model", (this->transform));
     this->model->Draw(ourShader);
 }
+void Object::drawInstanced(Shader ourShader)
+{
+    ourShader.use();
+    ourShader.setInt("instanceOffset",this->model->instanceOffset);
+    //this->transform = glm::inverse(this->transform);
+    //ourShader.setMat4("model", this->transform);
+    //ourShader.setMat4("model", (this->transform));
+    this->model->DrawInstanced(ourShader);
+}
 void Object::drawHulls(Shader ourShader)
 {
     debug = false;

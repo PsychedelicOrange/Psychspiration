@@ -87,8 +87,8 @@ int main()
     // glfw window creation
     // --------------------
     int* count= new int;
-    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
-    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
+    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -143,6 +143,7 @@ int main()
     Shader pbrShader_instanced("vertex_invertex_instanced.vs", "pbr.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
+    Shader simpleDepthShader_instanced("pointshadow_instanced.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
     
@@ -163,30 +164,17 @@ int main()
     //scene.getInstanceCount();
 
     scene.loadObjects();
+    scene.makeHAB();
+
     setLights(scene);
 
     //Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
     //scene.objects.push_back(player->obj);
 
-    int instanceCount = 1000;
-    Object* myobject = new Object("myobject", scene.objects[1]->model);
-    //std::vector <glm::mat4> modelMatrices(1000);
-    glm::mat4* modelMatrices = new glm::mat4[instanceCount];
-    glm::vec3 translate{ 0 };
-    glm::mat4 transform{ 1 };
-    
-    for (int i = 0; i < instanceCount; i++)
-    {
-        //modelMatrices.push_back(glm::translate(transform, translate));
-        modelMatrices[i] = glm::translate(transform, translate);
-        translate += glm::vec3{1, 0, 0};
-        //std::cout << "\n" << glm::to_string(transform);
-    }
-
     GLuint uboModelMatrices;
     glGenBuffers(1, &uboModelMatrices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * instanceCount, modelMatrices, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene.objects.size(), scene.instancedTransforms, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -301,11 +289,11 @@ int main()
         shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
         shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
     }
-    simpleDepthShader.use();
+    simpleDepthShader_instanced.use();
     for (unsigned int i = 0; i < 6 * numLights; ++i)
-        simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-    simpleDepthShader.setFloat("far_plane", far_plane);
-    simpleDepthShader.setInt("numLights", numLights);
+        simpleDepthShader_instanced.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+    simpleDepthShader_instanced.setFloat("far_plane", far_plane);
+    simpleDepthShader_instanced.setInt("numLights", numLights);
 
     //eventHandler->registerCallback("Hello", &Scene::loadObject , &scene);
     //player->setUpEvents();
@@ -355,10 +343,10 @@ int main()
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
-        simpleDepthShader.use();
+        simpleDepthShader_instanced.use();
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        scene.drawObjects(simpleDepthShader);
+        scene.drawObjectsInstanced(simpleDepthShader_instanced);
         //helmet.draw(simpleDepthShader);
          
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -395,10 +383,14 @@ int main()
             pbrShader.setFloat("far_plane", far_plane);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-            scene.drawObjects(pbrShader);
+            //scene.drawObjects(pbrShader);
             //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
+            //scene.drawobj(pbrShader);
+            //axes.Draw(pbrShader);
             pbrShader_instanced.use();
+            //glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
+            //glm::mat4 view = camera.GetViewMatrix();
             pbrShader_instanced.setMat4("projection", projection);
             pbrShader_instanced.setMat4("view", view);
             pbrShader_instanced.setVec3("viewPos", camera.Position);
@@ -411,11 +403,11 @@ int main()
             pbrShader_instanced.setFloat("far_plane", far_plane);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-            myobject->model->DrawInstanced(pbrShader_instanced,instanceCount);
+            scene.drawObjectsInstanced(pbrShader_instanced);
+            //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
-            //scene.drawobj(pbrShader);
-            //axes.Draw(pbrShader);
             //draw the bulbs
+            
             glm::mat4 model1 = glm::mat4(1.0f);
             lightCubeShader.use();
             lightCubeShader.setMat4("projection", projection);
