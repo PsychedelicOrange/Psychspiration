@@ -120,6 +120,22 @@ void Scene::drawObjectsInstanced(Shader ourShader)
     }
     //drawObjectInstanced(ourShader, 0);
 }
+void Scene::drawShadowObjectsInstanced(Shader ourShader)
+{
+    /*for (int i = 0; i < objects.size();i+=0)
+    {
+        objects[i]->drawInstanced(ourShader);
+        i += objects[i]->model->instanceCount;
+    }*/
+    ourShader.use();
+
+    for (int i = 0; i < uniqueModels.size(); i++)
+    {
+        ourShader.setInt("instanceOffset", uniqueModels[i]->instanceOffset);
+        uniqueModels[i]->DrawShadowInstanced(ourShader);
+    }
+    //drawObjectInstanced(ourShader, 0);
+}
 void Scene::drawHulls(Shader ourShader)
 {
     for (int i = 0; i < objects.size(); i++)

@@ -29,6 +29,7 @@ public:
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
     void Draw(Shader& shader);
     void DrawInstanced(Shader& shader,int instancedCount);
+    void DrawShadowInstanced(Shader& shader, int instancedCount);
 private:
     // render data 
     unsigned int VBO, EBO;

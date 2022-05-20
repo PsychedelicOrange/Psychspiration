@@ -71,6 +71,7 @@ public:
     void loadObjects();
     void drawObjects(Shader ourShader);
     void drawObjectsInstanced(Shader ourShader);
+    void drawShadowObjectsInstanced(Shader ourShader);
 
     void populateHulls();
     int find(std::string t);

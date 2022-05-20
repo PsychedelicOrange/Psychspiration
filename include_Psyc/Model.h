@@ -29,6 +29,7 @@ public:
     const aiScene* getpath(std::string path);
     void Draw(Shader& shader);
     void DrawInstanced(Shader& shader);
+    void DrawShadowInstanced(Shader& shader);
 private:
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
     const aiScene* loadModel(const std::string& path);

@@ -23,7 +23,11 @@ void Mesh::DrawInstanced(Shader& shader,int instanceCount)
     setupTextures(shader);
     drawInstanced(shader,instanceCount);
 }
-
+void Mesh::DrawShadowInstanced(Shader& shader, int instanceCount)
+{
+    //setupTextures(shader);
+    drawInstanced(shader, instanceCount);
+}
 void Mesh::setupMesh()
 {
     // create buffers/arrays

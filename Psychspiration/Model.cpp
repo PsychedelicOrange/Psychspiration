@@ -32,6 +32,13 @@ void Model::DrawInstanced(Shader& shader)
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].DrawInstanced(shader,instanceCount);
 }
+void Model::DrawShadowInstanced(Shader& shader)
+{
+    /*shader.use();
+    shader.setInt("instanceOffset", this->instanceOffset);*/
+    for (unsigned int i = 0; i < meshes.size(); i++)
+        meshes[i].DrawShadowInstanced(shader, instanceCount);
+}
 const aiScene* Model::loadModel(const std::string& path)
 {
     //std::cout << "inside loadmodel()\t no of meshes: " << std::endl;

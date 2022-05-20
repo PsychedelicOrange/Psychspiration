@@ -346,7 +346,7 @@ int main()
         simpleDepthShader_instanced.use();
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        scene.drawObjectsInstanced(simpleDepthShader_instanced);
+        scene.drawShadowObjectsInstanced(simpleDepthShader_instanced);
         //helmet.draw(simpleDepthShader);
          
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
