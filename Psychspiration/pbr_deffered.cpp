@@ -29,15 +29,14 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow* window);
 void processHoldKeys(GLFWwindow* window);
-void setLights(Shader ourShader);
-void setLights(Scene scene);
-void asyncLoad(Scene* scene);
+//void setLights(Shader ourShader);
+//void setLights(Scene scene);
+//void asyncLoad(Scene* scene);
 void renderSphere();
 void renderQuad();
 
 //Engine classes
-EventHandler* eventHandler = new EventHandler();;
-
+EventHandler* eventHandler = new EventHandler();
 
 // settings
 Settings User1(eventHandler);
@@ -61,12 +60,12 @@ float lastFrame = 0.0f;
 void updatelightloc(std::string x, float deltaTime);
 
 // lighting
-std::vector<PointLight> light;
-unsigned int numLights;
+//std::vector<PointLight> light;
+//unsigned int numLights;
 unsigned int maxLights{ 100 };
 // maxLights = max(scene[i].numLights);
-Scene* activeScene;
-struct GPULight* lights;
+//Scene* activeScene;
+//struct GPULight* lights;
 
 //Player* player = new Player(eventHandler);
 int main()
@@ -87,8 +86,8 @@ int main()
     // glfw window creation
     // --------------------
     int* count= new int;
-    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
-    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
+    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
+    GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -122,51 +121,31 @@ int main()
     //stbi_set_flip_vertically_on_load(true);
     
     ModelManager* modelManager;
-    //TextureManager* textureManager;
     Physics* physics;
-
-    // what the fuck do you call this thing again ?
     
     modelManager = new ModelManager();
-    //textureManager = Model::textureManager;
     physics = new Physics();
-
-    // set all static member variables here
-    //Model::textureManager = textureManager;
 
     // build and compile our shader zprogram
     // ------------------------------------
     //Shader matcapShader("matcap.vs", "matcap.fs", "0");
     Shader wireShader("model_simple.vs", "model_simple.fs", "0");
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
-    Shader pbrShader("vertex_invertex_.vs", "pbr.fs", "0");
-    Shader pbrShader_instanced("vertex_invertex_instanced.vs", "pbr.fs", "0");
+    Shader pbrShader("pbr.vs", "pbr.fs", "0");
+    Shader pbrShader_instanced("pbr_instanced.vs", "pbr_instanced.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     Shader simpleDepthShader_instanced("pointshadow_instanced.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
+    Shader dirShadow_instanced("simpleDepthShader_instanced.vs", "emptyfrag.fs", "0");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
-    
-    //Model axes("resource\\models\\axes.glb");
 
-    /*
-    glm::mat4 tabletrans{ 1.0f };
-    tabletrans = glm::translate(tabletrans, glm::vec3(0,0,0));
-    tabletrans = glm::scale(tabletrans, glm::vec3(1));
-    Object table((std::string)("table"),new Model("resource\\phytest\\Sphere.glb"),tabletrans);
-    //wireShader.setMat4("model", tabletrans);
-    table.printobj();
-    */
     TimerQueryAsync timer(5);
-    //Scene scene(User1.resourcePath);
     
     Scene scene(User1.resourcePath,physics,eventHandler,modelManager);
-    //scene.getInstanceCount();
 
     scene.loadObjects();
     scene.makeHAB();
-
-    setLights(scene);
 
     //Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
     //scene.objects.push_back(player->obj);
@@ -179,35 +158,38 @@ int main()
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
     //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
+    
     unsigned int lightUBO;
     glGenBuffers(1, &lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
     glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
     GLint bufMask = GL_READ_WRITE;
-    lights = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
+    GPULight* lights_buffer;
+    lights_buffer = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
 
-    for (unsigned int i = 0; i < numLights; ++i) {
+    for (unsigned int i = 0; i < scene.numLights; ++i) {
         //Fetching the light from the current scene
-        lights[i].position = glm::vec4(light[i].position, 1.0f);
-        lights[i].color = glm::vec4(light[i].color, 1.0f);
-        lights[i].enabled = 1;
-        lights[i].intensity = light[i].power;
-        lights[i].range = light[i].size;
+        lights_buffer[i].position = glm::vec4(scene.lightList[i].position, 1.0f);
+        lights_buffer[i].color = glm::vec4(scene.lightList[i].color, 1.0f);
+        lights_buffer[i].enabled = 1;
+        lights_buffer[i].intensity = scene.lightList[i].power;
+        lights_buffer[i].range = scene.lightList[i].size;
         //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
     }
     glUnmapBuffer(GL_UNIFORM_BUFFER);
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+    // point light shadow
     // create depth cubemap texture 
     //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
     const unsigned int SHADOW_MAP_MAX_SIZE = 1024;
     unsigned int depthCubemap;
     glGenTextures(1, &depthCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-    glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE, 6 * numLights, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE, 6 * scene.numLights, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     
-  //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
     glTexParameterf(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //linear
     glTexParameterf(GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST); //linear
@@ -226,16 +208,40 @@ int main()
     glGenFramebuffers(1, &depthMapFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-   /* for (int layer = 0; layer < numLights; layer++)
-    {
-        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, layer);
-    }*/
-    //glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, 6*numLights);
+    /* for (int layer = 0; layer < numLights; layer++)
+     {
+         glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, layer);
+     }*/
+     //glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, 6*numLights);
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    
+    // directional light shadow
+    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096;
+    unsigned int depthMap;
+    glGenTextures(1,&depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    pbrShader.use();
+    pbrShader.setInt("depthMap", 11);
+    pbrShader_instanced.use();
+    pbrShader_instanced.setInt("depthMap_dir",12);
+
+    // attach depth texture as FBO's depth buffer
+    unsigned int depthMapFBO_dir;
+    glGenFramebuffers(1, &depthMapFBO_dir);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     
     // configure floating point framebuffer
     // ------------------------------------
@@ -276,25 +282,38 @@ int main()
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    float near_plane = 0.1f;
+    //setup point light shadow shader
+    float near_plane = 0.0f;
     float far_plane = 100.0f;
     glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, near_plane, far_plane);
     std::vector<glm::mat4> shadowTransforms;
-    for (unsigned int i = 0; i < numLights; i++)
+    for (unsigned int i = 0; i < scene.numLights; i++)
     {
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(light[i].position, light[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
     }
     simpleDepthShader_instanced.use();
-    for (unsigned int i = 0; i < 6 * numLights; ++i)
+    for (unsigned int i = 0; i < 6 * scene.numLights; ++i)
         simpleDepthShader_instanced.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
     simpleDepthShader_instanced.setFloat("far_plane", far_plane);
-    simpleDepthShader_instanced.setInt("numLights", numLights);
-
+    simpleDepthShader_instanced.setInt("numLights", scene.numLights);
+    // setup directional light shadow shader 
+     // no setup required ? wait lets feed it a dir light
+    DirectionalLight dlight{};
+    glm::mat4 lightProjection = glm::ortho(-100.0f, 100.00f, -100.0f, 100.0f, near_plane, far_plane);
+    glm::mat4 lightView = glm::lookAt(dlight.direction, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    dirShadow_instanced.use();
+    dirShadow_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    pbrShader_instanced.use();
+    pbrShader_instanced.setVec3("dir_direction", dlight.direction);
+    pbrShader_instanced.setVec3("dir_color", dlight.color);
+    pbrShader_instanced.setFloat("dir_intensity", 100);
+    pbrShader_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
     //eventHandler->registerCallback("Hello", &Scene::loadObject , &scene);
     //player->setUpEvents();
     // render loop
@@ -343,10 +362,18 @@ int main()
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
-        simpleDepthShader_instanced.use();
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        scene.drawShadowObjectsInstanced(simpleDepthShader_instanced);
+        scene.drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
+
+        glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
+        glEnable(GL_DEPTH_TEST);
+        glCullFace(GL_FRONT);
+        scene.drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
+        glCullFace(GL_BACK);
         //helmet.draw(simpleDepthShader);
          
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -379,7 +406,7 @@ int main()
             pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
-            pbrShader.setInt("numLights", numLights);
+            pbrShader.setInt("numLights", scene.numLights);
             pbrShader.setFloat("far_plane", far_plane);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
@@ -399,10 +426,13 @@ int main()
             pbrShader_instanced.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader_instanced.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader_instanced.setBool("existnormals", 1);
-            pbrShader_instanced.setInt("numLights", numLights);
+            pbrShader_instanced.setInt("numLights", scene.numLights);
             pbrShader_instanced.setFloat("far_plane", far_plane);
+            glActiveTexture(GL_TEXTURE12);
+            glBindTexture(GL_TEXTURE_2D, depthMap);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
+            
             scene.drawObjectsInstanced(pbrShader_instanced);
             //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
@@ -412,15 +442,25 @@ int main()
             lightCubeShader.use();
             lightCubeShader.setMat4("projection", projection);
             lightCubeShader.setMat4("view", view);
-            for (unsigned int i = 0; i < numLights; i++)
+            for (unsigned int i = 0; i < scene.numLights; i++)
             {
                 model1 = glm::mat4(1.0f);
-                model1 = glm::translate(model1, light[i].position);
+                model1 = glm::translate(model1, scene.lightList[i].position);
                 model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
                 bulb.Draw(lightCubeShader);
             }
+            model1 = glm::mat4(1.0f);
+            model1 = glm::translate(model1, dlight.direction);
+            model1 = glm::scale(model1, glm::vec3(0.5f));
+            lightCubeShader.setMat4("model", model1);
+            bulb.Draw(lightCubeShader);
+            model1 = glm::mat4(1.0f);
+            model1 = glm::translate(model1, glm::vec3(0));
+            model1 = glm::scale(model1, glm::vec3(0.5f));
+            lightCubeShader.setMat4("model", model1);
+            bulb.Draw(lightCubeShader);
             wireShader.use();
             wireShader.setMat4("projection", projection);
             wireShader.setMat4("view", view);
@@ -625,14 +665,14 @@ void updatelightloc(std::string x, float deltaTime)
     }
 
 }
-
-void setLights(Scene scene)
-{
-    
-    numLights = scene.numLights;
-    light = scene.lightList;
-    
-}
+//
+//void setLights(Scene scene)
+//{
+//    
+//    numLights = scene.numLights;
+//    light = scene.lightList;
+//    
+//}
 
 // renderQuad() renders a 1x1 XY quad in NDC
 // -----------------------------------------
@@ -663,12 +703,6 @@ void renderQuad()
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
-}
-void updateLightBuffer(unsigned int lightubo)
-{
-    glBindBuffer(GL_UNIFORM_BUFFER, lightubo);
-    int size = sizeof(lights);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, size, &lights);
 }
 // renders (and builds at first invocation) a sphere
 // -------------------------------------------------

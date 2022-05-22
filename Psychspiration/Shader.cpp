@@ -25,7 +25,9 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
     try
     {
         // open files
+
         vShaderFile.open(relativeShaderPath + vertexPath);
+        std::cout << relativeShaderPath + vertexPath << std::endl;
         fShaderFile.open(relativeShaderPath + fragmentPath);
         std::stringstream vShaderStream, fShaderStream;
         // read file's buffer contents into streams
@@ -49,7 +51,7 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
     }
     catch (std::ifstream::failure& e)
     {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ::" << std::endl;
     }
     const char* vShaderCode = vertexCode.c_str();
     const char* fShaderCode = fragmentCode.c_str();
