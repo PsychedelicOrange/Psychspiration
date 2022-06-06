@@ -44,24 +44,33 @@ Scene::Scene(std::string sceneName, Physics* physics,EventHandler* eventHandler,
     this->physics = physics;
     this->eventHandler = eventHandler;
     this->modelManager = modelManager;
-    
-     
-    Json sceneData = Json::parse(getStringFromDisk("Resources\\Scenes\\" + sceneName + ".scene"));
+    parseScene(getStringFromDisk("Resources\\Scenes\\" + sceneName + ".scene"));
+}
+Scene::Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelManager* modelManager)
+{
+    this->sceneName = sceneName;
+    this->physics = physics;
+    this->eventHandler = eventHandler;
+    this->modelManager = modelManager;
+    parseScene(getStringFromDisk_direct(path));
+}
+void Scene::parseScene(std::string data)
+{
+    Json sceneData = Json::parse(data);
     // yet to implemnt hull loading yet
-    for(auto& object : sceneData["objects"])
-    { 
-            objects.push_back(new Object(object["name"].get<std::string>(),object["export_name"].get<std::string>(),modelManager,getmat4_json(object["transform"])));
+    for (auto& object : sceneData["objects"])
+    {
+        objects.push_back(new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"])));
     }
 
     for (auto& light : sceneData["lights"])
     {
-        lightList.push_back( PointLight(light["name"].get<std::string>(),convvec3_blender(getvec3_json(light["location"])),
-            light["power"].get<float>(),light["range"].get<float>(), getvec3_json(light["color"]),light["use_shadow"].get<bool>()));
+        lightList.push_back(PointLight(light["name"].get<std::string>(), convvec3_blender(getvec3_json(light["location"])),
+            light["power"].get<float>(), light["range"].get<float>(), getvec3_json(light["color"]), light["use_shadow"].get<bool>()));
     }
     numLights = lightList.size();
     std::cout << glm::to_string(lightList[0].position);
 }
-
 void Scene::getInstanceCount()
 {
       

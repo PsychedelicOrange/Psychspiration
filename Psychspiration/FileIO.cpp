@@ -13,6 +13,23 @@ std::vector<std::string> split(const std::string& s, char delim) {
     }
     return result;
 }
+
+std::string getStringFromDisk_direct(std::string path)
+{
+	std::fstream file{  path };
+	std::string prop;
+	if (!file)
+	{   // Print an error and exit
+		std::cerr << "Uh oh, \" " << path << "\" could not be opened for reading!" << std::endl;
+	}
+	while (file)
+	{
+		std::getline(file, prop);
+	}
+	file.close();
+	return prop;
+}
+
 std::string getStringFromDisk(std::string path)
 {
 	std::fstream file{ getRelativePath() + path };

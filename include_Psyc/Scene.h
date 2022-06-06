@@ -32,10 +32,12 @@ public:
     Physics* physics;
     void setScale(float scale);
     Scene(std::string sceneName,Physics* physics,EventHandler* eventHandler, ModelManager* modelManager);
-    Scene();
+    Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelManager* modelManager);
+    Scene() {}
     //void draw(Shader ourShader);
     void setUpEvents(EventHandler* eventHandler);
     
+    void parseScene(std::string data);
     void populateObjects();
     void getInstanceCount();
     void makeHAB();

@@ -4,6 +4,12 @@ from mathutils import Matrix
 import mathutils
 from subprocess import Popen, CREATE_NEW_CONSOLE,PIPE,STDOUT
 import json
+#settings
+export_models = True
+export_models_metadata = True
+compress_textures = True # make sure texture  file names do not contain 'jpg' or 'png' in filename ( for compressed )
+scene_metadata = True
+keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
 #globals
     # get path to render output (usually /tmp\)
 rootPath = os.path.abspath (bpy.context.scene.render.filepath)
@@ -19,12 +25,6 @@ data = {
         ]
     
     }
-#settings
-export_models = True
-export_models_metadata = True
-compress_textures = True # make sure texture  file names do not contain 'jpg' or 'png' in filename ( for compressed )
-scene_metadata = True
-keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
 #functions
 def get_export_name(dup_name):
     rfound = dup_name.rfind('.')

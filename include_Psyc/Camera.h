@@ -21,6 +21,9 @@ const float ZOOM = 45.0f;
 class Camera
 {
 public:
+    // frustrum helpful variables
+    float near_plane = 0.1f;
+    float far_plane = 100.0f;
     // camera Attributes
     glm::vec3 Position;
     glm::vec3 Front;

@@ -29,11 +29,114 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow* window);
 void processHoldKeys(GLFWwindow* window);
+
 //void setLights(Shader ourShader);
 //void setLights(Scene scene);
 //void asyncLoad(Scene* scene);
 void renderSphere();
 void renderQuad();
+// debug 
+class Line {
+    int shaderProgram;
+    unsigned int VBO, VAO;
+    std::vector<float> vertices;
+    glm::vec3 startPoint;
+    glm::vec3 endPoint;
+    glm::mat4 MVP;
+    glm::vec3 lineColor;
+public:
+    Line(glm::vec3 start, glm::vec3 end) {
+
+        startPoint = start;
+        endPoint = end;
+        lineColor = glm::vec3(1, 1, 1);
+        MVP = glm::mat4(1.0f);
+
+        const char* vertexShaderSource = "#version 330 core\n"
+            "layout (location = 0) in vec3 aPos;\n"
+            "uniform mat4 MVP;\n"
+            "void main()\n"
+            "{\n"
+            "   gl_Position = MVP * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+            "}\0";
+        const char* fragmentShaderSource = "#version 330 core\n"
+            "out vec4 FragColor;\n"
+            "uniform vec3 color;\n"
+            "void main()\n"
+            "{\n"
+            "   FragColor = vec4(color, 1.0f);\n"
+            "}\n\0";
+
+        // vertex shader
+        int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+        glCompileShader(vertexShader);
+        // check for shader compile errors
+
+        // fragment shader
+        int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+        glCompileShader(fragmentShader);
+        // check for shader compile errors
+
+        // link shaders
+        shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
+        // check for linking errors
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+
+        vertices = {
+             start.x, start.y, start.z,
+             end.x, end.y, end.z,
+
+        };
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glBindVertexArray(VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+
+    }
+
+    int setMVP(glm::mat4 mvp) {
+        MVP = mvp;
+        return 1;
+    }
+
+    int setColor(glm::vec3 color) {
+        lineColor = color;
+        return 1;
+    }
+
+    int draw() {
+        glUseProgram(shaderProgram);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "MVP"), 1, GL_FALSE, &MVP[0][0]);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, &lineColor[0]);
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_LINES, 0, 2);
+        return 1;
+    }
+
+    ~Line() {
+
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+        glDeleteProgram(shaderProgram);
+    }
+};
 
 //Engine classes
 EventHandler* eventHandler = new EventHandler();
@@ -42,13 +145,17 @@ EventHandler* eventHandler = new EventHandler();
 Settings User1(eventHandler);
 bool shadows = true; //toggle
 bool normals = true; //toggle
+bool cameraDebugBool = false; // toggle
 bool forward = true;
 bool shadowsKeyPressed = false;
 bool normalsKeyPressed = false;
+bool cameraDebugKeyPressed = false;
 bool forwardKeyPressed = false;
 bool play = false;
-// camera
-Camera camera(eventHandler,glm::vec3(0.0f, 0.0f, 3.0f));
+// camera 
+Camera* camera;
+Camera cameraPlayer(eventHandler,glm::vec3(0.0f, 0.0f, 3.0f));
+Camera cameraDebug(eventHandler, glm::vec3(1));
 float lastX = User1.SCR_WIDTH / 2.0f;
 float lastY = User1.SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -68,7 +175,7 @@ unsigned int maxLights{ 100 };
 //struct GPULight* lights;
 
 //Player* player = new Player(eventHandler);
-int main()
+int main(int argc, char* argv[])
 {
     // glfw: initialize and configure
     // ------------------------------
@@ -139,16 +246,25 @@ int main()
     Shader dirShadow_instanced("simpleDepthShader_instanced.vs", "emptyfrag.fs", "0");
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
-
+    Model chimera("Resources\\Models\\Suzanne.gltf");
     TimerQueryAsync timer(5);
+    Scene scene;
+    Scene* scene_;
+    if (argc-1)
+        scene_ = new Scene(argv[1],physics, eventHandler, modelManager);
+    else
+        scene_ = new Scene(User1.resourcePath,physics,eventHandler,modelManager);
+    scene = *scene_;
     
-    Scene scene(User1.resourcePath,physics,eventHandler,modelManager);
-
     scene.loadObjects();
     scene.makeHAB();
 
-    //Player* player = new Player(new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"), glm::mat4(1.0f)), eventHandler);
-    //scene.objects.push_back(player->obj);
+
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // SET UP BUFFERS 
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    // instancing call transformation matrices 
 
     GLuint uboModelMatrices;
     glGenBuffers(1, &uboModelMatrices);
@@ -180,8 +296,87 @@ int main()
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+
+    // calculating projection matrix and getting frustrum coords
+
+    float yfov = 90.0f;
+    float aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
+    glm::mat4 projection = glm::perspective(glm::radians(yfov), aspectratio, cameraPlayer.near_plane, cameraPlayer.far_plane);
+
+    float halftan = tan(yfov / 2);
+    float nhh = halftan * cameraPlayer.near_plane;
+    float nhw = aspectratio * nhh;
+    float fhh = (cameraPlayer.far_plane / cameraPlayer.near_plane) * nhh;
+    float fhw = aspectratio * fhh;
+    std::vector <glm::vec4> frustrum_coords_VS;
+    
+    frustrum_coords_VS.push_back(glm::vec4(-fhw, fhh, -cameraPlayer.far_plane, 1)); //top left 0
+    frustrum_coords_VS.push_back(glm::vec4(fhw, fhh, -cameraPlayer.far_plane, 1));// top right 1
+    frustrum_coords_VS.push_back(glm::vec4(fhw, -fhh, -cameraPlayer.far_plane, 1)); // bottom right 2
+    frustrum_coords_VS.push_back(glm::vec4(-fhw, -fhh, -cameraPlayer.far_plane, 1)); // bottom left 3
+
+    frustrum_coords_VS.push_back(glm::vec4(-nhw, nhh, -cameraPlayer.near_plane, 1)); // top left 4
+    frustrum_coords_VS.push_back(glm::vec4(nhw, nhh, -cameraPlayer.near_plane, 1)); //top right 5
+    frustrum_coords_VS.push_back(glm::vec4(nhw, -nhh, -cameraPlayer.near_plane, 1)); // bottom right 6
+    frustrum_coords_VS.push_back(glm::vec4(-nhw, -nhh, -cameraPlayer.near_plane, 1)); // bottom right 7
+
+    frustrum_coords_VS.push_back(glm::vec4(0, 0, 0, 1)); // origin 8
+
+    for (int i = 0; i < frustrum_coords_VS.size(); i++)
+    {
+        std::cout << glm::to_string(frustrum_coords_VS[i]) << std::endl;
+    }
+    // calculate WS coords
+
+    glm::mat4 Vinv = glm::inverse(cameraPlayer.GetViewMatrix());
+    float* frustrum_coords_WS_Array = new float[3 * 9];
+    glm::vec4 frustrum_coords_WS[9];
+    for (int i = 0; i < frustrum_coords_VS.size(); i++)
+    {
+        frustrum_coords_WS[i] = (Vinv * frustrum_coords_VS[i]);
+        frustrum_coords_WS_Array[3 * i] = frustrum_coords_WS[i].x;
+        frustrum_coords_WS_Array[3 * i + 1] = frustrum_coords_WS[i].y;
+        frustrum_coords_WS_Array[3 * i + 2] = frustrum_coords_WS[i].z;
+    }
+    float diagnolFrustrum = glm::length(frustrum_coords_VS[6] - frustrum_coords_VS[0]);
+    for (int i = 0; i < 9; i++)
+    {
+        for (int j = 0; j < 3; j++)
+            std::cout << frustrum_coords_WS_Array[3 * i + j] << ", ";
+        std::cout << std::endl;
+    }
+    // indices
+    unsigned int indices[] = {
+    0,1,8,// left 
+    1,2,8,// up
+    2,3,8,// right
+    3,0,8,// down
+    4,5,6, // near plane
+    6,7,4 //
+    };
+    // feed into proper buffers;
+
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+
+    unsigned int VBO_frustrum;
+    glGenBuffers(1, &VBO_frustrum);
+    unsigned int VAO_frustrum;
+    glGenVertexArrays(1, &VAO_frustrum);
+    glBindVertexArray(VAO_frustrum);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_frustrum);
+    glBufferData(GL_ARRAY_BUFFER, 27 * sizeof(float), frustrum_coords_WS_Array, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
     // point light shadow
-    // create depth cubemap texture 
+    
     //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
     const unsigned int SHADOW_MAP_MAX_SIZE = 1024;
     unsigned int depthCubemap;
@@ -218,7 +413,7 @@ int main()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // directional light shadow
-    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096;
+    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096*2;
     unsigned int depthMap;
     glGenTextures(1,&depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
@@ -283,9 +478,8 @@ int main()
         std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     //setup point light shadow shader
-    float near_plane = 0.0f;
-    float far_plane = 100.0f;
-    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, near_plane, far_plane);
+
+    glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, cameraPlayer.near_plane, cameraPlayer.far_plane);
     std::vector<glm::mat4> shadowTransforms;
     for (unsigned int i = 0; i < scene.numLights; i++)
     {
@@ -299,21 +493,82 @@ int main()
     simpleDepthShader_instanced.use();
     for (unsigned int i = 0; i < 6 * scene.numLights; ++i)
         simpleDepthShader_instanced.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-    simpleDepthShader_instanced.setFloat("far_plane", far_plane);
+    simpleDepthShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
     simpleDepthShader_instanced.setInt("numLights", scene.numLights);
     // setup directional light shadow shader 
-     // no setup required ? wait lets feed it a dir light
+    // lets feed it a dir light
     DirectionalLight dlight{};
-    glm::mat4 lightProjection = glm::ortho(-100.0f, 100.00f, -100.0f, 100.0f, near_plane, far_plane);
-    glm::mat4 lightView = glm::lookAt(dlight.direction, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    // calculate frustrum x and y min and max
+    glm::mat4 lightView = glm::lookAt(glm::normalize(dlight.direction), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    glm::vec4 frustrum_coords_LS[8];
+    for (int i = 0; i < 8;i++) 
+    {
+        frustrum_coords_LS[i] = lightView * frustrum_coords_WS[i];   
+    }
+    for (int i = 0; i < 8; i++)
+    {
+        std::cout << glm::to_string(frustrum_coords_LS[i]) << std::endl;
+    }
+    float xyminmax[4] = {frustrum_coords_LS[0].x,frustrum_coords_LS[0].y,frustrum_coords_LS[0].x,frustrum_coords_LS[0].y };
+    for (int i = 1; i < 8; i++)
+    {
+        if (xyminmax[0] > frustrum_coords_LS[i].x)
+            xyminmax[0] = frustrum_coords_LS[i].x;
+        if (xyminmax[1] < frustrum_coords_LS[i].x)
+            xyminmax[1] = frustrum_coords_LS[i].x;
+
+        if (xyminmax[2] > frustrum_coords_LS[i].y)
+            xyminmax[2] = frustrum_coords_LS[i].y;
+        if (xyminmax[3] < frustrum_coords_LS[i].y)
+            xyminmax[3] = frustrum_coords_LS[i].y;
+    }
+    float nearplane_ortho = -10.f;
+    float farplane_ortho = 10.f;
+    unsigned int indices_ortho[] = {  // note that we start from 0!
+    0, 1, 3,   // first triangle
+    1, 2, 3    // second triangle
+    };
+    float vertices_ortho[] = {  
+        xyminmax[0],xyminmax[1],
+   
+    };
+    for (int i = 0; i < 4; i++)
+    {
+        std::cout << xyminmax[i] << std::endl;
+    }
+    float xcenter = (xyminmax[1] + xyminmax[0]) / 2;
+    float ycenter = (xyminmax[3] + xyminmax[2]) / 2;
+    float extent = (xyminmax[1] - xyminmax[0]) > (xyminmax[3] + xyminmax[2]) ? (xyminmax[1] - xyminmax[0]) : (xyminmax[3] + xyminmax[2]);
+    float multiple = 2.0f * extent / SHADOW_MAP_MAX_SIZE_DIR;
+    glm::mat4 lightProjection = glm::ortho(xyminmax[0],xyminmax[1],xyminmax[2],xyminmax[2], nearplane_ortho, farplane_ortho);
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
     dirShadow_instanced.use();
     dirShadow_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
     pbrShader_instanced.use();
-    pbrShader_instanced.setVec3("dir_direction", dlight.direction);
+    pbrShader_instanced.setVec3("dir_direction", glm::normalize(dlight.direction));
     pbrShader_instanced.setVec3("dir_color", dlight.color);
     pbrShader_instanced.setFloat("dir_intensity", 100);
     pbrShader_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+    Line test(glm::vec3(0, 0, 0), dlight.direction);
+    test.setColor(glm::vec3(1, 1, 0));
+
+    camera = &cameraPlayer;
+
+    
+    /*eventHandler->registerCallback("ToggleCameras", [=]() {
+        if (*camera_toggle)
+        {
+            camera = &cameraPlayer;
+            *camera_toggle = 1;
+        }
+        else
+        {
+            camera = &cameraDebug;
+            *camera_toggle = 0;
+        }
+
+        });*/
     //eventHandler->registerCallback("Hello", &Scene::loadObject , &scene);
     //player->setUpEvents();
     // render loop
@@ -337,7 +592,10 @@ int main()
             //helmet.transform = glm::rotate(helmet.transform,(float)glm::radians(deltaTime*90),glm::vec3(0,1,0));
             play = false;
         }
-       
+        if (cameraDebugBool)
+            camera = &cameraDebug;
+        else
+            camera = &cameraPlayer;
 
         float currentFrame = (float)glfwGetTime();
         eventHandler->deltaTime = currentFrame - lastFrame;
@@ -347,14 +605,72 @@ int main()
         //player->ProcessKeyboard();
         processHoldKeys(window);
         processInput(window);
+        // frustrum shit veiw matrices and ****
+
+        glm::mat4 view = camera->GetViewMatrix();
+        Vinv = glm::inverse(cameraPlayer.GetViewMatrix());
+        //update debug frustrum coords of Player cam
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_frustrum);
+        float* ptr = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+        if (ptr)
+        {
+            for (int i = 0; i < frustrum_coords_VS.size(); i++)
+            {
+                frustrum_coords_WS[i] = (Vinv * frustrum_coords_VS[i]);
+                ptr[3 * i] = frustrum_coords_WS[i].x;
+                ptr[3 * i + 1] = frustrum_coords_WS[i].y;
+                ptr[3 * i + 2] = frustrum_coords_WS[i].z;
+            }
+        }
+        glUnmapBuffer(GL_ARRAY_BUFFER);
+
+        // use frustrum to fit ortho projection for directional shadow mapping 
+        for (int i = 0; i < 8; i++)
+        {
+            frustrum_coords_LS[i] = lightView * frustrum_coords_WS[i];
+        }
+
+        xyminmax[0] = frustrum_coords_LS[0].x;
+        xyminmax[1] = frustrum_coords_LS[0].y;
+        xyminmax[2] = frustrum_coords_LS[0].x;
+        xyminmax[3] = frustrum_coords_LS[0].y;
+        for (int i = 1; i < 8; i++)
+        {
+            if (xyminmax[0] > frustrum_coords_LS[i].x)
+                xyminmax[0] = frustrum_coords_LS[i].x;
+            if (xyminmax[1] < frustrum_coords_LS[i].x)
+                xyminmax[1] = frustrum_coords_LS[i].x;
+
+            if (xyminmax[2] > frustrum_coords_LS[i].y)
+                xyminmax[2] = frustrum_coords_LS[i].y;
+            if (xyminmax[3] < frustrum_coords_LS[i].y)
+                xyminmax[3] = frustrum_coords_LS[i].y;
+        }
+        float worldunitpertexel = diagnolFrustrum / SHADOW_MAP_MAX_SIZE_DIR;
+        for (int i = 0; i < 4; i++)
+        {
+            xyminmax[i] /= worldunitpertexel;
+            xyminmax[i] = floor(xyminmax[i]);
+            xyminmax[i] *= worldunitpertexel;
+            //xyminmax[i] /= worldunitpertexel;
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            std::cout << xyminmax[i];// << " :worlduptex =" << worldunitpertexel;
+        }
+        lightProjection = glm::ortho((float)xyminmax[0], (float)xyminmax[1], (float)xyminmax[2], (float)xyminmax[3], nearplane_ortho, farplane_ortho);
+       
+        std::cout<< std::endl;  
+       // lightProjection = glm::ortho(-30.0f, 30.00f, -30.0f, 30.0f, -100.f, 100.f);
+        lightSpaceMatrix = lightProjection * lightView;
+        dirShadow_instanced.use();
+        dirShadow_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        pbrShader_instanced.use();
+        pbrShader_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         // render
         // ------
         glClearColor(0, 0, 0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // -----------------------------------------------
-        //float near_plane = 1.f;
-        //float far_plane = 25.0f;
         
         timer.Begin();
         // 1. render scene to depth cubemap
@@ -380,11 +696,11 @@ int main()
         timer.End();
         try
         {
-            std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
+            //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
-            std::cout << e.what() << "\n";
+            //std::cout << e.what() << "\n";
         }
         timer.Begin();
             
@@ -395,19 +711,17 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
-            pbrShader.use();
-            glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
-            glm::mat4 view = camera.GetViewMatrix();
+            pbrShader.use();     
             pbrShader.setMat4("projection", projection);
             pbrShader.setMat4("view", view);
-            pbrShader.setVec3("viewPos", camera.Position);
-            pbrShader.setVec3("spotLight.position", camera.Position);
-            pbrShader.setVec3("spotLight.direction", camera.Front);
+            pbrShader.setVec3("viewPos", camera->Position);
+            pbrShader.setVec3("spotLight.position", camera->Position);
+            pbrShader.setVec3("spotLight.direction", camera->Front);
             pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", scene.numLights);
-            pbrShader.setFloat("far_plane", far_plane);
+            pbrShader.setFloat("far_plane", cameraPlayer.far_plane);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             //scene.drawObjects(pbrShader);
@@ -420,14 +734,14 @@ int main()
             //glm::mat4 view = camera.GetViewMatrix();
             pbrShader_instanced.setMat4("projection", projection);
             pbrShader_instanced.setMat4("view", view);
-            pbrShader_instanced.setVec3("viewPos", camera.Position);
-            pbrShader_instanced.setVec3("spotLight.position", camera.Position);
-            pbrShader_instanced.setVec3("spotLight.direction", camera.Front);
+            pbrShader_instanced.setVec3("viewPos", camera->Position);
+            pbrShader_instanced.setVec3("spotLight.position", camera->Position);
+            pbrShader_instanced.setVec3("spotLight.direction", camera->Front);
             pbrShader_instanced.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
             pbrShader_instanced.setInt("donormals", normals); // enable/disable normals by pressing '2'
             pbrShader_instanced.setBool("existnormals", 1);
             pbrShader_instanced.setInt("numLights", scene.numLights);
-            pbrShader_instanced.setFloat("far_plane", far_plane);
+            pbrShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
             glActiveTexture(GL_TEXTURE12);
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glActiveTexture(GL_TEXTURE11);
@@ -442,6 +756,7 @@ int main()
             lightCubeShader.use();
             lightCubeShader.setMat4("projection", projection);
             lightCubeShader.setMat4("view", view);
+            lightCubeShader.setMat4("model", glm::mat4(1.0f));
             for (unsigned int i = 0; i < scene.numLights; i++)
             {
                 model1 = glm::mat4(1.0f);
@@ -460,13 +775,26 @@ int main()
             model1 = glm::translate(model1, glm::vec3(0));
             model1 = glm::scale(model1, glm::vec3(0.5f));
             lightCubeShader.setMat4("model", model1);
-            bulb.Draw(lightCubeShader);
+            test.setMVP(projection* view);
+            test.draw();
+            /*for (int i = 0; i < lines.size(); i++)
+                lines[i].setMVP(projection * view);
+            for (int i = 0; i < lines.size(); i++)
+                lines[i].draw();*/
+            
+            //bulb.Draw(lightCubeShader);
             wireShader.use();
             wireShader.setMat4("projection", projection);
             wireShader.setMat4("view", view);
-
+            wireShader.setMat4("model", glm::mat4(1.0f));
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glDisable (GL_CULL_FACE);
             scene.drawHulls(wireShader);
+            //chimera.Draw(wireShader);
+            glBindVertexArray(VAO_frustrum);
+            glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_INT, 0);
+            glEnable(GL_CULL_FACE);
+            glBindVertexArray(0);
             //helmet.draw(pbrShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -489,11 +817,11 @@ int main()
         timer.End();
         try
         {
-            std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
+            //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
-            std::cout << e.what() << "\n";
+            //std::cout << e.what() << "\n";
         }
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -513,13 +841,13 @@ int main()
 void processHoldKeys(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, eventHandler->deltaTime);
+        camera->ProcessKeyboard(FORWARD, eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, eventHandler->deltaTime);
+        camera->ProcessKeyboard(BACKWARD, eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, eventHandler->deltaTime);
+        camera->ProcessKeyboard(LEFT, eventHandler->deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, eventHandler->deltaTime);
+        camera->ProcessKeyboard(RIGHT, eventHandler->deltaTime);
 }
 void processInput(GLFWwindow* window)
 {
@@ -554,6 +882,15 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE)
     {
         normalsKeyPressed = false;
+    }
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !cameraDebugKeyPressed)
+    {
+        cameraDebugBool = !cameraDebugBool;
+        cameraDebugKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE)
+    {
+        cameraDebugKeyPressed = false;
     }
     if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS && !forwardKeyPressed)
     {
@@ -598,14 +935,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     lastX = (float)xpos;
     lastY = (float)ypos;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
+    camera->ProcessMouseMovement(xoffset, yoffset);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll((float)yoffset);
+    camera->ProcessMouseScroll((float)yoffset);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -633,6 +970,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS)
     {
         eventHandler->fireCallback("Update_Settings");
+    }
+    if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+    {
+        eventHandler->fireCallback("ToggleCameras");
     }
 }
 void updatelightloc(std::string x, float deltaTime)
