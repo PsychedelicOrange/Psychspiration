@@ -57,12 +57,14 @@ Scenes
 		Scene myscene(sceneName); 
 	// Load all models and textures of all objects in the scene
 		myscene.loadObjects();
+	// make instanced rendering buffer full of transforms
+		myscene.makeHAB();
 
 // in render loop
 	// updates transforms of all Objects in the scene
 		myscene.updatePhysics();
 	// finally draw all objects
-		myscene.drawObjects();
+		myscene.drawObjectsInstanced();
 ```
 ## How to render individual objects in Psychspiration
 
