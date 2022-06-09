@@ -222,6 +222,7 @@ int main(int argc, char* argv[])
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     //glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -257,9 +258,10 @@ int main(int argc, char* argv[])
     scene = *scene_;
     
     scene.loadObjects();
-    scene.makeHAB();
-
-
+    //scene.makeHAB();
+    scene.setInstanceOffsets();
+    scene.fillInstanceBuffer();
+    //std::cout << "\ndone\n";
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -322,10 +324,10 @@ int main(int argc, char* argv[])
 
     frustrum_coords_VS.push_back(glm::vec4(0, 0, 0, 1)); // origin 8
 
-    for (int i = 0; i < frustrum_coords_VS.size(); i++)
+    /*for (int i = 0; i < frustrum_coords_VS.size(); i++)
     {
         std::cout << glm::to_string(frustrum_coords_VS[i]) << std::endl;
-    }
+    }*/
     // calculate WS coords
 
     glm::mat4 Vinv = glm::inverse(cameraPlayer.GetViewMatrix());
@@ -339,12 +341,12 @@ int main(int argc, char* argv[])
         frustrum_coords_WS_Array[3 * i + 2] = frustrum_coords_WS[i].z;
     }
     float diagnolFrustrum = glm::length(frustrum_coords_VS[6] - frustrum_coords_VS[0]);
-    for (int i = 0; i < 9; i++)
+    /*for (int i = 0; i < 9; i++)
     {
         for (int j = 0; j < 3; j++)
             std::cout << frustrum_coords_WS_Array[3 * i + j] << ", ";
         std::cout << std::endl;
-    }
+    }*/
     // indices
     unsigned int indices[] = {
     0,1,8,// left 
@@ -413,7 +415,7 @@ int main(int argc, char* argv[])
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // directional light shadow
-    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096*2;
+    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096*8;
     unsigned int depthMap;
     glGenTextures(1,&depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
@@ -505,10 +507,10 @@ int main(int argc, char* argv[])
     {
         frustrum_coords_LS[i] = lightView * frustrum_coords_WS[i];   
     }
-    for (int i = 0; i < 8; i++)
+    /*for (int i = 0; i < 8; i++)
     {
         std::cout << glm::to_string(frustrum_coords_LS[i]) << std::endl;
-    }
+    }*/
     float xyminmax[4] = {frustrum_coords_LS[0].x,frustrum_coords_LS[0].y,frustrum_coords_LS[0].x,frustrum_coords_LS[0].y };
     for (int i = 1; i < 8; i++)
     {
@@ -522,8 +524,8 @@ int main(int argc, char* argv[])
         if (xyminmax[3] < frustrum_coords_LS[i].y)
             xyminmax[3] = frustrum_coords_LS[i].y;
     }
-    float nearplane_ortho = -10.f;
-    float farplane_ortho = 10.f;
+    float nearplane_ortho = -20.f;
+    float farplane_ortho = 20.f;
     unsigned int indices_ortho[] = {  // note that we start from 0!
     0, 1, 3,   // first triangle
     1, 2, 3    // second triangle
@@ -532,10 +534,10 @@ int main(int argc, char* argv[])
         xyminmax[0],xyminmax[1],
    
     };
-    for (int i = 0; i < 4; i++)
+   /* for (int i = 0; i < 4; i++)
     {
         std::cout << xyminmax[i] << std::endl;
-    }
+    }*/
     float xcenter = (xyminmax[1] + xyminmax[0]) / 2;
     float ycenter = (xyminmax[3] + xyminmax[2]) / 2;
     float extent = (xyminmax[1] - xyminmax[0]) > (xyminmax[3] + xyminmax[2]) ? (xyminmax[1] - xyminmax[0]) : (xyminmax[3] + xyminmax[2]);
@@ -574,6 +576,7 @@ int main(int argc, char* argv[])
     // render loop
     // -----------
     bool shadowUpdate = true;
+    float tempdir = dlight.direction.y;
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
@@ -581,7 +584,8 @@ int main(int argc, char* argv[])
         if (play)
         {
             //load helmet async
-            std::cout << "before thread";
+            //std::cout << "before thread";
+            dlight.direction.y = tempdir + (10.f * sin(glfwGetTime()));
             //std::thread t1(&Scene::loadObject,scene);
            // t1.join();
             //scene.loadObject();
@@ -623,7 +627,8 @@ int main(int argc, char* argv[])
             }
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
-
+        // change directional light direction 
+        lightView = glm::lookAt(glm::normalize(dlight.direction), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
         // use frustrum to fit ortho projection for directional shadow mapping 
         for (int i = 0; i < 8; i++)
         {
@@ -654,13 +659,13 @@ int main(int argc, char* argv[])
             xyminmax[i] *= worldunitpertexel;
             //xyminmax[i] /= worldunitpertexel;
         }
-        for (int i = 0; i < 4; i++)
-        {
-            std::cout << xyminmax[i];// << " :worlduptex =" << worldunitpertexel;
-        }
+        //for (int i = 0; i < 4; i++)
+        //{
+        //    std::cout << xyminmax[i];// << " :worlduptex =" << worldunitpertexel;
+        //}
         lightProjection = glm::ortho((float)xyminmax[0], (float)xyminmax[1], (float)xyminmax[2], (float)xyminmax[3], nearplane_ortho, farplane_ortho);
        
-        std::cout<< std::endl;  
+        //std::cout<< std::endl;  
        // lightProjection = glm::ortho(-30.0f, 30.00f, -30.0f, 30.0f, -100.f, 100.f);
         lightSpaceMatrix = lightProjection * lightView;
         dirShadow_instanced.use();
@@ -775,8 +780,8 @@ int main(int argc, char* argv[])
             model1 = glm::translate(model1, glm::vec3(0));
             model1 = glm::scale(model1, glm::vec3(0.5f));
             lightCubeShader.setMat4("model", model1);
-            test.setMVP(projection* view);
-            test.draw();
+            //test.setMVP(projection* view);
+            //test.draw();
             /*for (int i = 0; i < lines.size(); i++)
                 lines[i].setMVP(projection * view);
             for (int i = 0; i < lines.size(); i++)

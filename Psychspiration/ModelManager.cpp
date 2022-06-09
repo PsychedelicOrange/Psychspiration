@@ -4,11 +4,13 @@ Model* ModelManager::getModel(std::string path)
 	auto search = Models.find(path);
 	if (search != Models.end())
 	{
+		search->second->instanceCount++;
 		return search->second;
 	}
 	else
 	{
 		Models.emplace(path, new Model("Resources/Models/" + path + ".gltf"));
+		Models[path]->instanceCount++;
 		return Models[path];
 	}
 }

@@ -39,7 +39,8 @@ public:
     
     void parseScene(std::string data);
     void populateObjects();
-    void getInstanceCount();
+    void setInstanceOffsets();
+    void fillInstanceBuffer();
     void makeHAB();
     void loadObjects();
     void drawObjects(Shader ourShader);

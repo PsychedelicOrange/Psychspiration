@@ -8,11 +8,12 @@
 TextureManager Model::textureManager{};
 Model::Model(std::string const& path,unsigned int* pbo, bool gamma ) : gammaCorrection(gamma)
 {
+    instanceCurr = -1;
     loadModel(path);
 }
 Model::Model()
 {
-    
+    instanceCurr = -1;
 }
 const aiScene* Model::getpath(std::string path)
 {
