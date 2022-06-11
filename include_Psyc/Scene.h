@@ -9,7 +9,7 @@
 #include<string>
 #include <Physics.h>
 #include <Light.h>
-
+#include <unordered_map>
 class Scene
 {
 //importer 
@@ -21,7 +21,8 @@ public:
     glm::mat4* instancedTransforms; // huge ass buffer
 
     std::string sceneName; // name of folder containing scene
-    std::vector<Object*> objects; // vector of object pointers 
+    std::vector<Object*> objects_; // vector of object pointers
+    std::unordered_map<std::string, Object*> objects;
     std::vector<Model*> uniqueModels; // vector of unique model
     
     //lights
@@ -46,9 +47,11 @@ public:
     void drawObjects(Shader ourShader);
     void drawObjectsInstanced(Shader ourShader);
     void drawShadowObjectsInstanced(Shader ourShader);
-
+    void addObject(std::string objectName, std::string path);
+    void removeObject(std::string objectName);
     void populateHulls();
     int find(std::string t);
+    std::vector<Object*>::iterator find_it(std::string t);
     void drawHulls(Shader ourShader);
     void setPhysics();
     void updatePhysics();

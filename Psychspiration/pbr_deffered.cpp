@@ -152,6 +152,7 @@ bool normalsKeyPressed = false;
 bool cameraDebugKeyPressed = false;
 bool forwardKeyPressed = false;
 bool play = false;
+bool once = true;
 // camera 
 Camera* camera;
 Camera cameraPlayer(eventHandler,glm::vec3(0.0f, 0.0f, 3.0f));
@@ -586,6 +587,19 @@ int main(int argc, char* argv[])
             //load helmet async
             //std::cout << "before thread";
             dlight.direction.y = tempdir + (10.f * sin(glfwGetTime()));
+            if(once)
+            {
+                //scene.objects.back()->model->instanceCount--;
+                //.objects.erase(std::remove(scene.objects.begin(), scene.objects.end(), scene.objects[scene.find("helmet.001")]));
+                //scene.objects.pop_back();
+                scene.removeObject("helmet.001");
+                scene.addObject("Suzzane","Mesh_0");
+                (scene.objects["Suzzane"])->transform = glm::scale((scene.objects["Suzzane"])->transform, glm::vec3(0.01));
+                scene.setInstanceOffsets();
+                scene.fillInstanceBuffer();
+                once = false;
+            }
+            
             //std::thread t1(&Scene::loadObject,scene);
            // t1.join();
             //scene.loadObject();
@@ -609,6 +623,12 @@ int main(int argc, char* argv[])
         //player->ProcessKeyboard();
         processHoldKeys(window);
         processInput(window);
+        // update instance buffer 
+        //scene.setInstanceOffsets();
+        //scene.fillInstanceBuffer();
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene.objects.size(), scene.instancedTransforms, GL_DYNAMIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
         // frustrum shit veiw matrices and ****
 
         glm::mat4 view = camera->GetViewMatrix();

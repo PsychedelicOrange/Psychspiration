@@ -60,7 +60,8 @@ void Scene::parseScene(std::string data)
     // yet to implemnt hull loading yet
     for (auto& object : sceneData["objects"])
     {
-        objects.push_back(new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"])));
+        objects.insert({ object["name"].get<std::string>(),new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"] ))});
+        objects_.push_back(new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"])));
     }
     for (auto& light : sceneData["lights"])
     {
@@ -79,38 +80,53 @@ void Scene::setInstanceOffsets()
         obj->second->instanceOffset = std::prev(obj)->second->instanceOffset + std::prev(obj)->second->instanceCount;
     }
 }
-
+//void Scene::updateInstanceBuffer()
+//{
+//    for (auto obj : objects)
+//    {
+//        instanced
+//    }
+//}
 void Scene::fillInstanceBuffer()
 {
     instancedTransforms = new glm::mat4[objects.size()];
+    for (auto uniqueModel : modelManager->Models)
+    {
+        uniqueModel.second->instanceCurr = -1;
+    }
     for (auto obj : objects)
     {
-        instancedTransforms[obj->model->instanceOffset + ++(obj->model->instanceCurr)] = obj->transform;
+        instancedTransforms[obj.second->model->instanceOffset + ++(obj.second->model->instanceCurr)] = obj.second->transform;
     }
-   /* for (int i = 0; i < objects.size(); i++)
-        std::cout << "\n " << glm::to_string(instancedTransforms[i]);*/
-}
-void Scene::makeHAB()
-{
-    instancedTransforms = new glm::mat4 [objects.size()];
-    std::string prev_string = objects[0]->path;
-    objects[0]->model->instanceOffset = 0;
-    uniqueModels.push_back(objects[0]->model);
     for (int i = 0; i < objects.size(); i++)
-    {
-        instancedTransforms[i] = objects[i]->transform;
-        if (prev_string != objects[i]->path || i >= objects.size())
-        {
-            uniqueModels.push_back(objects[i]->model);
-            objects[i]->model->instanceOffset = i;
-            objects[i - 1]->model->instanceCount = objects[i]->model->instanceOffset - objects[i - 1]->model->instanceOffset;
-            prev_string = objects[i]->path;
-        }
-    }
+        std::cout << "\n " << glm::to_string(instancedTransforms[i]);
 }
+//void Scene::makeHAB()
+//{
+//    instancedTransforms = new glm::mat4 [objects.size()];
+//    std::string prev_string = objects[0]->path;
+//    objects[0]->model->instanceOffset = 0;
+//    uniqueModels.push_back(objects[0]->model);
+//    for (int i = 0; i < objects.size(); i++)
+//    {
+//        instancedTransforms[i] = objects[i]->transform;
+//        if (prev_string != objects[i]->path || i >= objects.size())
+//        {
+//            uniqueModels.push_back(objects[i]->model);
+//            objects[i]->model->instanceOffset = i;
+//            objects[i - 1]->model->instanceCount = objects[i]->model->instanceOffset - objects[i - 1]->model->instanceOffset;
+//            prev_string = objects[i]->path;
+//        }
+//    }
+//}
 
 void Scene::loadObjects()
 {
+    for (auto obj : objects)
+    {
+        obj.second->load();
+    }
+    /*
     for (int i = 0; i < objects.size(); i++)
     {
         objects[i]->load();
@@ -118,15 +134,20 @@ void Scene::loadObjects()
         //physics->setObject(objects[i]);
 
     }
+    */
 
 }
 void Scene::drawObjects(Shader ourShader)
 {
-
-    for (int i = 0; i < objects.size(); i++)
+    for (auto obj : objects)
     {
-        objects[i]->draw(ourShader);
+        obj.second->draw(ourShader);
     }
+
+    //for (int i = 0; i < objects.size(); i++)
+    //{
+    //    objects[i]->draw(ourShader);
+    //}
 }
 void Scene::drawObjectsInstanced(Shader ourShader)
 {
@@ -168,57 +189,96 @@ void Scene::drawShadowObjectsInstanced(Shader ourShader)
     }*/
     //drawObjectInstanced(ourShader, 0);
 }
+void Scene::addObject(std::string objectName,std::string path)
+{
+    objects.insert({ objectName ,new Object(objectName,path,modelManager) });
+    objects[objectName]->load();
+}
 void Scene::drawHulls(Shader ourShader)
 {
+    for (auto obj : objects)
+    {
+        obj.second->drawHulls(ourShader);
+    }
+    /*
     for (int i = 0; i < objects.size(); i++)
     {
         objects[i]->drawHulls(ourShader);
     }
+    */
 }
 void Scene::setPhysics()
 {
-    for (int i = 0; i < objects.size(); i++)
+    for (auto obj : objects)
+    {
+        physics->setObject(obj.second);
+    }
+    /*for (int i = 0; i < objects.size(); i++)
     {
         physics->setObject(objects[i]);
-    }
+    }*/
 }
 void Scene::updatePhysics()
 {
+    for (auto obj : objects)
+    {
+        physics->setTransforms(obj.second);
+    }/*
     for (int i = 0; i < objects.size(); i++)
     {
         physics->setTransforms(objects[i]);
-    }
+    }*/
 }
 
 void Scene::printdetail()
 {
     std::cout << std::endl << "Scene read: " << sceneName << "\n   Number of Object: " << objects.size();
-    for (int i = 0; i < objects.size(); i++)
+    for (auto obj : objects)
+    {
+      (obj.second)->printobj();
+    }
+    /*for (int i = 0; i < objects.size(); i++)
     {
         objects[i]->printobj();
-    }
+    }*/
 
 }
 
-
-int Scene::find(std::string t)
-{
-    for (int i = 0; i < objects.size(); i++)
-    {
-        if (t == objects[i]->name)
-            return i;
-    }
-    std::cout << "ERROR:: HULL COULD'NT FIND GRAPHIC MODEL";
-}
+//std::vector<Object*>::iterator Scene::find_it(std::string t)
+//{
+//    for (auto obj :     )
+//    {
+//        if (obj->name == t)
+//            return obj;
+//    }
+//}
+//int Scene::find(std::string t)
+//{
+//    for (int i = 0; i < objects.size(); i++)
+//    {
+//        if (t == objects[i]->name)
+//            return i;
+//    }
+//    std::cout << "ERROR:: HULL COULD'NT FIND GRAPHIC MODEL";
+//}
 
 void Scene::setScale(float scale)
 {
-    for (int i = 0; i < objects.size(); i++)
+    for (auto obj : objects)
+    {
+        (obj.second)->transform = glm::scale((obj.second)->transform, glm::vec3(scale));;
+    }
+   /* for (int i = 0; i < objects.size(); i++)
     {
         objects[i]->transform = glm::scale(objects[i]->transform, glm::vec3(scale));
-    }
+    }*/
 }
 void Scene::setUpEvents(EventHandler* eventHandler)
 {
     //eventHandler->registerCallback("SpawnObject", &Scene::loadObject,this);
+}
+void Scene::removeObject(std::string objectName)
+{
+    objects["helmet.002"]->model->instanceCount--;
+    objects.erase("helmet.002");
 }
