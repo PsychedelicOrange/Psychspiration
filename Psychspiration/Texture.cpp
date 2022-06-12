@@ -1,5 +1,10 @@
 #include <Texture.h>
-#include <gli/gli.hpp>
+#include <chrono>
+#include <thread>
+
+unsigned int Texture::pbo[2];
+ GLsync Texture::is_pbo_free[2];
+bool Texture::first_pbo;
 unsigned int Texture::TextureFromFile(std::string path)
 {
     path = relativePath + '\\' + "Resources" + '\\' + path.substr(2, path.size() - 2);
@@ -21,7 +26,8 @@ unsigned int Texture::TextureFromFile(std::string path)
         gli::gl GL(gli::gl::PROFILE_GL33);
         gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
         GLenum Target = GL.translate(Texture.target());
-        std::cout << Texture.levels() << " mips, " << Texture.faces() << " faces, " << Texture.layers() << "\n";
+        std::cout << Texture.levels() << " mips, " << Texture.faces() << " faces, " << Texture.layers() << " layers\n";
+        std::cout << static_cast<GLsizei>(Texture.size()) << " storage in bytes\n";
         GLuint TextureName = 0;
         glGenTextures(1, &TextureName);
         glBindTexture(Target, TextureName);
@@ -63,73 +69,33 @@ unsigned int Texture::TextureFromFile(std::string path)
             break;
         }
 
-        for (std::size_t Layer = 0; Layer < Texture.layers(); ++Layer)
-            for (std::size_t Face = 0; Face < Texture.faces(); ++Face)
-                for (std::size_t Level = 0; Level < Texture.levels(); ++Level)
-                {
-                    GLsizei const LayerGL = static_cast<GLsizei>(Layer);
-                    glm::tvec3<GLsizei> Extent(Texture.extent(Level));
-                    Target = gli::is_target_cube(Texture.target())
-                        ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + Face)
-                        : Target;
+        // from here its different for dma or usual
+        /*if (first_pbo)
+        {
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[0]);
+            first_pbo = 0;
+        }
+        else
+        {
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[1]);
+            first_pbo = 1;
+        }*/
+        GLbitfield flags = 0;
+        
+        
 
-                    switch (Texture.target())
-                    {
-                    case gli::TARGET_1D:
-                        if (gli::is_compressed(Texture.format()))
-                            glCompressedTexSubImage1D(
-                                Target, static_cast<GLint>(Level), 0, Extent.x,
-                                Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
-                                Texture.data(Layer, Face, Level));
-                        else
-                            glTexSubImage1D(
-                                Target, static_cast<GLint>(Level), 0, Extent.x,
-                                Format.External, Format.Type,
-                                Texture.data(Layer, Face, Level));
-                        break;
-                    case gli::TARGET_1D_ARRAY:
-                    case gli::TARGET_2D:
-                    case gli::TARGET_CUBE:
-                        if (gli::is_compressed(Texture.format()))
-                            glCompressedTexSubImage2D(
-                                Target, static_cast<GLint>(Level),
-                                0, 0,
-                                Extent.x,
-                                Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
-                                Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
-                                Texture.data(Layer, Face, Level));
-                        else
-                            glTexSubImage2D(
-                                Target, static_cast<GLint>(Level),
-                                0, 0,
-                                Extent.x,
-                                Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
-                                Format.External, Format.Type,
-                                Texture.data(Layer, Face, Level));
-                        break;
-                    case gli::TARGET_2D_ARRAY:
-                    case gli::TARGET_3D:
-                    case gli::TARGET_CUBE_ARRAY:
-                        if (gli::is_compressed(Texture.format()))
-                            glCompressedTexSubImage3D(
-                                Target, static_cast<GLint>(Level),
-                                0, 0, 0,
-                                Extent.x, Extent.y,
-                                Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
-                                Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
-                                Texture.data(Layer, Face, Level));
-                        else
-                            glTexSubImage3D(
-                                Target, static_cast<GLint>(Level),
-                                0, 0, 0,
-                                Extent.x, Extent.y,
-                                Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
-                                Format.External, Format.Type,
-                                Texture.data(Layer, Face, Level));
-                        break;
-                    default: assert(0); break;
-                    }
-                }
+        if(first_pbo)
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[0]);
+        else
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[1]);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizei>(Texture.size()), Texture.data(), GL_STREAM_DRAW);
+        uploadTextureDMA(Texture, Format, Target);
+        /*std::cout << "sync stat: " << glClientWaitSync(is_pbo_free[0], flags, GL_TIMEOUT_IGNORED) << "\n";
+        glDeleteSync(is_pbo_free[0]);*/
+       
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        //is_pbo_free[0] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,flags);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
         return TextureName;
 
     }
@@ -165,6 +131,148 @@ unsigned int Texture::TextureFromFile(std::string path)
 
         return textureID;
     }
+}
+void Texture::uploadTexture(gli::texture Texture, gli::gl::format Format, GLenum Target)
+{
+    for (std::size_t Layer = 0; Layer < Texture.layers(); ++Layer)
+        for (std::size_t Face = 0; Face < Texture.faces(); ++Face)
+            for (std::size_t Level = 0; Level < Texture.levels(); ++Level)
+            {
+                GLsizei const LayerGL = static_cast<GLsizei>(Layer);
+                glm::tvec3<GLsizei> Extent(Texture.extent(Level));
+                Target = gli::is_target_cube(Texture.target())
+                    ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + Face)
+                    : Target;
+
+                switch (Texture.target())
+                {
+                case gli::TARGET_1D:
+                    if (gli::is_compressed(Texture.format()))
+                        glCompressedTexSubImage1D(
+                            Target, static_cast<GLint>(Level), 0, Extent.x,
+                            Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                            Texture.data(Layer, Face, Level));
+                    else
+                        glTexSubImage1D(
+                            Target, static_cast<GLint>(Level), 0, Extent.x,
+                            Format.External, Format.Type,
+                            Texture.data(Layer, Face, Level));
+                    break;
+                case gli::TARGET_1D_ARRAY:
+                case gli::TARGET_2D:
+                case gli::TARGET_CUBE:
+                    if (gli::is_compressed(Texture.format()))
+                        glCompressedTexSubImage2D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0,
+                            Extent.x,
+                            Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
+                            Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                            Texture.data(Layer, Face, Level));
+                    else
+                        glTexSubImage2D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0,
+                            Extent.x,
+                            Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
+                            Format.External, Format.Type,
+                            Texture.data(Layer, Face, Level));
+                    break;
+                case gli::TARGET_2D_ARRAY:
+                case gli::TARGET_3D:
+                case gli::TARGET_CUBE_ARRAY:
+                    if (gli::is_compressed(Texture.format()))
+                        glCompressedTexSubImage3D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0, 0,
+                            Extent.x, Extent.y,
+                            Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                            Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                            Texture.data(Layer, Face, Level));
+                    else
+                        glTexSubImage3D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0, 0,
+                            Extent.x, Extent.y,
+                            Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                            Format.External, Format.Type,
+                            Texture.data(Layer, Face, Level));
+                    break;
+                default: assert(0); break;
+                }
+            }
+}
+void Texture::uploadTextureDMA(gli::texture Texture, gli::gl::format Format, GLenum Target)
+{
+    for (std::size_t Layer = 0; Layer < Texture.layers(); ++Layer)
+        for (std::size_t Face = 0; Face < Texture.faces(); ++Face)
+            for (std::size_t Level = 0; Level < Texture.levels(); ++Level)
+            {
+                int offset = Texture.getBaseOffset(Layer,Face,Level);
+                std::cout << offset << " / " <<offset + Texture.size(Level) << std::endl;
+                GLsizei const LayerGL = static_cast<GLsizei>(Layer);
+                glm::tvec3<GLsizei> Extent(Texture.extent(Level));
+                Target = gli::is_target_cube(Texture.target())
+                    ? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + Face)
+                    : Target;
+
+                switch (Texture.target())
+                {
+                case gli::TARGET_1D:
+                    if (gli::is_compressed(Texture.format()))
+                        glCompressedTexSubImage1D(
+                            Target, static_cast<GLint>(Level), 0, Extent.x,
+                            Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                            reinterpret_cast<void*>(offset));
+                    else
+                        glTexSubImage1D(
+                            Target, static_cast<GLint>(Level), 0, Extent.x,
+                            Format.External, Format.Type,
+                            reinterpret_cast<void*>(offset));
+                    break;
+                case gli::TARGET_1D_ARRAY:
+                case gli::TARGET_2D:
+                case gli::TARGET_CUBE:
+                    if (gli::is_compressed(Texture.format()))
+                        glCompressedTexSubImage2D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0,
+                            Extent.x,
+                            Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
+                            Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                            reinterpret_cast<void*>(offset));
+                    else
+                        glTexSubImage2D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0,
+                            Extent.x,
+                            Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
+                            Format.External, Format.Type,
+                            reinterpret_cast<void*>(offset));
+                    break;
+                case gli::TARGET_2D_ARRAY:
+                case gli::TARGET_3D:
+                case gli::TARGET_CUBE_ARRAY:
+                    if (gli::is_compressed(Texture.format()))
+                        glCompressedTexSubImage3D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0, 0,
+                            Extent.x, Extent.y,
+                            Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                            Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
+                            reinterpret_cast<void*>(offset));
+                    else
+                        glTexSubImage3D(
+                            Target, static_cast<GLint>(Level),
+                            0, 0, 0,
+                            Extent.x, Extent.y,
+                            Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                            Format.External, Format.Type,
+                            reinterpret_cast<void*>(offset));
+                    break;
+                default: assert(0); break;
+                }
+            }
 }
 unsigned int Texture::TextureEmbedded(const aiTexture* texture, std::string typeName)
 {

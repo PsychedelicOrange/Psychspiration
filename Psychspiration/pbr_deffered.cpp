@@ -234,7 +234,9 @@ int main(int argc, char* argv[])
     
     modelManager = new ModelManager();
     physics = new Physics();
-
+    // pbo required for texture loading 
+    glGenBuffers(2, Texture::pbo);
+    Texture::first_pbo = 1;
     // build and compile our shader zprogram
     // ------------------------------------
     //Shader matcapShader("matcap.vs", "matcap.fs", "0");
@@ -266,7 +268,7 @@ int main(int argc, char* argv[])
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+    
     // instancing call transformation matrices 
 
     GLuint uboModelMatrices;
@@ -593,7 +595,7 @@ int main(int argc, char* argv[])
                 //.objects.erase(std::remove(scene.objects.begin(), scene.objects.end(), scene.objects[scene.find("helmet.001")]));
                 //scene.objects.pop_back();
                 scene.removeObject("helmet.001");
-                scene.addObject("Suzzane","Mesh_0");
+                scene.addObject("Suzzane", "Mesh_0");
                 (scene.objects["Suzzane"])->transform = glm::scale((scene.objects["Suzzane"])->transform, glm::vec3(0.01));
                 scene.setInstanceOffsets();
                 scene.fillInstanceBuffer();

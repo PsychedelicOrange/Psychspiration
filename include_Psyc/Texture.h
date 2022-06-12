@@ -2,13 +2,18 @@
 #include <stb_image.h>
 #include <FileIO.h>
 #include <assimp/texture.h>
+#include <gli/gli.hpp>
 #include <string>
 #include <iostream>
+#include <glad/glad.h>
 class Texture {
 public:
     unsigned int id;
     std::string type;
     std::string path;
+    static unsigned int pbo[2];
+    static GLsync is_pbo_free[2];
+    static bool first_pbo;
     Texture() {}
     Texture(std::string path) {
     
@@ -22,6 +27,8 @@ public:
         this->path = "embedded";
     }
     unsigned int TextureFromFile(std::string path);
+    void uploadTexture(gli::texture Texture, gli::gl::format Format, GLenum Target);
+    void uploadTextureDMA(gli::texture Texture, gli::gl::format Format, GLenum Target);
     unsigned int TextureEmbedded(const aiTexture* texture, std::string typeName);
 
 };
