@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 #include <EventHandler.h>
+#include <Frustum.h>
 // An abstract camera class that processes input and calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
@@ -21,9 +22,12 @@ const float ZOOM = 45.0f;
 class Camera
 {
 public:
-    // frustrum helpful variables
+    // frustum 
+    Frustum* frustum;
     float near_plane = 0.1f;
     float far_plane = 100.0f;
+    float yfov;
+    float aspectratio;
     // camera Attributes
     glm::vec3 Position;
     glm::vec3 Front;
@@ -37,17 +41,24 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
+    //Renderer
+    glm::mat4 View;
+    glm::mat4 inView;
+    glm::mat4 Projection;
     // Event Handler
     EventHandler* eventHandler;
     //constructor with vector values
     Camera(EventHandler* eventHandler ,glm::vec3 position = glm::vec3(-9.0f, 1.0f, 1.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH);
     // constructor with scalar values
     Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
-    glm::mat4 GetViewMatrix();
+    glm::mat4 constructViewMatrix();
+    glm::mat4 constructProjection();
     void ProcessKeyboard(Camera_Movement direction, float deltaTime);
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true);
     void ProcessMouseScroll(float yoffset);
+    //frustum
+    void constructFrustum();
 private:
     // calculates the front vector from the Camera's (updated) Euler Angles
     void updateCameraVectors();

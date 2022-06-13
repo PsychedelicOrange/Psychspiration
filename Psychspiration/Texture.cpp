@@ -5,6 +5,7 @@
 unsigned int Texture::pbo[2];
  GLsync Texture::is_pbo_free[2];
 bool Texture::first_pbo;
+std::thread* Texture::TextureTransferCPU;
 unsigned int Texture::TextureFromFile(std::string path)
 {
     path = relativePath + '\\' + "Resources" + '\\' + path.substr(2, path.size() - 2);
@@ -82,19 +83,31 @@ unsigned int Texture::TextureFromFile(std::string path)
         }*/
         GLbitfield flags = 0;
         
-        
-
         if(first_pbo)
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[0]);
         else
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[1]);
-        glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizei>(Texture.size()), Texture.data(), GL_STREAM_DRAW);
+        
+        /*TextureTransferCPU = new std::thread([=]() {
+            glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizei>(Texture.size()), Texture.data(), GL_STREAM_DRAW);
+            });
+        TextureTransferCPU->join();*/
+        //glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizei>(Texture.size()), Texture.data(), GL_STREAM_DRAW);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, Texture.size(), 0, GL_STREAM_DRAW);
+        GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+        if (ptr)
+        {
+            // update data directly on the mapped buffer
+            memcpy(ptr, Texture.data(), Texture.size());
+            glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
+        }
         uploadTextureDMA(Texture, Format, Target);
         /*std::cout << "sync stat: " << glClientWaitSync(is_pbo_free[0], flags, GL_TIMEOUT_IGNORED) << "\n";
         glDeleteSync(is_pbo_free[0]);*/
-       
+
         //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //is_pbo_free[0] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,flags);
+        
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
         return TextureName;
 

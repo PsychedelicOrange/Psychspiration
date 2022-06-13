@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <bullet/btBulletDynamicsCommon.h>
-
+#include <AABB.h>
 class Model
 {
 public:
@@ -16,12 +16,15 @@ public:
     int instanceCount;
     int instanceOffset;
     int instanceCurr;
+    Aabb* aabb;
+
     // model data
     std::vector<Texture> textures_loaded;	// stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     std::vector<Mesh> meshes;
     std::string directory;
     std::string format;
     bool gammaCorrection;
+
     //physics
     btRigidBody* rigidBody;
     // constructor, expects a filepath to the 3D model.

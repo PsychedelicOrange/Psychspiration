@@ -47,7 +47,7 @@ const aiScene* Model::loadModel(const std::string& path)
     std::string relativePath = getRelativePath();
     Assimp::Importer importer;
     //std::cout << relativePath + path;
-    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace );
+    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
     // check for errors
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
     {
@@ -85,7 +85,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 {
     // std::cout << "(inside processMesh) " << std::endl;
 
-     // data to fill
+    // data to fill
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
@@ -145,6 +145,11 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         for (unsigned int j = 0; j < face.mNumIndices; j++)
             indices.push_back(face.mIndices[j]);
     }
+    // process aabb
+    aiAABB thisaaBB = mesh->mAABB;
+    glm::vec3 mMax = { thisaaBB.mMax.x,thisaaBB.mMax.y,thisaaBB.mMax.y };
+    glm::vec3 mMin = { thisaaBB.mMin.x,thisaaBB.mMin.y,thisaaBB.mMin.y };
+    aabb = new Aabb(mMax, mMin);
     /*
     for (int i = 0; i < vertices.size(); i++)
     {

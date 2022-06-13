@@ -16,9 +16,16 @@ Camera::Camera(EventHandler* eventHandler,glm::vec3 position, glm::vec3 up, floa
     eventHandler->registerCallback("Camera_Move_Right", [=]() {Position += Right* MovementSpeed * eventHandler->deltaTime; });*/
 }
 // returns the view matrix calculated using Euler Angles and the LookAt Matrix
-glm::mat4 Camera::GetViewMatrix()
+glm::mat4 Camera::constructViewMatrix()
 {
-    return glm::lookAt(Position, Position + Front, Up);
+    View = glm::lookAt(Position, Position + Front, Up);
+    return View;
+}
+
+glm::mat4 Camera::constructProjection()
+{
+    Projection = glm::perspective(glm::radians(yfov), aspectratio, near_plane, far_plane);
+    return Projection;
 }
 
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
@@ -65,6 +72,11 @@ void Camera::ProcessMouseScroll(float yoffset)
         Zoom = 1.0f;
     if (Zoom > 45.0f)
         Zoom = 45.0f;
+}
+
+void Camera::constructFrustum()
+{
+    frustum = new Frustum(yfov, aspectratio, near_plane, far_plane);
 }
 
 // calculates the front vector from the Camera's (updated) Euler Angles

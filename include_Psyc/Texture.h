@@ -6,11 +6,13 @@
 #include <string>
 #include <iostream>
 #include <glad/glad.h>
+#include <thread>
 class Texture {
 public:
     unsigned int id;
     std::string type;
     std::string path;
+    static std::thread* TextureTransferCPU;
     static unsigned int pbo[2];
     static GLsync is_pbo_free[2];
     static bool first_pbo;

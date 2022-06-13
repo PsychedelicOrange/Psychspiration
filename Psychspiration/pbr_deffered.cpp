@@ -301,66 +301,22 @@ int main(int argc, char* argv[])
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-
     // calculating projection matrix and getting frustrum coords
 
-    float yfov = 90.0f;
-    float aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
-    glm::mat4 projection = glm::perspective(glm::radians(yfov), aspectratio, cameraPlayer.near_plane, cameraPlayer.far_plane);
+    cameraPlayer.yfov = 90.0f;
+    cameraPlayer.aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
+    cameraPlayer.constructProjection();
+    cameraPlayer.constructFrustum();
 
-    float halftan = tan(yfov / 2);
-    float nhh = halftan * cameraPlayer.near_plane;
-    float nhw = aspectratio * nhh;
-    float fhh = (cameraPlayer.far_plane / cameraPlayer.near_plane) * nhh;
-    float fhw = aspectratio * fhh;
-    std::vector <glm::vec4> frustrum_coords_VS;
-    
-    frustrum_coords_VS.push_back(glm::vec4(-fhw, fhh, -cameraPlayer.far_plane, 1)); //top left 0
-    frustrum_coords_VS.push_back(glm::vec4(fhw, fhh, -cameraPlayer.far_plane, 1));// top right 1
-    frustrum_coords_VS.push_back(glm::vec4(fhw, -fhh, -cameraPlayer.far_plane, 1)); // bottom right 2
-    frustrum_coords_VS.push_back(glm::vec4(-fhw, -fhh, -cameraPlayer.far_plane, 1)); // bottom left 3
+    cameraDebug.yfov = 90.0f;
+    cameraDebug.aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
+    cameraDebug.constructProjection();
 
-    frustrum_coords_VS.push_back(glm::vec4(-nhw, nhh, -cameraPlayer.near_plane, 1)); // top left 4
-    frustrum_coords_VS.push_back(glm::vec4(nhw, nhh, -cameraPlayer.near_plane, 1)); //top right 5
-    frustrum_coords_VS.push_back(glm::vec4(nhw, -nhh, -cameraPlayer.near_plane, 1)); // bottom right 6
-    frustrum_coords_VS.push_back(glm::vec4(-nhw, -nhh, -cameraPlayer.near_plane, 1)); // bottom right 7
-
-    frustrum_coords_VS.push_back(glm::vec4(0, 0, 0, 1)); // origin 8
-
-    /*for (int i = 0; i < frustrum_coords_VS.size(); i++)
-    {
-        std::cout << glm::to_string(frustrum_coords_VS[i]) << std::endl;
-    }*/
     // calculate WS coords
+    cameraPlayer.inView = glm::inverse(cameraPlayer.View);
+    cameraPlayer.frustum->constructWS(cameraPlayer.inView);
 
-    glm::mat4 Vinv = glm::inverse(cameraPlayer.GetViewMatrix());
-    float* frustrum_coords_WS_Array = new float[3 * 9];
-    glm::vec4 frustrum_coords_WS[9];
-    for (int i = 0; i < frustrum_coords_VS.size(); i++)
-    {
-        frustrum_coords_WS[i] = (Vinv * frustrum_coords_VS[i]);
-        frustrum_coords_WS_Array[3 * i] = frustrum_coords_WS[i].x;
-        frustrum_coords_WS_Array[3 * i + 1] = frustrum_coords_WS[i].y;
-        frustrum_coords_WS_Array[3 * i + 2] = frustrum_coords_WS[i].z;
-    }
-    float diagnolFrustrum = glm::length(frustrum_coords_VS[6] - frustrum_coords_VS[0]);
-    /*for (int i = 0; i < 9; i++)
-    {
-        for (int j = 0; j < 3; j++)
-            std::cout << frustrum_coords_WS_Array[3 * i + j] << ", ";
-        std::cout << std::endl;
-    }*/
-    // indices
-    unsigned int indices[] = {
-    0,1,8,// left 
-    1,2,8,// up
-    2,3,8,// right
-    3,0,8,// down
-    4,5,6, // near plane
-    6,7,4 //
-    };
     // feed into proper buffers;
-
     unsigned int EBO;
     glGenBuffers(1, &EBO);
 
@@ -371,10 +327,10 @@ int main(int argc, char* argv[])
     glBindVertexArray(VAO_frustrum);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cameraPlayer.frustum->indices), cameraPlayer.frustum->indices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO_frustrum);
-    glBufferData(GL_ARRAY_BUFFER, 27 * sizeof(float), frustrum_coords_WS_Array, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 27 * sizeof(float), cameraPlayer.frustum->Coords_WS_ARRAY, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_TRUE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -503,48 +459,13 @@ int main(int argc, char* argv[])
     // setup directional light shadow shader 
     // lets feed it a dir light
     DirectionalLight dlight{};
-    // calculate frustrum x and y min and max
+    // fit frustrum bounding box in orthographic proj of directional light
     glm::mat4 lightView = glm::lookAt(glm::normalize(dlight.direction), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
-    glm::vec4 frustrum_coords_LS[8];
-    for (int i = 0; i < 8;i++) 
-    {
-        frustrum_coords_LS[i] = lightView * frustrum_coords_WS[i];   
-    }
-    /*for (int i = 0; i < 8; i++)
-    {
-        std::cout << glm::to_string(frustrum_coords_LS[i]) << std::endl;
-    }*/
-    float xyminmax[4] = {frustrum_coords_LS[0].x,frustrum_coords_LS[0].y,frustrum_coords_LS[0].x,frustrum_coords_LS[0].y };
-    for (int i = 1; i < 8; i++)
-    {
-        if (xyminmax[0] > frustrum_coords_LS[i].x)
-            xyminmax[0] = frustrum_coords_LS[i].x;
-        if (xyminmax[1] < frustrum_coords_LS[i].x)
-            xyminmax[1] = frustrum_coords_LS[i].x;
-
-        if (xyminmax[2] > frustrum_coords_LS[i].y)
-            xyminmax[2] = frustrum_coords_LS[i].y;
-        if (xyminmax[3] < frustrum_coords_LS[i].y)
-            xyminmax[3] = frustrum_coords_LS[i].y;
-    }
+    cameraPlayer.frustum->constructLS(lightView);
+    float* xyminmax = cameraPlayer.frustum->getFrustrumMinMax();
     float nearplane_ortho = -20.f;
     float farplane_ortho = 20.f;
-    unsigned int indices_ortho[] = {  // note that we start from 0!
-    0, 1, 3,   // first triangle
-    1, 2, 3    // second triangle
-    };
-    float vertices_ortho[] = {  
-        xyminmax[0],xyminmax[1],
-   
-    };
-   /* for (int i = 0; i < 4; i++)
-    {
-        std::cout << xyminmax[i] << std::endl;
-    }*/
-    float xcenter = (xyminmax[1] + xyminmax[0]) / 2;
-    float ycenter = (xyminmax[3] + xyminmax[2]) / 2;
-    float extent = (xyminmax[1] - xyminmax[0]) > (xyminmax[3] + xyminmax[2]) ? (xyminmax[1] - xyminmax[0]) : (xyminmax[3] + xyminmax[2]);
-    float multiple = 2.0f * extent / SHADOW_MAP_MAX_SIZE_DIR;
+
     glm::mat4 lightProjection = glm::ortho(xyminmax[0],xyminmax[1],xyminmax[2],xyminmax[2], nearplane_ortho, farplane_ortho);
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
     dirShadow_instanced.use();
@@ -603,7 +524,7 @@ int main(int argc, char* argv[])
             }
             
             //std::thread t1(&Scene::loadObject,scene);
-           // t1.join();
+            // t1.join();
             //scene.loadObject();
             //Object* helmet = new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
             //glm::mat4 helmetTrans{ 1.0f };
@@ -632,63 +553,33 @@ int main(int argc, char* argv[])
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene.objects.size(), scene.instancedTransforms, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
         // frustrum shit veiw matrices and ****
-
-        glm::mat4 view = camera->GetViewMatrix();
-        Vinv = glm::inverse(cameraPlayer.GetViewMatrix());
+        camera->constructViewMatrix();
+        cameraPlayer.constructViewMatrix();
+        cameraPlayer.inView = glm::inverse(cameraPlayer.View);
         //update debug frustrum coords of Player cam
         glBindBuffer(GL_ARRAY_BUFFER, VBO_frustrum);
         float* ptr = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         if (ptr)
         {
-            for (int i = 0; i < frustrum_coords_VS.size(); i++)
-            {
-                frustrum_coords_WS[i] = (Vinv * frustrum_coords_VS[i]);
-                ptr[3 * i] = frustrum_coords_WS[i].x;
-                ptr[3 * i + 1] = frustrum_coords_WS[i].y;
-                ptr[3 * i + 2] = frustrum_coords_WS[i].z;
-            }
+            cameraPlayer.frustum->updateWS(ptr,cameraPlayer.inView);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         // change directional light direction 
         lightView = glm::lookAt(glm::normalize(dlight.direction), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
         // use frustrum to fit ortho projection for directional shadow mapping 
-        for (int i = 0; i < 8; i++)
-        {
-            frustrum_coords_LS[i] = lightView * frustrum_coords_WS[i];
-        }
-
-        xyminmax[0] = frustrum_coords_LS[0].x;
-        xyminmax[1] = frustrum_coords_LS[0].y;
-        xyminmax[2] = frustrum_coords_LS[0].x;
-        xyminmax[3] = frustrum_coords_LS[0].y;
-        for (int i = 1; i < 8; i++)
-        {
-            if (xyminmax[0] > frustrum_coords_LS[i].x)
-                xyminmax[0] = frustrum_coords_LS[i].x;
-            if (xyminmax[1] < frustrum_coords_LS[i].x)
-                xyminmax[1] = frustrum_coords_LS[i].x;
-
-            if (xyminmax[2] > frustrum_coords_LS[i].y)
-                xyminmax[2] = frustrum_coords_LS[i].y;
-            if (xyminmax[3] < frustrum_coords_LS[i].y)
-                xyminmax[3] = frustrum_coords_LS[i].y;
-        }
-        float worldunitpertexel = diagnolFrustrum / SHADOW_MAP_MAX_SIZE_DIR;
-        for (int i = 0; i < 4; i++)
-        {
-            xyminmax[i] /= worldunitpertexel;
-            xyminmax[i] = floor(xyminmax[i]);
-            xyminmax[i] *= worldunitpertexel;
-            //xyminmax[i] /= worldunitpertexel;
-        }
+        cameraPlayer.frustum->constructLS(lightView);
+        xyminmax = cameraPlayer.frustum->getFrustrumMinMax();
+     
+        //float worldunitpertexel = cameraPlayer.frustum->diagnolFrustrum / SHADOW_MAP_MAX_SIZE_DIR;
         //for (int i = 0; i < 4; i++)
         //{
-        //    std::cout << xyminmax[i];// << " :worlduptex =" << worldunitpertexel;
+        //    xyminmax[i] /= worldunitpertexel;
+        //    xyminmax[i] = floor(xyminmax[i]);
+        //    xyminmax[i] *= worldunitpertexel;
+        //    //xyminmax[i] /= worldunitpertexel;
         //}
         lightProjection = glm::ortho((float)xyminmax[0], (float)xyminmax[1], (float)xyminmax[2], (float)xyminmax[3], nearplane_ortho, farplane_ortho);
-       
-        //std::cout<< std::endl;  
-       // lightProjection = glm::ortho(-30.0f, 30.00f, -30.0f, 30.0f, -100.f, 100.f);
+
         lightSpaceMatrix = lightProjection * lightView;
         dirShadow_instanced.use();
         dirShadow_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
@@ -739,8 +630,8 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
             pbrShader.use();     
-            pbrShader.setMat4("projection", projection);
-            pbrShader.setMat4("view", view);
+            pbrShader.setMat4("projection", camera->Projection);
+            pbrShader.setMat4("view", camera->View);
             pbrShader.setVec3("viewPos", camera->Position);
             pbrShader.setVec3("spotLight.position", camera->Position);
             pbrShader.setVec3("spotLight.direction", camera->Front);
@@ -759,8 +650,8 @@ int main(int argc, char* argv[])
             pbrShader_instanced.use();
             //glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
             //glm::mat4 view = camera.GetViewMatrix();
-            pbrShader_instanced.setMat4("projection", projection);
-            pbrShader_instanced.setMat4("view", view);
+            pbrShader_instanced.setMat4("projection", camera->Projection);
+            pbrShader_instanced.setMat4("view", camera->View);
             pbrShader_instanced.setVec3("viewPos", camera->Position);
             pbrShader_instanced.setVec3("spotLight.position", camera->Position);
             pbrShader_instanced.setVec3("spotLight.direction", camera->Front);
@@ -781,8 +672,8 @@ int main(int argc, char* argv[])
             
             glm::mat4 model1 = glm::mat4(1.0f);
             lightCubeShader.use();
-            lightCubeShader.setMat4("projection", projection);
-            lightCubeShader.setMat4("view", view);
+            lightCubeShader.setMat4("projection", camera->Projection);
+            lightCubeShader.setMat4("view", camera->View);
             lightCubeShader.setMat4("model", glm::mat4(1.0f));
             for (unsigned int i = 0; i < scene.numLights; i++)
             {
@@ -811,15 +702,15 @@ int main(int argc, char* argv[])
             
             //bulb.Draw(lightCubeShader);
             wireShader.use();
-            wireShader.setMat4("projection", projection);
-            wireShader.setMat4("view", view);
+            wireShader.setMat4("projection", camera->Projection);
+            wireShader.setMat4("view", camera->View);
             wireShader.setMat4("model", glm::mat4(1.0f));
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable (GL_CULL_FACE);
             scene.drawHulls(wireShader);
             //chimera.Draw(wireShader);
             glBindVertexArray(VAO_frustrum);
-            glDrawElements(GL_TRIANGLES, sizeof(indices), GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);
             glEnable(GL_CULL_FACE);
             glBindVertexArray(0);
             //helmet.draw(pbrShader);
