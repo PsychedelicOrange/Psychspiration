@@ -26,6 +26,10 @@ void Object::load()
     //this->model = new Model("Resources/Models/" + this->path + ".gltf");
     //this->model->textureManager = textureManager;
     this->model = modelManager->getModel(this->path);
+    //this->aabb = { glm::vec3(glm::vec4(this->model->mMin,1)*this->transform),glm::vec3(glm::vec4(this->model->mMax,1) * this->transform) };s
+    glm::vec3 min = this->model->mMin;
+    glm::vec3 max = this->model->mMax;
+    this->aabb = {min, max,this->transform};
 }
 void Object::loadHulls()
 {

@@ -107,7 +107,6 @@ public:
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
-
     }
 
     int setMVP(glm::mat4 mvp) {
@@ -222,8 +221,8 @@ int main(int argc, char* argv[])
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
     //glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -260,24 +259,13 @@ int main(int argc, char* argv[])
         scene_ = new Scene(User1.resourcePath,physics,eventHandler,modelManager);
     scene = *scene_;
     
+    //load models,textures into memory
     scene.loadObjects();
-    //scene.makeHAB();
-    scene.setInstanceOffsets();
-    scene.fillInstanceBuffer();
-    //std::cout << "\ndone\n";
+
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-    // instancing call transformation matrices 
-
-    GLuint uboModelMatrices;
-    glGenBuffers(1, &uboModelMatrices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene.objects.size(), scene.instancedTransforms, GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
+   
     //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
     
     unsigned int lightUBO;
@@ -316,6 +304,8 @@ int main(int argc, char* argv[])
     cameraPlayer.inView = glm::inverse(cameraPlayer.View);
     cameraPlayer.frustum->constructWS(cameraPlayer.inView);
 
+    Aabb::camFrustum = cameraPlayer.frustum;
+
     // feed into proper buffers;
     unsigned int EBO;
     glGenBuffers(1, &EBO);
@@ -336,6 +326,23 @@ int main(int argc, char* argv[])
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    // instancing call transformation matrices 
+
+    //scene.setaabbTransform();
+    scene.dontCull();
+    scene.setInstanceCount();
+    scene.setInstanceOffsets();
+    scene.fillInstanceBuffer();
+
+    GLuint uboModelMatrices;
+    glGenBuffers(1, &uboModelMatrices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene.liveObjects.size(), scene.instancedTransforms, GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  
+
     // point light shadow
     
     //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
@@ -462,7 +469,8 @@ int main(int argc, char* argv[])
     // fit frustrum bounding box in orthographic proj of directional light
     glm::mat4 lightView = glm::lookAt(glm::normalize(dlight.direction), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
     cameraPlayer.frustum->constructLS(lightView);
-    float* xyminmax = cameraPlayer.frustum->getFrustrumMinMax();
+    float* xyminmax = new float[4];
+    xyminmax = cameraPlayer.frustum->getFrustrumMinMax(xyminmax);
     float nearplane_ortho = -20.f;
     float farplane_ortho = 20.f;
 
@@ -515,11 +523,10 @@ int main(int argc, char* argv[])
                 //scene.objects.back()->model->instanceCount--;
                 //.objects.erase(std::remove(scene.objects.begin(), scene.objects.end(), scene.objects[scene.find("helmet.001")]));
                 //scene.objects.pop_back();
-                scene.removeObject("helmet.001");
+                /*scene.removeObject("helmet.001");
                 scene.addObject("Suzzane", "Mesh_0");
-                (scene.objects["Suzzane"])->transform = glm::scale((scene.objects["Suzzane"])->transform, glm::vec3(0.01));
-                scene.setInstanceOffsets();
-                scene.fillInstanceBuffer();
+                (scene.objects["Suzzane"])->transform = glm::scale((scene.objects["Suzzane"])->transform, glm::vec3(0.01));*/
+                //scene.artificialCull();
                 once = false;
             }
             
@@ -543,14 +550,18 @@ int main(int argc, char* argv[])
         lastFrame = currentFrame;
         // input
         // -----
-        //player->ProcessKeyboard();
+        // player->ProcessKeyboard();
         processHoldKeys(window);
         processInput(window);
+
         // update instance buffer 
-        //scene.setInstanceOffsets();
-        //scene.fillInstanceBuffer();
+        //scene.fillDrawList();
+        scene.setInstanceCount();
+        scene.setInstanceOffsets();
+        scene.fillInstanceBuffer();
+
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene.objects.size(), scene.instancedTransforms, GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene.liveObjects.size(), scene.instancedTransforms, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
         // frustrum shit veiw matrices and ****
         camera->constructViewMatrix();
@@ -568,8 +579,8 @@ int main(int argc, char* argv[])
         lightView = glm::lookAt(glm::normalize(dlight.direction), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
         // use frustrum to fit ortho projection for directional shadow mapping 
         cameraPlayer.frustum->constructLS(lightView);
-        xyminmax = cameraPlayer.frustum->getFrustrumMinMax();
-     
+        xyminmax = cameraPlayer.frustum->getFrustrumMinMax(xyminmax);
+        
         //float worldunitpertexel = cameraPlayer.frustum->diagnolFrustrum / SHADOW_MAP_MAX_SIZE_DIR;
         //for (int i = 0; i < 4; i++)
         //{
@@ -578,6 +589,7 @@ int main(int argc, char* argv[])
         //    xyminmax[i] *= worldunitpertexel;
         //    //xyminmax[i] /= worldunitpertexel;
         //}
+
         lightProjection = glm::ortho((float)xyminmax[0], (float)xyminmax[1], (float)xyminmax[2], (float)xyminmax[3], nearplane_ortho, farplane_ortho);
 
         lightSpaceMatrix = lightProjection * lightView;
@@ -614,7 +626,7 @@ int main(int argc, char* argv[])
         timer.End();
         try
         {
-            //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
+            std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
@@ -735,7 +747,7 @@ int main(int argc, char* argv[])
         timer.End();
         try
         {
-            //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
+            std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
         }
         catch (const std::bad_optional_access& e)
         {

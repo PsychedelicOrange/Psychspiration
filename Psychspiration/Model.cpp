@@ -147,9 +147,8 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     }
     // process aabb
     aiAABB thisaaBB = mesh->mAABB;
-    glm::vec3 mMax = { thisaaBB.mMax.x,thisaaBB.mMax.y,thisaaBB.mMax.y };
-    glm::vec3 mMin = { thisaaBB.mMin.x,thisaaBB.mMin.y,thisaaBB.mMin.y };
-    aabb = new Aabb(mMax, mMin);
+    mMax = { thisaaBB.mMax.x,thisaaBB.mMax.y,thisaaBB.mMax.y };
+    mMin = { thisaaBB.mMin.x,thisaaBB.mMin.y,thisaaBB.mMin.y };
     /*
     for (int i = 0; i < vertices.size(); i++)
     {

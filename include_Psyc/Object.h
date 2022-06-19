@@ -24,21 +24,22 @@ class Object {
 public:
 	//engine
 	ModelManager* modelManager;
-	//TextureManager* textureManager;
+	
 	//meta
 	std::string name;
 	bool debug;
+	
 	//graphics
 	std::string path;
 	Model* model;
 	glm::mat4 transform;
+	Aabb aabb;
 	//physics
 	bool dynamic;
 	std::vector<hull*> hulls;
 	
 	void load();
 	void loadHulls();
-
 	void setPhysics();
 	
 	void draw(Shader ourShader);

@@ -16,9 +16,21 @@ Moving towards supporting open-world games.
 * Integrated Bullet Physics (*broken in current version*)
 
 # Goals
-
-* [x] Instanced rendering
-* [ ] View Frustrum Culling
+## Graphics Feature Addition
+* [ ] Better GLTF Support
+* [ ] Transparency
 * [ ] IBL
 * [ ] GI
 * [ ] SSR
+## Graphics Optimization
+* [x] Instanced rendering
+* [ ] View Frustrum Culling
+## Asset pipeline / setting up tool chain btw blender / engine
+* [ ] Make a gui for a resource Manager for deleting/viewing/creating Scenes
+* [ ] Compress textures ? (.dds 10 mipmaps take up soo much extra space)
+## Building / distributing
+* [ ] Make Project more portable and easy to set up 
+* [ ] Achieve distributable builds
+* [ ] Set up one click build button
+
+

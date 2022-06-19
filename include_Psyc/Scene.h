@@ -13,7 +13,6 @@
 class Scene
 {
 //importer 
-   
 public:
     //engine
     EventHandler* eventHandler;
@@ -22,13 +21,15 @@ public:
 
     std::string sceneName; // name of folder containing scene
     std::vector<Object*> objects_; // vector of object pointers
-    std::unordered_map<std::string, Object*> objects;
+    std::unordered_map<std::string, Object*> liveObjects; // live objects in vicinity of player
+    std::list <Object*> visibleObjects; // objects visible to the player / in the camera frustum
     std::vector<Model*> uniqueModels; // vector of unique model
     
-    //lights
+    // lights
     std::vector<std::string> lightvec;
     std::vector<PointLight> lightList; // vector of lights 
     unsigned int numLights;
+
     // physics 
     Physics* physics;
     void setScale(float scale);
@@ -37,11 +38,15 @@ public:
     Scene() {}
     //void draw(Shader ourShader);
     void setUpEvents(EventHandler* eventHandler);
-    
     void parseScene(std::string data);
-    void populateObjects();
+
+    void dontCull();
+    void fillDrawList();
+    void artificialCull();
+    void setInstanceCount();
     void setInstanceOffsets();
     void fillInstanceBuffer();
+
     void makeHAB();
     void loadObjects();
     void drawObjects(Shader ourShader);

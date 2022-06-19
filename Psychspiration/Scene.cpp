@@ -57,10 +57,10 @@ Scene::Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelMana
 void Scene::parseScene(std::string data)
 {
     Json sceneData = Json::parse(data);
-    // yet to implemnt hull loading yet
+    // yet to implement hull loading yet
     for (auto& object : sceneData["objects"])
     {
-        objects.insert({ object["name"].get<std::string>(),new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"] ))});
+        liveObjects.insert({ object["name"].get<std::string>(),new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"] ))});
         objects_.push_back(new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"])));
     }
     for (auto& light : sceneData["lights"])
@@ -71,6 +71,38 @@ void Scene::parseScene(std::string data)
     numLights = lightList.size();
     std::cout << glm::to_string(lightList[0].position);
 }
+
+void Scene::dontCull()
+{
+    visibleObjects.clear();
+    for (auto obj : liveObjects)
+        visibleObjects.push_back(obj.second);
+}
+void Scene::artificialCull()
+{
+    visibleObjects.clear();
+    for (auto obj : liveObjects)
+        if (obj.second->name[0]!='P')
+            visibleObjects.push_back(obj.second);
+}
+void Scene::fillDrawList()
+{
+    visibleObjects.clear();
+    for (auto obj : liveObjects)
+        if (obj.second->aabb.isOnFrustum(obj.second->getTransform())) 
+            visibleObjects.push_back(obj.second);
+}
+void Scene::setInstanceCount()
+{
+    for (auto uniqueModel : modelManager->Models)
+    {
+        uniqueModel.second->instanceCount = 0;
+    }
+    for (auto obj : visibleObjects)
+    {
+        obj->model->instanceCount++;
+    }
+}
 void Scene::setInstanceOffsets()
 {
     modelManager->Models.begin()->second->instanceOffset = 0;
@@ -80,126 +112,86 @@ void Scene::setInstanceOffsets()
         obj->second->instanceOffset = std::prev(obj)->second->instanceOffset + std::prev(obj)->second->instanceCount;
     }
 }
-//void Scene::updateInstanceBuffer()
-//{
-//    for (auto obj : objects)
-//    {
-//        instanced
-//    }
-//}
 void Scene::fillInstanceBuffer()
 {
-    instancedTransforms = new glm::mat4[objects.size()];
+    delete instancedTransforms;
+    instancedTransforms = new glm::mat4[visibleObjects.size()];
     for (auto uniqueModel : modelManager->Models)
     {
         uniqueModel.second->instanceCurr = -1;
     }
-    for (auto obj : objects)
+    for (auto obj : visibleObjects)
     {
-        instancedTransforms[obj.second->model->instanceOffset + ++(obj.second->model->instanceCurr)] = obj.second->transform;
+       instancedTransforms[obj->model->instanceOffset + ++(obj->model->instanceCurr)] = obj->transform;
     }
-    for (int i = 0; i < objects.size(); i++)
-        std::cout << "\n " << glm::to_string(instancedTransforms[i]);
+    //for (int i = 0; i < objects.size(); i++)
+    //    std::cout << "\n " << glm::to_string(instancedTransforms[i]);
 }
-//void Scene::makeHAB()
-//{
-//    instancedTransforms = new glm::mat4 [objects.size()];
-//    std::string prev_string = objects[0]->path;
-//    objects[0]->model->instanceOffset = 0;
-//    uniqueModels.push_back(objects[0]->model);
-//    for (int i = 0; i < objects.size(); i++)
-//    {
-//        instancedTransforms[i] = objects[i]->transform;
-//        if (prev_string != objects[i]->path || i >= objects.size())
-//        {
-//            uniqueModels.push_back(objects[i]->model);
-//            objects[i]->model->instanceOffset = i;
-//            objects[i - 1]->model->instanceCount = objects[i]->model->instanceOffset - objects[i - 1]->model->instanceOffset;
-//            prev_string = objects[i]->path;
-//        }
-//    }
-//}
-
 void Scene::loadObjects()
 {
-    for (auto obj : objects)
+    for (auto obj : liveObjects)
     {
         obj.second->load();
     }
-    /*
-    for (int i = 0; i < objects.size(); i++)
-    {
-        objects[i]->load();
-        //set dynamic of object when doing this outside of scene
-        //physics->setObject(objects[i]);
-
-    }
-    */
-
+    //set dynamic of object when doing this outside of scene
+    //physics->setObject(objects[i]);
 }
 void Scene::drawObjects(Shader ourShader)
 {
-    for (auto obj : objects)
+    for (auto obj : objects_)
     {
-        obj.second->draw(ourShader);
+        obj->draw(ourShader);
     }
-
-    //for (int i = 0; i < objects.size(); i++)
-    //{
-    //    objects[i]->draw(ourShader);
-    //}
 }
 void Scene::drawObjectsInstanced(Shader ourShader)
 {
-    /*for (int i = 0; i < objects.size();i+=0)
+    for (auto obj : modelManager->Models)
     {
-        objects[i]->drawInstanced(ourShader);
-        i += objects[i]->model->instanceCount;
-    }*/
-    ourShader.use();
+        if (obj.second->instanceCount != 0)
+        {
+            ourShader.use();
+            ourShader.setInt("instanceOffset", obj.second->instanceOffset);
+            obj.second->DrawInstanced(ourShader);
+        }
+            
+    }
+   /* ourShader.use();
     for (auto uniqueModels : modelManager->Models)
     {
         ourShader.setInt("instanceOffset", uniqueModels.second->instanceOffset);
         uniqueModels.second->DrawInstanced(ourShader);
-    }
-   /* for (int i = 0; i < uniqueModels.size(); i++)
-    {
-        ourShader.setInt("instanceOffset",uniqueModels[i]->instanceOffset);
-        uniqueModels[i]->DrawInstanced(ourShader);
     }*/
-    //drawObjectInstanced(ourShader, 0);
 }
 void Scene::drawShadowObjectsInstanced(Shader ourShader)
 {
-    /*for (int i = 0; i < objects.size();i+=0)
+    for (auto obj : modelManager->Models)
     {
-        objects[i]->drawInstanced(ourShader);
-        i += objects[i]->model->instanceCount;
-    }*/
-    ourShader.use();
+        if (obj.second->instanceCount != 0)
+        {
+            ourShader.use();
+            ourShader.setInt("instanceOffset", obj.second->instanceOffset);
+            obj.second->DrawInstanced(ourShader);
+        }
+
+    }
+    /*ourShader.use();
     for (auto uniqueModels : modelManager->Models)
     {
         ourShader.setInt("instanceOffset", uniqueModels.second->instanceOffset);
         uniqueModels.second->DrawInstanced(ourShader);
-    }
-    /*for (int i = 0; i < uniqueModels.size(); i++)
-    {
-        ourShader.setInt("instanceOffset", uniqueModels[i]->instanceOffset);
-        uniqueModels[i]->DrawShadowInstanced(ourShader);
     }*/
-    //drawObjectInstanced(ourShader, 0);
 }
 void Scene::addObject(std::string objectName,std::string path)
 {
-    objects.insert({ objectName ,new Object(objectName,path,modelManager) });
-    objects[objectName]->load();
+    liveObjects.insert({ objectName ,new Object(objectName,path,modelManager) });
+    liveObjects[objectName]->load();
 }
 void Scene::drawHulls(Shader ourShader)
 {
-    for (auto obj : objects)
+    /*for (auto obj : liveObjects)
     {
         obj.second->drawHulls(ourShader);
-    }
+    }*/
     /*
     for (int i = 0; i < objects.size(); i++)
     {
@@ -209,7 +201,7 @@ void Scene::drawHulls(Shader ourShader)
 }
 void Scene::setPhysics()
 {
-    for (auto obj : objects)
+    for (auto obj : liveObjects)
     {
         physics->setObject(obj.second);
     }
@@ -220,7 +212,7 @@ void Scene::setPhysics()
 }
 void Scene::updatePhysics()
 {
-    for (auto obj : objects)
+    for (auto obj : liveObjects)
     {
         physics->setTransforms(obj.second);
     }/*
@@ -232,8 +224,8 @@ void Scene::updatePhysics()
 
 void Scene::printdetail()
 {
-    std::cout << std::endl << "Scene read: " << sceneName << "\n   Number of Object: " << objects.size();
-    for (auto obj : objects)
+    std::cout << std::endl << "Scene read: " << sceneName << "\n   Number of Object: " << liveObjects.size();
+    for (auto obj : liveObjects)
     {
       (obj.second)->printobj();
     }
@@ -264,7 +256,7 @@ void Scene::printdetail()
 
 void Scene::setScale(float scale)
 {
-    for (auto obj : objects)
+    for (auto obj : liveObjects)
     {
         (obj.second)->transform = glm::scale((obj.second)->transform, glm::vec3(scale));;
     }
@@ -279,6 +271,6 @@ void Scene::setUpEvents(EventHandler* eventHandler)
 }
 void Scene::removeObject(std::string objectName)
 {
-    objects["helmet.002"]->model->instanceCount--;
-    objects.erase("helmet.002");
+    liveObjects["helmet.002"]->model->instanceCount--;
+    liveObjects.erase("helmet.002");
 }

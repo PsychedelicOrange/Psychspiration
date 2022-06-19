@@ -1,11 +1,30 @@
 #pragma once
+struct Plane {
+	glm::vec3 normal = { 0,1,0 };
+	float distance = 0;
+	Plane() {};
+	Plane(const glm::vec3& p1, const glm::vec3& norm)
+		: normal(glm::normalize(norm)),
+		distance(glm::dot(normal, p1))
+	{}
+	float getSignedDistanceToPlan(const glm::vec3& point) const
+	{
+		return glm::dot(normal, point) - distance;
+	}
+
+};
 class Frustum
 {
 public:
+	// construction
+
 	float halftan, nhh, nhw, fhh, fhw,near_plane,far_plane, diagnolFrustrum;
 	glm::vec4 Coords_VS[9]; // View Space Coordinates
 	glm::vec4 Coords_WS[9]; // World Space Coordinates
 	glm::vec4 Coords_LS[8]; // Light Space Coordinates
+
+	// For culling 
+	Plane topFace,bottomFace,rightFace,leftFace,farFace,nearFace;
 
 	// Renderer 
 	float Coords_WS_ARRAY[3 * 9];
@@ -72,21 +91,42 @@ public:
 			Coords_LS[i] = LightView * Coords_WS[i];
 		}
 	}
-	float* getFrustrumMinMax()
+	float* getFrustrumMinMax(float* xyminmax)
 	{
-		float xyminmax[4] = { Coords_LS[0].x,Coords_LS[0].y,Coords_LS[0].x,Coords_LS[0].y };
+		xyminmax[0] = Coords_LS[0].x;
+		xyminmax[1] = Coords_LS[0].y;
+		xyminmax[2] = Coords_LS[0].x;
+		xyminmax[3] = Coords_LS[0].y;
 		for (int i = 1; i < 8; i++)
 		{
 			if (xyminmax[0] > Coords_LS[i].x)
 				xyminmax[0] = Coords_LS[i].x;
 			if (xyminmax[1] < Coords_LS[i].x)
 				xyminmax[1] = Coords_LS[i].x;
-
 			if (xyminmax[2] > Coords_LS[i].y)
 				xyminmax[2] = Coords_LS[i].y;
 			if (xyminmax[3] < Coords_LS[i].y)
 				xyminmax[3] = Coords_LS[i].y;
 		}
 		return xyminmax;
+	}
+	void updateForCulling(glm::vec3 Position, glm::vec3 Front, glm::vec3 Right,glm::vec3 Up)
+	{
+		//const float halfVSide = zFar * tanf(fovY * .5f);
+		//const float halfHSide = halfVSide * aspectratio;
+
+		const glm::vec3 frontMultFar = far_plane * Front;
+
+		nearFace = { Position + near_plane * Front, Front };
+		farFace = { Position + frontMultFar, -Front };
+		rightFace = { Position,
+								glm::cross(Up,frontMultFar + Right * fhh) };
+		leftFace = { Position,
+								glm::cross(frontMultFar - Right * fhw, Up) };
+		topFace = { Position,
+								glm::cross(Right, frontMultFar - Up * fhh) };
+		bottomFace = {Position,
+								glm::cross(frontMultFar + Up * fhw, Right) };
+
 	}
 };
