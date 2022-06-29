@@ -24,8 +24,7 @@ public:
     std::string format;
     bool gammaCorrection;
 
-    //physics
-    btRigidBody* rigidBody;
+    
     // constructor, expects a filepath to the 3D model.
     Model(std::string const& path, unsigned int* pbo = nullptr, bool gamma = false);
     Model();

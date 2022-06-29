@@ -9,7 +9,8 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
     this->vertices = vertices;
     this->indices = indices;
     this->textures = textures;
-
+    this->vertices_flat = vertices_flat;
+    this->indices_flat = indices_flat;
     // now that we have all the required data, set the vertex buffers and its attribute pointers.
     setupMesh();
 }

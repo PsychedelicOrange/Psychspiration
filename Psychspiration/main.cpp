@@ -1,8 +1,9 @@
 #pragma once
 #include <glad/glad.h>
-#include <Window.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <EventHandler.h>
 #include <FileIO.h>
 #include <Scene.h>
@@ -14,13 +15,11 @@
 #include <Model.h>
 #include <ModelManager.h>
 #include <Player.h>
-#include <func.h>
 #include <TimerQueryAsync.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include <functional>
 #include <iostream>
-#include <glm/gtx/string_cast.hpp>
 #include <chrono>
 #include <thread>
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -262,6 +261,7 @@ int main(int argc, char* argv[])
     //load models,textures into memory
     scene.loadObjects();
 
+    scene.setPhysics();
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -535,8 +535,9 @@ int main(int argc, char* argv[])
             //scene.loadObject();
             //Object* helmet = new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
             //glm::mat4 helmetTrans{ 1.0f };
-            //scene.physics.stepSim();
-            //scene.updatePhysics();
+            scene.physics->stepSim();
+            scene.updatePhysics();
+
             //helmet.transform = glm::rotate(helmet.transform,(float)glm::radians(deltaTime*90),glm::vec3(0,1,0));
             play = false;
         }
@@ -554,8 +555,9 @@ int main(int argc, char* argv[])
         processHoldKeys(window);
         processInput(window);
 
+        
         // update instance buffer 
-        //scene.fillDrawList();
+        //scene.fillDrawList(); 
         scene.setInstanceCount();
         scene.setInstanceOffsets();
         scene.fillInstanceBuffer();
@@ -599,7 +601,8 @@ int main(int argc, char* argv[])
         pbrShader_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         // render
         // ------
-        glClearColor(0, 0, 0, 1.0f);
+        //glClearColor(0, 0, 0, 1.0f);
+        glClearColor(1,1, 1, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         timer.Begin();
@@ -626,7 +629,7 @@ int main(int argc, char* argv[])
         timer.End();
         try
         {
-            std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
+            //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
@@ -634,8 +637,8 @@ int main(int argc, char* argv[])
         }
         timer.Begin();
             
-        //glClearColor(1,1,1, 1.0f);
-        glClearColor(0, 0, 0, 1.0f);
+        glClearColor(1,1,1, 1.0f);
+        //glClearColor(0, 0, 0, 1.0f);
         glViewport(0, 0, User1.SCR_WIDTH ,User1.SCR_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -676,7 +679,7 @@ int main(int argc, char* argv[])
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-            
+            //scene.drawObjects(pbrShader);
             scene.drawObjectsInstanced(pbrShader_instanced);
             //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
@@ -721,10 +724,10 @@ int main(int argc, char* argv[])
             glDisable (GL_CULL_FACE);
             scene.drawHulls(wireShader);
             //chimera.Draw(wireShader);
-            glBindVertexArray(VAO_frustrum);
+            /*glBindVertexArray(VAO_frustrum);
             glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);
             glEnable(GL_CULL_FACE);
-            glBindVertexArray(0);
+            glBindVertexArray(0);*/
             //helmet.draw(pbrShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -747,7 +750,7 @@ int main(int argc, char* argv[])
         timer.End();
         try
         {
-            std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
+            //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
         }
         catch (const std::bad_optional_access& e)
         {

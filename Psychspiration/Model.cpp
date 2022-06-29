@@ -78,13 +78,11 @@ void Model::processNode(aiNode* node, const aiScene* scene)
     {
         processNode(node->mChildren[i], scene);
     }
-
 }
 
 Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 {
     // std::cout << "(inside processMesh) " << std::endl;
-
     // data to fill
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -145,6 +143,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         for (unsigned int j = 0; j < face.mNumIndices; j++)
             indices.push_back(face.mIndices[j]);
     }
+
     // process aabb
     aiAABB thisaaBB = mesh->mAABB;
     mMax = { thisaaBB.mMax.x,thisaaBB.mMax.y,thisaaBB.mMax.y };
@@ -213,8 +212,18 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 
     }
     
-
-    return Mesh(vertices, indices, textures);
+    Mesh temp_mesh = Mesh(vertices, indices, textures);
+    temp_mesh.vertices_flat = new float[vertices.size() * 3];
+    for (int i = 0; i < vertices.size(); i++)
+    {
+        temp_mesh.vertices_flat[(i * 3) + 0] = vertices[i].Position.x;
+        temp_mesh.vertices_flat[(i * 3) + 1] = vertices[i].Position.y;
+        temp_mesh.vertices_flat[(i * 3) + 2] = vertices[i].Position.z;
+    }
+    temp_mesh.indices_flat = new unsigned int[indices.size()];
+    for (int i = 0; i < indices.size(); i++)
+        temp_mesh.indices_flat[i] = indices[i];
+    return temp_mesh;
 
 }
 

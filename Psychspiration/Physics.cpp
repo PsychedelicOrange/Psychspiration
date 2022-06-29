@@ -1,4 +1,6 @@
 #include <Physics.h>
+#define ENABLE_VHACD_IMPLEMENTATION 1
+#include <VHACD.h>
 #include <Mesh.h> // for vertex struct 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -13,7 +15,8 @@ inline glm::vec3 bt2glm(const btVector3& vec)
     return { vec.x(), vec.y(), vec.z() };
 }
 
-Physics::Physics() {
+Physics::Physics() 
+{
 
     collisionConfiguration = new btDefaultCollisionConfiguration();
     
@@ -31,7 +34,7 @@ void Physics::setObject(Object* obj)
         setStaticRigidBody(obj);
     else
     {
-        obj->loadHulls();
+        //obj->loadHulls();
         setDynamicRigidBody(obj);
     }
 }
@@ -48,12 +51,15 @@ void Physics::setStaticRigidBody(Object* obj)
     for (int i = 0; i < obj->model->meshes.size(); i++)
     {
         t_mesh = &obj->model->meshes[i];
-        btCollisionShape* colShape = obj->model->meshes[i].colShape;
+        btCollisionShape* colShape;
 
         auto mesh = new btTriangleIndexVertexArray((int)t_mesh->indices.size() / 3, (int*)&(t_mesh->indices[0]), 3 * sizeof(unsigned int),t_mesh->vertices.size(),(btScalar* )&(t_mesh->vertices[0]), sizeof(Vertex));
-  
+        std::cout <<"Scale"<< obj->transform[0][0] << "," << obj->transform[1][1] << "," << obj->transform[2][2];
+        auto scale = btVector3(obj->transform[0][0], obj->transform[1][1], obj->transform[2][2]);
+        //colShape = new btScaledBvhTriangleMeshShape(new btBvhTriangleMeshShape(mesh, false),scale);
         colShape = new btBvhTriangleMeshShape(mesh, false);
-
+        obj->model->meshes[i].colShape = colShape ;
+        
         collisionShapes.push_back(colShape);
 
         compoundShape->addChildShape(groundTransform,colShape);
@@ -61,36 +67,37 @@ void Physics::setStaticRigidBody(Object* obj)
     }
     btScalar mass =  0 ;
     btVector3 localInertia(0, 0, 0);
-    compoundShape->setLocalScaling(btVector3(obj->transform[0][0], obj->transform[1][1], obj->transform[2][2]));
+    //compoundShape->setLocalScaling(btVector3(obj->transform[0][0], obj->transform[1][1], obj->transform[2][2]));
     //motion state
     btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, compoundShape, localInertia);
     btRigidBody* body = new btRigidBody(rbInfo);
-
     //add the body to the dynamics world and to Model object
     dynamicsWorld->addRigidBody(body);
-    obj->model->rigidBody = body;
+    obj->rigidBody = body;
 }
 void Physics::setDynamicRigidBody(Object* obj)
 {
     //temp compound shape
     btCompoundShape* compoundShape = new btCompoundShape();
-    std::cout << "\n For " << obj->name << ": opengl matrix : " << glm::to_string(obj->transform);
+    //std::cout << "\n For " << obj->name << ": opengl matrix : " << glm::to_string(obj->transform);
     btTransform startTransform;
     startTransform.setFromOpenGLMatrix(&(obj->transform[0][0]));
     btTransform* hullTransform;
 
     //make and add all collision shapes to compound shape
     btConvexHullShape* colShape;
+    
     for (int i = 0; i < obj->hulls.size(); i++)
     {
+
         colShape = new btConvexHullShape((btScalar*)&(obj->hulls[i]->model->meshes[0].vertices[0]),obj->hulls[i]->model->meshes[0].vertices.size(), sizeof(Vertex));
-        //colShape->setLocalScaling(btVector3(obj->hulls[i].transform[0][0], obj->hulls[i].transform[1][1], obj->hulls[i].transform[2][2]));
+        colShape->setSafeMargin(00.04);
         collisionShapes.push_back(colShape);
         hullTransform = new btTransform();
-        hullTransform->setFromOpenGLMatrix(&(obj->hulls[i]->transform[0][0]));
+        glm::mat4 t = glm::mat4(1.0f);
+        hullTransform->setFromOpenGLMatrix(&(t[0][0]));
         compoundShape->addChildShape(*hullTransform, colShape);
-        
     }
     //btScalar* mass = new btScalar[compoundShape->getNumChildShapes()]{ 1 };
     btScalar mass[100];
@@ -101,7 +108,8 @@ void Physics::setDynamicRigidBody(Object* obj)
     btTransform principal;
     btVector3 inertia;
     compoundShape->calculatePrincipalAxisTransform(mass, principal, inertia);
-    //compoundShape->setLocalScaling(btVector3(obj->transform[0][0], obj->transform[1][1], obj->transform[2][2]));
+    compoundShape->setLocalScaling(btVector3(obj->localScale.x, obj->localScale.y, obj->localScale.z));
+    compoundShape->setMargin(0.04);
     btCompoundShape* compound2 = new btCompoundShape();
     collisionShapes.push_back(compound2);
     
@@ -118,7 +126,7 @@ void Physics::setDynamicRigidBody(Object* obj)
     btRigidBody* body = new btRigidBody(rbInfo);
 
     dynamicsWorld->addRigidBody(body);
-    obj->model->rigidBody = body;
+    obj->rigidBody = body;
 }
 void Physics::setGravity()
 {
@@ -131,7 +139,7 @@ void Physics::stepSim()
 
 void Physics::setTransforms(Object* obj)
 {
-    btRigidBody* rbody = obj->model->rigidBody;
+    btRigidBody* rbody = obj->rigidBody;
     btCollisionObject* pobj = rbody;
     btTransform trans;
     if (rbody && rbody->getMotionState())
@@ -142,21 +150,47 @@ void Physics::setTransforms(Object* obj)
     {
         trans = pobj->getWorldTransform();
     }
-    //std::cout<<obj->name<<" : \t"<< float(trans.getOrigin().getX())<<" , "<< float(trans.getOrigin().getY()) << " , " << float(trans.getOrigin().getZ())<<"\n";
-    // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-    trans.getOpenGLMatrix(&obj->transform[0][0]);
-   
-    //if (obj->dynamic)
-    //{
-    //    /*obj->transform[0][0] *= pobj->getCollisionShape()->getLocalScaling().x();
-    //    obj->transform[0][0] *= pobj->getCollisionShape()->getLocalScaling().y();
-    //    obj->transform[0][0] *= pobj->getCollisionShape()->getLocalScaling().z();*/
-    //    //obj->transform = glm::scale(obj->transform,bt2glm(pobj->getCollisionShape()->getLocalScaling()));
-    //}
-    //if (!obj->debug)
-    //{
-    //    std::cout << "\n For " << obj->name << ": after setTransform : " << glm::to_string(obj->transform);
-    //    obj->debug = true;
-    //}
+
+    glm::mat4 transform,scaled_transform;
+    trans.getOpenGLMatrix(&transform[0][0]);
+    scaled_transform = glm::scale(glm::mat4(1.0f), obj->localScale);
+    obj->transform = transform * scaled_transform;
     
 }
+//VHACD::IVHACD* iface = VHACD::CreateVHACD_ASYNC();
+ //VHACD::IVHACD::Parameters params;
+ //for (auto mesh : obj->model->meshes)
+ //{
+ //    /*for (int i = 0; i < mesh.vertices.size() ; i++)
+ //    {
+ //        std::cout << "\n " << mesh.vertices_flat[i]<<"," <<mesh.vertices_flat[i+1]<<","<<mesh.vertices_flat[i+2];
+ //    }
+ //    for (int i = 0; i < mesh.indices.size(); i++)
+ //    {
+ //        std::cout << "\n " << mesh.indices_flat[i] << "," << mesh.indices_flat[i + 1] << "," << mesh.indices_flat[i + 2];
+ //    }*/
+ //    std::cout << "iface->Compute(mesh.vertices_flat," << mesh.vertices.size() << ", mesh.indices_flat," << mesh.indices.size() << ", params); ";
+ //    iface->Compute(mesh.vertices_flat,mesh.vertices.size(), mesh.indices_flat, mesh.indices.size()/3, params);
+ //    while (!iface->IsReady())
+ //    {
+ //        std::this_thread::sleep_for(std::chrono::nanoseconds(10000)); // s
+ //    }
+ //    if (!iface->GetNConvexHulls())
+ //        std::cout << "failed";
+ //    else
+ //    {
+ //        std::cout << obj->name << "'s mesh computed !\n";
+ //        for (int i = 0; i < iface->GetNConvexHulls(); i++)
+ //        {
+ //            VHACD::IVHACD::ConvexHull hull;
+ //            iface->GetConvexHull(i,hull);
+ //            colShape = new btConvexHullShape((btScalar*)hull.m_points, hull.m_nPoints);
+ //            collisionShapes.push_back(colShape);
+ //            hullTransform = new btTransform();
+ //            //hullTransform->setFromOpenGLMatrix(&(obj->hulls[i]->transform[0][0]));
+ //            compoundShape->addChildShape(*hullTransform, colShape);
+
+ //        }
+ //    }
+ //}
+ //

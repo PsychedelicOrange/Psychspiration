@@ -1,9 +1,9 @@
 #pragma once
-#include<Model.h>
-#include<ModelManager.h>
-#include<Shader.h>
-#include<string>
-#include<vector>
+#include <Model.h>
+#include <ModelManager.h>
+#include <Shader.h>
+#include <string>
+#include <vector>
 
 struct hull {
 	Model* model;
@@ -34,9 +34,14 @@ public:
 	Model* model;
 	glm::mat4 transform;
 	Aabb aabb;
+
 	//physics
 	bool dynamic;
 	std::vector<hull*> hulls;
+	btRigidBody* rigidBody;
+	glm::vec3 localScale;
+	/*glm::vec3 translate;
+	glm::vec4 rotate;*/
 	
 	void load();
 	void loadHulls();
@@ -46,7 +51,6 @@ public:
 	void drawInstanced(Shader ourShader);
 	void drawHulls(Shader ourShader);
 
-	
 	void printobj();
 
 	Object(std::string name);

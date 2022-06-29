@@ -12,3 +12,17 @@ Model* ModelManager::getModel(std::string path)
 		return Models[path];
 	}
 }
+
+Model* ModelManager::getHull(std::string path)
+{
+	auto search = hulls.find(path);
+	if (search != hulls.end())
+	{
+		return search->second;
+	}
+	else
+	{
+		hulls.emplace(path, new Model("Resources/Hulls/" + path + ".glb"));
+		return hulls[path];
+	}
+}

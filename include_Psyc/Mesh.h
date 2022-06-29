@@ -24,6 +24,8 @@ public:
     std::vector<Texture>      textures;
     unsigned int VAO;
     //physics 
+    float* vertices_flat;
+    unsigned int * indices_flat;
     btCollisionShape* colShape;
     // constructor
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);

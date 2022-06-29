@@ -22,6 +22,15 @@ glm::mat4 getmat4_json(Json temp)
     }
     return glm::make_mat4(temp_arr);
 }
+glm::vec4 getvec4_json(Json temp)
+{
+    float temp_arr[4];
+    for (int i = 0; i < 4; i++)
+    {
+        temp_arr[i] = temp[i].get<float>();
+    }
+    return glm::make_vec4(temp_arr);
+}
 glm::vec3 getvec3_json(Json temp)
 {
     float temp_arr[3];
@@ -60,7 +69,26 @@ void Scene::parseScene(std::string data)
     // yet to implement hull loading yet
     for (auto& object : sceneData["objects"])
     {
-        liveObjects.insert({ object["name"].get<std::string>(),new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"] ))});
+        Object* ob = new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"]));
+        if (object["hulls"].empty())
+            ob->dynamic = 0;
+        else
+        {
+            ob->dynamic = 1;
+        }
+        ob->localScale = getvec3_json(object["scale"]);
+        glm::mat4 trans(1.0f);
+        //trans = glm::scale(trans, ob->localScale);
+        trans = glm::rotate(trans, glm::radians(object["rotate"][0].get<float>()), glm::vec3(object["rotate"][0].get<float>(), object["rotate"][0].get<float>(), object["rotate"][0].get<float>()));
+        trans = glm::translate(trans, convvec3_blender(getvec3_json(object["translate"])));
+
+        //if(ob->dynamic)
+        //    ob->transform = trans;
+        
+        for (auto& hull_ : object["hulls"])
+            ob->hulls.push_back(new hull(hull_["export_name"].get<std::string>(), getmat4_json(hull_["transform"])));
+        liveObjects.insert({ object["name"].get<std::string>(),ob });
+        
         objects_.push_back(new Object(object["name"].get<std::string>(), object["export_name"].get<std::string>(), modelManager, getmat4_json(object["transform"])));
     }
     for (auto& light : sceneData["lights"])
@@ -132,15 +160,17 @@ void Scene::loadObjects()
     for (auto obj : liveObjects)
     {
         obj.second->load();
+        obj.second->loadHulls();
     }
+
     //set dynamic of object when doing this outside of scene
     //physics->setObject(objects[i]);
 }
 void Scene::drawObjects(Shader ourShader)
 {
-    for (auto obj : objects_)
+    for (auto obj : liveObjects)
     {
-        obj->draw(ourShader);
+        obj.second->draw(ourShader);
     }
 }
 void Scene::drawObjectsInstanced(Shader ourShader)
@@ -188,10 +218,11 @@ void Scene::addObject(std::string objectName,std::string path)
 }
 void Scene::drawHulls(Shader ourShader)
 {
-    /*for (auto obj : liveObjects)
+    for (auto obj : liveObjects)
     {
-        obj.second->drawHulls(ourShader);
-    }*/
+        if(obj.second->dynamic)
+            obj.second->drawHulls(ourShader);
+    }
     /*
     for (int i = 0; i < objects.size(); i++)
     {
@@ -201,6 +232,7 @@ void Scene::drawHulls(Shader ourShader)
 }
 void Scene::setPhysics()
 {
+
     for (auto obj : liveObjects)
     {
         physics->setObject(obj.second);
@@ -214,7 +246,8 @@ void Scene::updatePhysics()
 {
     for (auto obj : liveObjects)
     {
-        physics->setTransforms(obj.second);
+        if(obj.second->dynamic)
+            physics->setTransforms(obj.second);
     }/*
     for (int i = 0; i < objects.size(); i++)
     {
@@ -253,18 +286,18 @@ void Scene::printdetail()
 //    }
 //    std::cout << "ERROR:: HULL COULD'NT FIND GRAPHIC MODEL";
 //}
-
-void Scene::setScale(float scale)
-{
-    for (auto obj : liveObjects)
-    {
-        (obj.second)->transform = glm::scale((obj.second)->transform, glm::vec3(scale));;
-    }
-   /* for (int i = 0; i < objects.size(); i++)
-    {
-        objects[i]->transform = glm::scale(objects[i]->transform, glm::vec3(scale));
-    }*/
-}
+//
+//void Scene::setScale(float scale)
+//{
+//    for (auto obj : liveObjects)
+//    {
+//        (obj.second)->transform = glm::scale((obj.second)->transform, glm::vec3(scale));;
+//    }
+//   /* for (int i = 0; i < objects.size(); i++)
+//    {
+//        objects[i]->transform = glm::scale(objects[i]->transform, glm::vec3(scale));
+//    }*/
+//}
 void Scene::setUpEvents(EventHandler* eventHandler)
 {
     //eventHandler->registerCallback("SpawnObject", &Scene::loadObject,this);

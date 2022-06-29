@@ -1,5 +1,6 @@
 #include <Object.h>
 #include <glm/gtx/string_cast.hpp>
+#include <filesystem>
 #include <iostream>
 Object::Object(std::string name)
 {
@@ -33,11 +34,11 @@ void Object::load()
 }
 void Object::loadHulls()
 {
-    for (int i = 0; i < hulls.size(); i++)
-    {
-        //this->hulls[i]->model = new Model("Resources/Models/"+this->hulls[i]->path + ".gltf");
-        this->hulls[i]->model = modelManager->getModel(this->hulls[i]->path);
-    }
+     for (auto hull_ : this->hulls)
+     {
+         hull_->model = modelManager->getHull(hull_->path );
+     }
+ 
 }
 void Object::draw(Shader ourShader)
 {
@@ -60,10 +61,16 @@ void Object::drawHulls(Shader ourShader)
 {
     debug = false;
     ourShader.use();
-    
     for (int i = 0; i < hulls.size(); i++)
     {
-        ourShader.setMat4("model", (this->transform)*(this->hulls[i]->transform) );// * this->transform);
+        //hulls[i]->transform[0][3] = +transform[0][3];
+        //hulls[i]->transform[1][3] = +transform[1][3];
+        //hulls[i]->transform[2][3] = +transform[2][3];
+       // glm::mat4 totalTrans = glm::mat4(1.0f);
+        //totalTrans = glm::scale(totalTrans, glm::vec3(transform[0][0], transform[1][1], transform[2][2]));
+
+        //totalTrans = this->transform* totalTrans;
+        ourShader.setMat4("model",this->transform);
         hulls[i]->model->Draw(ourShader);
     }
 }

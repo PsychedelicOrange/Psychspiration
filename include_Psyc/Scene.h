@@ -20,7 +20,7 @@ public:
     glm::mat4* instancedTransforms; // huge ass buffer
 
     std::string sceneName; // name of folder containing scene
-    std::vector<Object*> objects_; // vector of object pointers
+    std::vector<Object*> objects_; // vector of object pointers in the scene
     std::unordered_map<std::string, Object*> liveObjects; // live objects in vicinity of player
     std::list <Object*> visibleObjects; // objects visible to the player / in the camera frustum
     std::vector<Model*> uniqueModels; // vector of unique model
@@ -43,6 +43,7 @@ public:
     void dontCull();
     void fillDrawList();
     void artificialCull();
+
     void setInstanceCount();
     void setInstanceOffsets();
     void fillInstanceBuffer();
