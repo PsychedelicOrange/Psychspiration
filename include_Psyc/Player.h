@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 #include <Object.h>
-//#include <Window.h>
+#include <Camera.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <functional>
@@ -10,10 +10,12 @@ class Player
 {
 public:
 	Object* obj; //models and physics
+	Camera* camera;
 	EventHandler* eventHandler; // controls
-	Player(EventHandler* eventHandler) { this->eventHandler = eventHandler; }
+	Player(EventHandler* eventHandler,Camera* camera) { this->eventHandler = eventHandler; }
 	Player(Object* obj,EventHandler* eventHandler)
 	{
+		this->camera = camera;
 		this->obj = obj;
 		this->eventHandler = eventHandler;
 	}

@@ -19,6 +19,9 @@ public:
 	void update();
 	Settings(EventHandler* eventHandler)
 	{
+		SCR_WIDTH = 1920;
+		SCR_HEIGHT = 1080;
+		exposure = 0.5;
 		update();
 		eventHandler->registerCallback("Update_Settings", [=]() {update(); });
 	}

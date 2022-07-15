@@ -9,7 +9,11 @@
 #include <Scene.h>
 #include <Settings.h>
 #include <Shader.h>
+#include <State.h>
 #include <Camera.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 #include <FileIO.h>
 #include <Mesh.h>
 #include <Model.h>
@@ -26,15 +30,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void processInput(GLFWwindow* window);
 void processHoldKeys(GLFWwindow* window);
 
-//void setLights(Shader ourShader);
-//void setLights(Scene scene);
-//void asyncLoad(Scene* scene);
 void renderSphere();
 void renderQuad();
-// debug 
+
 class Line {
     int shaderProgram;
     unsigned int VBO, VAO;
@@ -138,46 +138,20 @@ public:
 
 //Engine classes
 EventHandler* eventHandler = new EventHandler();
-
-// settings
+State state(eventHandler);
 Settings User1(eventHandler);
-bool shadows = true; //toggle
-bool normals = true; //toggle
-bool cameraDebugBool = false; // toggle
-bool forward = true;
-bool shadowsKeyPressed = false;
-bool normalsKeyPressed = false;
-bool cameraDebugKeyPressed = false;
-bool forwardKeyPressed = false;
-bool play = false;
-bool once = true;
-// camera 
-Camera* camera;
-Camera cameraPlayer(eventHandler,glm::vec3(0.0f, 0.0f, 3.0f));
-Camera cameraDebug(eventHandler, glm::vec3(1));
 float lastX = User1.SCR_WIDTH / 2.0f;
 float lastY = User1.SCR_HEIGHT / 2.0f;
-bool firstMouse = true;
-//Physics
-
-// timing
-//float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-void updatelightloc(std::string x, float deltaTime);
-
-// lighting
-//std::vector<PointLight> light;
-//unsigned int numLights;
+// camera 
+Camera* camera;
 unsigned int maxLights{ 100 };
-// maxLights = max(scene[i].numLights);
-//Scene* activeScene;
-//struct GPULight* lights;
-
 //Player* player = new Player(eventHandler);
 int main(int argc, char* argv[])
 {
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // INITIALIZATION 
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // glfw: initialize and configure
-    // ------------------------------
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
@@ -188,10 +162,7 @@ int main(int argc, char* argv[])
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-
     // glfw window creation
-    // --------------------
-    int* count= new int;
     //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
     GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
@@ -209,16 +180,13 @@ int main(int argc, char* argv[])
 
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
     // glad: load all OpenGL function pointers
-    // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
     // configure global opengl state
-    // -----------------------------
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_CULL_FACE);
     //glCullFace(GL_BACK);
@@ -226,18 +194,26 @@ int main(int argc, char* argv[])
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
     //stbi_set_flip_vertically_on_load(true);
-    
-    ModelManager* modelManager;
-    Physics* physics;
-    
-    modelManager = new ModelManager();
-    physics = new Physics();
+    // Setup Dear Imgui
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    const char* glsl_version = "#version 430";
+    ImGui_ImplOpenGL3_Init(glsl_version);
+    // psych classes
+     ModelManager* modelManager = new ModelManager();
+    Physics* physics = new Physics();
+    Camera cameraPlayer(eventHandler, glm::vec3(0.0f, 0.0f, 3.0f));
+    Camera cameraDebug(eventHandler, glm::vec3(1));
+    TimerQueryAsync timer(5);
     // pbo required for texture loading 
     glGenBuffers(2, Texture::pbo);
     Texture::first_pbo = 1;
-    // build and compile our shader zprogram
-    // ------------------------------------
-    //Shader matcapShader("matcap.vs", "matcap.fs", "0");
+    // Load Shaders
     Shader wireShader("model_simple.vs", "model_simple.fs", "0");
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
     Shader pbrShader("pbr.vs", "pbr.fs", "0");
@@ -249,7 +225,7 @@ int main(int argc, char* argv[])
     //setLights(pbrShader);
     Model bulb("resource\\bulb\\bulb2.glb");
     Model chimera("Resources\\Models\\Suzanne.gltf");
-    TimerQueryAsync timer(5);
+    // Load Scene
     Scene scene;
     Scene* scene_;
     if (argc-1)
@@ -257,19 +233,15 @@ int main(int argc, char* argv[])
     else
         scene_ = new Scene(User1.resourcePath,physics,eventHandler,modelManager);
     scene = *scene_;
-    
     //load models,textures into memory
     scene.loadObjects();
-
     scene.setPhysics();
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-   
-    //lights are stored in ubo // might increase performance compared to ssbo, also no need to change light attributes in shader
-    
+    // lights UBO
     unsigned int lightUBO;
-    glGenBuffers(1, &lightUBO);
+     glGenBuffers(1, &lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
     glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
     GLint bufMask = GL_READ_WRITE;
@@ -288,9 +260,7 @@ int main(int argc, char* argv[])
     glUnmapBuffer(GL_UNIFORM_BUFFER);
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
     // calculating projection matrix and getting frustrum coords
-
     cameraPlayer.yfov = 90.0f;
     cameraPlayer.aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
     cameraPlayer.constructProjection();
@@ -305,8 +275,7 @@ int main(int argc, char* argv[])
     cameraPlayer.frustum->constructWS(cameraPlayer.inView);
 
     Aabb::camFrustum = cameraPlayer.frustum;
-
-    // feed into proper buffers;
+    // WS frustrum buffer
     unsigned int EBO;
     glGenBuffers(1, &EBO);
 
@@ -326,26 +295,19 @@ int main(int argc, char* argv[])
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-
-    // instancing call transformation matrices 
-
-    //scene.setaabbTransform();
-    scene.dontCull();
+    // setup instancing
+        scene.dontCull();
     scene.setInstanceCount();
     scene.setInstanceOffsets();
     scene.fillInstanceBuffer();
-
+    // instancing call transformation matrices 
     GLuint uboModelMatrices;
     glGenBuffers(1, &uboModelMatrices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene.liveObjects.size(), scene.instancedTransforms, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  
-
-    // point light shadow
-    
-    //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    // point light shadow map texture setup
     const unsigned int SHADOW_MAP_MAX_SIZE = 1024;
     unsigned int depthCubemap;
     glGenTextures(1, &depthCubemap);
@@ -380,7 +342,7 @@ int main(int argc, char* argv[])
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // directional light shadow
+    // directional light shadow map texture setup
     const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096*8;
     unsigned int depthMap;
     glGenTextures(1,&depthMap);
@@ -445,8 +407,8 @@ int main(int argc, char* argv[])
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Intermediate framebuffer is not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    //setup point light shadow shader
 
+    // Set Light shader uniforms
     glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, cameraPlayer.near_plane, cameraPlayer.far_plane);
     std::vector<glm::mat4> shadowTransforms;
     for (unsigned int i = 0; i < scene.numLights; i++)
@@ -487,75 +449,70 @@ int main(int argc, char* argv[])
     Line test(glm::vec3(0, 0, 0), dlight.direction);
     test.setColor(glm::vec3(1, 1, 0));
 
-    camera = &cameraPlayer;
-
-    
-    /*eventHandler->registerCallback("ToggleCameras", [=]() {
-        if (*camera_toggle)
-        {
-            camera = &cameraPlayer;
-            *camera_toggle = 1;
-        }
-        else
-        {
-            camera = &cameraDebug;
-            *camera_toggle = 0;
-        }
-
-        });*/
-    //eventHandler->registerCallback("Hello", &Scene::loadObject , &scene);
-    //player->setUpEvents();
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     // render loop
     // -----------
     bool shadowUpdate = true;
     float tempdir = dlight.direction.y;
     while (!glfwWindowShouldClose(window))
     {
-        // per-frame time logic
-        // --------------------
-        if (play)
+        if (state.play)
         {
-            //load helmet async
-            //std::cout << "before thread";
-            dlight.direction.y = tempdir + (10.f * sin(glfwGetTime()));
-            if(once)
-            {
-                //scene.objects.back()->model->instanceCount--;
-                //.objects.erase(std::remove(scene.objects.begin(), scene.objects.end(), scene.objects[scene.find("helmet.001")]));
-                //scene.objects.pop_back();
-                /*scene.removeObject("helmet.001");
-                scene.addObject("Suzzane", "Mesh_0");
-                (scene.objects["Suzzane"])->transform = glm::scale((scene.objects["Suzzane"])->transform, glm::vec3(0.01));*/
-                //scene.artificialCull();
-                once = false;
-            }
-            
-            //std::thread t1(&Scene::loadObject,scene);
-            // t1.join();
-            //scene.loadObject();
-            //Object* helmet = new Object((std::string)("table"), new Model("resource\\newDDSexporter\\node_damagedHelmet_-6514.gltf"));
-            //glm::mat4 helmetTrans{ 1.0f };
             scene.physics->stepSim();
             scene.updatePhysics();
-
-            //helmet.transform = glm::rotate(helmet.transform,(float)glm::radians(deltaTime*90),glm::vec3(0,1,0));
-            play = false;
+            state.play = false;
         }
-        if (cameraDebugBool)
+        if (state.cameraDebugBool)
             camera = &cameraDebug;
         else
             camera = &cameraPlayer;
 
         float currentFrame = (float)glfwGetTime();
-        eventHandler->deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        eventHandler->deltaTime = currentFrame - state.lastFrame;
+        state.lastFrame = currentFrame;
         // input
         // -----
         // player->ProcessKeyboard();
         processHoldKeys(window);
-        processInput(window);
 
-        
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        if (state.show_menu)
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+            ImGui::Begin("Psychspiration");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("I love IMGUI");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Renderer", &state.show_renderer);      // Edit bools storing our window open/close state
+            if (state.show_renderer)
+            {
+                ImGui::Begin("Renderer");
+                ImGui::Checkbox("Shadows", &state.shadows);
+                ImGui::Checkbox("Normals", &state.normals);
+                ImGui::End();
+            }
+            ImGui::SliderFloat("float", &User1.exposure, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            int res[2] = { User1.SCR_WIDTH, User1.SCR_HEIGHT };        
+            if (ImGui::InputInt2("Resolution", res, ImGuiInputTextFlags_AutoSelectAll))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            {
+                User1.SCR_WIDTH = res[0];
+                User1.SCR_HEIGHT = res[1];
+                glfwSetWindowSize(window, User1.SCR_WIDTH, User1.SCR_HEIGHT);
+            }
+            
+            //ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
         // update instance buffer 
         //scene.fillDrawList(); 
         scene.setInstanceCount();
@@ -637,7 +594,9 @@ int main(int argc, char* argv[])
         }
         timer.Begin();
             
-        glClearColor(1,1,1, 1.0f);
+        //glClearColor(1,1,1, 1.0f);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
         //glClearColor(0, 0, 0, 1.0f);
         glViewport(0, 0, User1.SCR_WIDTH ,User1.SCR_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
@@ -650,8 +609,8 @@ int main(int argc, char* argv[])
             pbrShader.setVec3("viewPos", camera->Position);
             pbrShader.setVec3("spotLight.position", camera->Position);
             pbrShader.setVec3("spotLight.direction", camera->Front);
-            pbrShader.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
-            pbrShader.setInt("donormals", normals); // enable/disable normals by pressing '2'
+            pbrShader.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
+            pbrShader.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
             pbrShader.setInt("numLights", scene.numLights);
             pbrShader.setFloat("far_plane", cameraPlayer.far_plane);
@@ -670,8 +629,8 @@ int main(int argc, char* argv[])
             pbrShader_instanced.setVec3("viewPos", camera->Position);
             pbrShader_instanced.setVec3("spotLight.position", camera->Position);
             pbrShader_instanced.setVec3("spotLight.direction", camera->Front);
-            pbrShader_instanced.setInt("doshadows", shadows); // enable/disable shadows by pressing '1'
-            pbrShader_instanced.setInt("donormals", normals); // enable/disable normals by pressing '2'
+            pbrShader_instanced.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
+            pbrShader_instanced.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
             pbrShader_instanced.setBool("existnormals", 1);
             pbrShader_instanced.setInt("numLights", scene.numLights);
             pbrShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
@@ -756,200 +715,97 @@ int main(int argc, char* argv[])
         {
             //std::cout << e.what() << "\n";
         }
+        // Rendering
+        ImGui::Render();
+        int display_w = User1.SCR_WIDTH, display_h = User1.SCR_HEIGHT;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    // Imgui terminate 
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
-  
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
 void processHoldKeys(GLFWwindow* window)
 {
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera->ProcessKeyboard(FORWARD, eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera->ProcessKeyboard(BACKWARD, eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera->ProcessKeyboard(LEFT, eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera->ProcessKeyboard(RIGHT, eventHandler->deltaTime);
+    if (!state.show_menu)
+    {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera->ProcessKeyboard(FORWARD, eventHandler->deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera->ProcessKeyboard(BACKWARD, eventHandler->deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera->ProcessKeyboard(LEFT, eventHandler->deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera->ProcessKeyboard(RIGHT, eventHandler->deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            state.play = true;
+    }
 }
-void processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        updatelightloc("forward", eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        updatelightloc("backward", eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        updatelightloc("left", eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        updatelightloc("right", eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        updatelightloc("up", eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        updatelightloc("down", eventHandler->deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !shadowsKeyPressed)
-    {
-        shadows = !shadows;
-        shadowsKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE)
-    {
-        shadowsKeyPressed = false;
-    }
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && !normalsKeyPressed)
-    {
-        normals = !normals;
-        normalsKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE)
-    {
-        normalsKeyPressed = false;
-    }
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !cameraDebugKeyPressed)
-    {
-        cameraDebugBool = !cameraDebugBool;
-        cameraDebugKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE)
-    {
-        cameraDebugKeyPressed = false;
-    }
-    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS && !forwardKeyPressed)
-    {
-        forward = !forward;
-        forwardKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_RELEASE)
-    {
-        forwardKeyPressed = false;
-    }
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-    {
-        play = true;
-    }
-    
-}
-
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
-
-
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    if (firstMouse)
+    if (!state.show_menu)
     {
+        if (state.firstMouse)
+        {
+            lastX = (float)xpos;
+            lastY = (float)ypos;
+            state.firstMouse = false;
+        }
+
+        float xoffset = (float)(xpos - lastX);
+        float yoffset = (float)(lastY - ypos); // reversed since y-coordinates go from bottom to top
+
         lastX = (float)xpos;
         lastY = (float)ypos;
-        firstMouse = false;
+
+        camera->ProcessMouseMovement(xoffset, yoffset);
     }
-
-    float xoffset = (float)(xpos - lastX);
-    float yoffset = (float)(lastY - ypos); // reversed since y-coordinates go from bottom to top
-
-    lastX = (float)xpos;
-    lastY = (float)ypos;
-
-    camera->ProcessMouseMovement(xoffset, yoffset);
+    
 }
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera->ProcessMouseScroll((float)yoffset);
 }
-
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_W && action == GLFW_PRESS)
-    {
-        eventHandler->fireCallback("Camera_Move_Forward");
-    }
-    if (key == GLFW_KEY_A && action == GLFW_PRESS)
-    {
-        eventHandler->fireCallback("Camera_Move_Left");
-    }
-    if (key == GLFW_KEY_S && action == GLFW_PRESS)
-    {
-        eventHandler->fireCallback("Camera_Move_Backward");
-    }
-    if (key == GLFW_KEY_D && action == GLFW_PRESS)
-    {
-        eventHandler->fireCallback("Camera_Move_Right");
-    }
-    if (key == GLFW_KEY_E && action == GLFW_PRESS)
-    {
-        eventHandler->fireCallback("Player_Move_Forward");
-    }
     if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS)
     {
-        eventHandler->fireCallback("Update_Settings");
+        eventHandler->fireCallback("Toggle_Debug");
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        // eventHandler->fireCallback("Update_Settings");
     }
     if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
     {
-        eventHandler->fireCallback("ToggleCameras");
+        eventHandler->fireCallback("Toggle_Camera");
     }
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    {
+        glfwSetWindowShouldClose(window, true);
+    }
+    
 }
-void updatelightloc(std::string x, float deltaTime)
-{
-    float speed = 1;
-    speed *= deltaTime;
-    if (x == "forward")
-    {
-        //light[0].z += speed;
-    }
-    if (x == "backward")
-    {
-       // pointLightPositions[0].z -= speed;
-    }
-    if (x =="left")
-    {
-        //pointLightPositions[0].x += speed;
-    }
-    if (x =="right")
-    {
-        //pointLightPositions[0].x -= speed;
-    }
-    if (x == "up")
-    {
-        //pointLightPositions[0].y += speed;
-    }
-    if (x == "down")
-    {
-        //pointLightPositions[0].y -= speed;
-    }
 
-}
-//
-//void setLights(Scene scene)
-//{
-//    
-//    numLights = scene.numLights;
-//    light = scene.lightList;
-//    
-//}
 
-// renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
 void renderQuad()
