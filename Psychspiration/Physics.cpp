@@ -1,4 +1,5 @@
 #include <Physics.h>
+#include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #define ENABLE_VHACD_IMPLEMENTATION 1
 #include <VHACD.h>
 #include <Mesh.h> // for vertex struct 
@@ -27,6 +28,8 @@ Physics::Physics()
     solver = new btSequentialImpulseConstraintSolver;
     
     dynamicsWorld= new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+    dynamicsWorld->getPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
+
 }
 void Physics::setObject(Object* obj)
 {

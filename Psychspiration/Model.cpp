@@ -3,7 +3,6 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/pbrmaterial.h>
-#include <stb_image.h>
 #include <iostream>
 TextureManager Model::textureManager{};
 Model::Model(std::string const& path,unsigned int* pbo, bool gamma ) : gammaCorrection(gamma)

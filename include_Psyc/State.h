@@ -12,7 +12,7 @@ public:
 	bool play = false;
 
 	//windows 
-	bool show_menu = false;
+	bool show_menu = true;
 	bool show_renderer = false;
 	
 	// last

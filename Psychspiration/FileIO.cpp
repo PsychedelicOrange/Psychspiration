@@ -1,5 +1,6 @@
 #include<FileIO.h>
 #include <Windows.h>
+#include <filesystem>
 #include <sstream>
 #include <fstream>
 #include <iostream>
@@ -52,11 +53,15 @@ std::vector<std::string> parse(std::string path)
 std::string getRelativePath()
 {
 	std::string tempString;
-	WCHAR pBuf[1024];
+	
+	char pBuf[MAX_PATH];
 	size_t len = sizeof(pBuf);
-	int bytes = GetModuleFileName(NULL, pBuf, len);
+	int bytes = GetModuleFileNameA(NULL, pBuf, MAX_PATH);
 	bytes ? bytes : -1;
-	std::wstring wstr = pBuf;
+	std::filesystem::path relPath(pBuf);
+	relPath.remove_filename();
+	return relPath.string();
+	/*std::wstring wstr = pBuf;
 	if (!wstr.empty())
 	{
 		int sizeRequired = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
@@ -82,5 +87,5 @@ std::string getRelativePath()
 		}
 	}
 	tempString.erase(tempString.size() - 18, tempString.size() - 1);
-	return tempString;
+	return tempString;*/
 }

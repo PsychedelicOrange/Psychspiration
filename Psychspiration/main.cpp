@@ -145,7 +145,6 @@ float lastY = User1.SCR_HEIGHT / 2.0f;
 // camera 
 Camera* camera;
 unsigned int maxLights{ 100 };
-//Player* player = new Player(eventHandler);
 int main(int argc, char* argv[])
 {
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -205,7 +204,7 @@ int main(int argc, char* argv[])
     const char* glsl_version = "#version 430";
     ImGui_ImplOpenGL3_Init(glsl_version);
     // psych classes
-     ModelManager* modelManager = new ModelManager();
+    ModelManager* modelManager = new ModelManager();
     Physics* physics = new Physics();
     Camera cameraPlayer(eventHandler, glm::vec3(0.0f, 0.0f, 3.0f));
     Camera cameraDebug(eventHandler, glm::vec3(1));
@@ -236,6 +235,10 @@ int main(int argc, char* argv[])
     //load models,textures into memory
     scene.loadObjects();
     scene.setPhysics();
+    //player
+    Object* objPlayer = new Object("player", "samsung_box",modelManager);
+    objPlayer->load();
+    Player* player = new Player(objPlayer, &cameraPlayer, eventHandler,  physics);
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -296,7 +299,7 @@ int main(int argc, char* argv[])
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     // setup instancing
-        scene.dontCull();
+    scene.dontCull();
     scene.setInstanceCount();
     scene.setInstanceOffsets();
     scene.fillInstanceBuffer();
@@ -456,10 +459,11 @@ int main(int argc, char* argv[])
     float tempdir = dlight.direction.y;
     while (!glfwWindowShouldClose(window))
     {
-        if (state.play)
+        if (state.play )
         {
             scene.physics->stepSim();
             scene.updatePhysics();
+            player->updateTrans();
             state.play = false;
         }
         if (state.cameraDebugBool)
@@ -472,7 +476,7 @@ int main(int argc, char* argv[])
         state.lastFrame = currentFrame;
         // input
         // -----
-        // player->ProcessKeyboard();
+        player->ProcessKeyboard(window);
         processHoldKeys(window);
 
         // Start the Dear ImGui frame
@@ -508,7 +512,8 @@ int main(int argc, char* argv[])
             }
             
             //ImGui::Text("counter = %d", counter);
-
+             
+            ImGui::Text("%s", to_string(player->obj->transform).c_str());
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
@@ -663,6 +668,7 @@ int main(int argc, char* argv[])
             model1 = glm::scale(model1, glm::vec3(0.5f));
             lightCubeShader.setMat4("model", model1);
             bulb.Draw(lightCubeShader);
+            player->obj->draw(pbrShader);
             model1 = glm::mat4(1.0f);
             model1 = glm::translate(model1, glm::vec3(0));
             model1 = glm::scale(model1, glm::vec3(0.5f));
