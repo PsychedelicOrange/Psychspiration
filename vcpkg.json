@@ -1,0 +1,22 @@
+{
+  "name": "cmake-test",
+  "version-string": "0.1.0",
+  "dependencies": [
+    {
+      "name": "glad",
+      "default-features": true,
+      "features": [ "gl-api-46", "extensions" ]
+    },
+    {
+      "name": "imgui",
+      "default-features": true,
+      "features": [ "glfw-binding", "opengl3-binding" ]
+    },
+    "glfw3",
+    "glm",
+    "assimp",
+    "bullet3",
+    "nlohmann-json"
+
+  ]
+}
