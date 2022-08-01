@@ -33,7 +33,7 @@ std::string getStringFromDisk_direct(std::string path)
 
 std::string getStringFromDisk(std::string path)
 {
-	std::fstream file{ getRelativePath() + path };
+	std::fstream file{ pathResource + path };
 	std::string prop;
 	if (!file)
 	{   // Print an error and exit
@@ -88,4 +88,23 @@ std::string getRelativePath()
 	}
 	tempString.erase(tempString.size() - 18, tempString.size() - 1);
 	return tempString;*/
+}
+std::string getdefpathResource()
+{
+	std::filesystem::path debug = getRelativePath();
+	for (int i = 0; i < 3; i++)
+		debug = debug.parent_path();
+	debug /= std::filesystem::path("Resources");
+	return debug.string();
+}
+std::vector<std::string> getSceneList()
+{
+	std::filesystem::path sceneFolder = pathResource;
+	sceneFolder /= std::filesystem::path("Scenes");
+	int sceneCount = static_cast<int>(std::distance(std::filesystem::directory_iterator(sceneFolder), std::filesystem::directory_iterator()));
+	std::vector<std::string> sceneList;
+	for (const auto& entry : std::filesystem::directory_iterator(sceneFolder))
+		sceneList.push_back(entry.path().stem().string());
+
+	return sceneList;
 }

@@ -23,7 +23,7 @@ class Physics {
 
 	//constraint with all axis locked 
 	Physics();
-	
+	~Physics();
 	void cleanupPhysics();
 	void cleanupModels();
 	void setObject(Object* obj);

@@ -47,22 +47,22 @@ glm::vec3 convvec3_blender(glm::vec3 temp)
     temp.z = tempo;
     return temp;
 }
-Scene::Scene(std::string sceneName, Physics* physics,EventHandler* eventHandler,ModelManager* modelManager)
+Scene::Scene(std::string sceneName,EventHandler* eventHandler,ModelManager* modelManager)
 {
     this->sceneName = sceneName;
-    this->physics = physics;
     this->eventHandler = eventHandler;
     this->modelManager = modelManager;
-    parseScene(getStringFromDisk("Resources\\Scenes\\" + sceneName + ".scene"));
+    this->physics = new Physics();
+    parseScene(getStringFromDisk("\\Scenes\\" + sceneName + ".scene"));
 }
-Scene::Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelManager* modelManager)
-{
-    this->sceneName = sceneName;
-    this->physics = physics;
-    this->eventHandler = eventHandler;
-    this->modelManager = modelManager;
-    parseScene(getStringFromDisk_direct(path));
-}
+//Scene::Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelManager* modelManager)
+//{
+//    this->sceneName = sceneName;
+//    this->physics = physics;
+//    this->eventHandler = eventHandler;
+//    this->modelManager = modelManager;
+//    parseScene(getStringFromDisk_direct(path));
+//}
 void Scene::parseScene(std::string data)
 {
     Json sceneData = Json::parse(data);
@@ -162,7 +162,6 @@ void Scene::loadObjects()
         obj.second->load();
         obj.second->loadHulls();
     }
-
     //set dynamic of object when doing this outside of scene
     //physics->setObject(objects[i]);
 }
@@ -306,4 +305,10 @@ void Scene::removeObject(std::string objectName)
 {
     liveObjects["helmet.002"]->model->instanceCount--;
     liveObjects.erase("helmet.002");
+}
+Scene::~Scene()
+{
+    delete modelManager;
+    delete instancedTransforms;
+    delete physics;
 }

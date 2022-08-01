@@ -12,7 +12,7 @@ public:
 	std::string relativePath;
 	static std::string realtivePathStatic;
 	std::string resourcePath; // scene name
-	unsigned int hdr;
+	bool hdr;
 	float exposure;
 	unsigned int MSAA;
 	unsigned int AF;
@@ -22,7 +22,9 @@ public:
 		SCR_WIDTH = 1920;
 		SCR_HEIGHT = 1080;
 		exposure = 0.5;
-		update();
+		resourcePath = "sponza";
+		hdr = 1;
+		//update();
 		eventHandler->registerCallback("Update_Settings", [=]() {update(); });
 	}
 };

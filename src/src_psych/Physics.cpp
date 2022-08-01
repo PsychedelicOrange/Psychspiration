@@ -31,6 +31,34 @@ Physics::Physics()
     dynamicsWorld->getPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
 
 }
+Physics::~Physics()
+{
+    //remove the rigidbodies from the dynamics world and delete them
+    for (int i = dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
+    {
+        btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
+        btRigidBody* body = btRigidBody::upcast(obj);
+        if (body && body->getMotionState())
+        {
+            delete body->getMotionState();
+        }
+        dynamicsWorld->removeCollisionObject(obj);
+        delete obj;
+    }
+    //delete collision shapes
+    for (int j = 0; j < collisionShapes.size(); j++)
+    {
+        btCollisionShape* shape = collisionShapes[j];
+        collisionShapes[j] = 0;
+        delete shape;
+    }
+
+    delete dynamicsWorld;
+    delete solver;
+    delete overlappingPairCache;
+    delete dispatcher;
+    delete collisionConfiguration;
+}
 void Physics::setObject(Object* obj)
 {
     if (!obj->dynamic)
@@ -57,7 +85,7 @@ void Physics::setStaticRigidBody(Object* obj)
         btCollisionShape* colShape;
 
         auto mesh = new btTriangleIndexVertexArray((int)t_mesh->indices.size() / 3, (int*)&(t_mesh->indices[0]), 3 * sizeof(unsigned int),t_mesh->vertices.size(),(btScalar* )&(t_mesh->vertices[0]), sizeof(Vertex));
-        std::cout <<"Scale"<< obj->transform[0][0] << "," << obj->transform[1][1] << "," << obj->transform[2][2];
+        //std::cout <<"Scale"<< obj->transform[0][0] << "," << obj->transform[1][1] << "," << obj->transform[2][2];
         auto scale = btVector3(obj->transform[0][0], obj->transform[1][1], obj->transform[2][2]);
         //colShape = new btScaledBvhTriangleMeshShape(new btBvhTriangleMeshShape(mesh, false),scale);
         colShape = new btBvhTriangleMeshShape(mesh, false);

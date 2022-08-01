@@ -9,4 +9,5 @@ public:
 	std::map<std::string, Model*> Models,hulls;
 	Model* getModel(std::string path);
 	Model* getHull(std::string path);
+	~ModelManager();
 };

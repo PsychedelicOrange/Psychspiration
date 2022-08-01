@@ -8,7 +8,7 @@ Model* ModelManager::getModel(std::string path)
 	}
 	else
 	{
-		Models.emplace(path, new Model("Resources/Models/" + path + ".gltf"));
+		Models.emplace(path, new Model("\\Models\\" + path + ".gltf"));
 		return Models[path];
 	}
 }
@@ -22,7 +22,15 @@ Model* ModelManager::getHull(std::string path)
 	}
 	else
 	{
-		hulls.emplace(path, new Model("Resources/Hulls/" + path + ".glb"));
+		hulls.emplace(path, new Model("\\Hulls\\" + path + ".glb"));
 		return hulls[path];
 	}
+}
+
+ModelManager::~ModelManager()
+{
+	for (auto elm : Models)
+		delete elm.second;
+	for (auto elm : hulls)
+		delete elm.second;
 }

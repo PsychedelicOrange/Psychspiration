@@ -12,7 +12,7 @@
 #include <unordered_map>
 class Scene
 {
-//importer 
+//importer
 public:
     //engine
     EventHandler* eventHandler;
@@ -33,9 +33,8 @@ public:
     // physics 
     Physics* physics;
     void setScale(float scale);
-    Scene(std::string sceneName,Physics* physics,EventHandler* eventHandler, ModelManager* modelManager);
-    Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelManager* modelManager);
-    Scene() {}
+    Scene(std::string sceneName,EventHandler* eventHandler, ModelManager* modelManager);
+    ~Scene();
     //void draw(Shader ourShader);
     void setUpEvents(EventHandler* eventHandler);
     void parseScene(std::string data);

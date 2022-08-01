@@ -10,7 +10,7 @@ bool Texture::first_pbo;
 std::thread* Texture::TextureTransferCPU;
 unsigned int Texture::TextureFromFile(std::string path)
 {
-    path = relativePath + '\\' + "Resources" + '\\' + path.substr(2, path.size() - 2);
+    path = pathResource + '\\' + path.substr(2, path.size() - 2);
     //std::cout << "\nPATH: " << path;
     unsigned int textureID;
     glGenTextures(1, &textureID);

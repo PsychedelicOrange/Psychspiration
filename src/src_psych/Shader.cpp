@@ -16,7 +16,7 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
     std::ifstream vShaderFile;
     std::ifstream fShaderFile;
     std::ifstream gShaderFile;
-    std::string relativeShaderPath = relativePath + "shaders\\";
+    std::string relativeShaderPath = pathResource + "\\shaders\\";
     //std::cout<< relativeShaderPath+vertexPath;
     // ensure ifstream objects can throw exceptions:
     vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -27,7 +27,7 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
         // open files
 
         vShaderFile.open(relativeShaderPath + vertexPath);
-        std::cout << relativeShaderPath + vertexPath << std::endl;
+        //std::cout << relativeShaderPath + vertexPath << std::endl;
         fShaderFile.open(relativeShaderPath + fragmentPath);
         std::stringstream vShaderStream, fShaderStream;
         // read file's buffer contents into streams

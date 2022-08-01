@@ -34,6 +34,8 @@ void processHoldKeys(GLFWwindow* window);
 void renderSphere();
 void renderQuad();
 
+std::string pathResource;
+
 class Line {
     int shaderProgram;
     unsigned int VBO, VAO;
@@ -184,6 +186,7 @@ int main(int argc, char* argv[])
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
     // configure global opengl state
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_CULL_FACE);
@@ -202,9 +205,18 @@ int main(int argc, char* argv[])
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     const char* glsl_version = "#version 430";
     ImGui_ImplOpenGL3_Init(glsl_version);
+    //command line arguments
+    if (argc - 1)
+    {
+        pathResource = argv[1];
+    }
+    else
+    {
+        pathResource = getdefpathResource();
+    }
+    std::cout << "Path to Resource folder : " << pathResource<<std::endl;
     // psych classes
     ModelManager* modelManager = new ModelManager();
-    Physics* physics = new Physics();
     Camera cameraPlayer(eventHandler, glm::vec3(0.0f, 0.0f, 3.0f));
     Camera cameraDebug(eventHandler, glm::vec3(1));
     TimerQueryAsync timer(5);
@@ -221,23 +233,26 @@ int main(int argc, char* argv[])
     Shader simpleDepthShader_instanced("pointshadow_instanced.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
     Shader dirShadow_instanced("simpleDepthShader_instanced.vs", "emptyfrag.fs", "0");
     //setLights(pbrShader);
-    Model bulb("resource\\bulb\\bulb2.glb");
-    Model chimera("Resources\\Models\\Suzanne.gltf");
+    Model bulb("\\Models\\bulb.gltf");
+    Model chimera("\\Models\\Suzanne.gltf");
+
+    
     // Load Scene
-    Scene scene;
+   /* Scene* scene;
     Scene* scene_;
     if (argc-1)
         scene_ = new Scene(argv[1],physics, eventHandler, modelManager);
     else
         scene_ = new Scene(User1.resourcePath,physics,eventHandler,modelManager);
-    scene = *scene_;
+    scene = scene_;*/
+    Scene* scene = new Scene(User1.resourcePath, eventHandler, modelManager);
     //load models,textures into memory
-    scene.loadObjects();
-    scene.setPhysics();
+    scene->loadObjects();
+    scene->setPhysics();
     //player
-    Object* objPlayer = new Object("player", "samsung_box",modelManager);
-    objPlayer->load();
-    Player* player = new Player(objPlayer, &cameraPlayer, eventHandler,  physics);
+    //Object* objPlayer = new Object("player", "samsung_box",modelManager);
+    //objPlayer->load();
+    //Player* player = new Player(objPlayer, &cameraPlayer, eventHandler,  physics);
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -250,13 +265,13 @@ int main(int argc, char* argv[])
     GPULight* lights_buffer;
     lights_buffer = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
 
-    for (unsigned int i = 0; i < scene.numLights; ++i) {
+    for (unsigned int i = 0; i < scene->numLights; ++i) {
         //Fetching the light from the current scene
-        lights_buffer[i].position = glm::vec4(scene.lightList[i].position, 1.0f);
-        lights_buffer[i].color = glm::vec4(scene.lightList[i].color, 1.0f);
+        lights_buffer[i].position = glm::vec4(scene->lightList[i].position, 1.0f);
+        lights_buffer[i].color = glm::vec4(scene->lightList[i].color, 1.0f);
         lights_buffer[i].enabled = 1;
-        lights_buffer[i].intensity = scene.lightList[i].power;
-        lights_buffer[i].range = scene.lightList[i].size;
+        lights_buffer[i].intensity = scene->lightList[i].power;
+        lights_buffer[i].range = scene->lightList[i].size;
         //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
     }
     glUnmapBuffer(GL_UNIFORM_BUFFER);
@@ -298,15 +313,15 @@ int main(int argc, char* argv[])
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     // setup instancing
-    scene.dontCull();
-    scene.setInstanceCount();
-    scene.setInstanceOffsets();
-    scene.fillInstanceBuffer();
+    scene->dontCull();
+    scene->setInstanceCount();
+    scene->setInstanceOffsets();
+    scene->fillInstanceBuffer();
     // instancing call transformation matrices 
     GLuint uboModelMatrices;
     glGenBuffers(1, &uboModelMatrices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene.liveObjects.size(), scene.instancedTransforms, GL_STATIC_DRAW);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene->liveObjects.size(), scene->instancedTransforms, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     // point light shadow map texture setup
@@ -314,7 +329,7 @@ int main(int argc, char* argv[])
     unsigned int depthCubemap;
     glGenTextures(1, &depthCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-    glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE, 6 * scene.numLights, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE, 6 * scene->numLights, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     
     //glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
@@ -413,20 +428,20 @@ int main(int argc, char* argv[])
     // Set Light shader uniforms
     glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.f/*aspect ratio*/, cameraPlayer.near_plane, cameraPlayer.far_plane);
     std::vector<glm::mat4> shadowTransforms;
-    for (unsigned int i = 0; i < scene.numLights; i++)
+    for (unsigned int i = 0; i < scene->numLights; i++)
     {
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(scene.lightList[i].position, scene.lightList[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene->lightList[i].position, scene->lightList[i].position + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene->lightList[i].position, scene->lightList[i].position + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene->lightList[i].position, scene->lightList[i].position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene->lightList[i].position, scene->lightList[i].position + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene->lightList[i].position, scene->lightList[i].position + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(scene->lightList[i].position, scene->lightList[i].position + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
     }
     simpleDepthShader_instanced.use();
-    for (unsigned int i = 0; i < 6 * scene.numLights; ++i)
+    for (unsigned int i = 0; i < 6 * scene->numLights; ++i)
         simpleDepthShader_instanced.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
     simpleDepthShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
-    simpleDepthShader_instanced.setInt("numLights", scene.numLights);
+    simpleDepthShader_instanced.setInt("numLights", scene->numLights);
     // setup directional light shadow shader 
     // lets feed it a dir light
     DirectionalLight dlight{};
@@ -452,6 +467,10 @@ int main(int argc, char* argv[])
     test.setColor(glm::vec3(1, 1, 0));
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    std::vector<std::string> sceneList =  getSceneList();
+    bool scene_change = false;
+    static const char* current_scene = NULL;
+    float sundir[3] = {dlight.direction.x,dlight.direction.y,dlight.direction.z};
     // render loop
     // -----------
     bool shadowUpdate = true;
@@ -460,9 +479,9 @@ int main(int argc, char* argv[])
     {
         if (state.play )
         {
-            scene.physics->stepSim();
-            scene.updatePhysics();
-            player->updateTrans();
+            scene->physics->stepSim();
+            scene->updatePhysics();
+            //player->updateTrans();
             state.play = false;
         }
         if (state.cameraDebugBool)
@@ -475,31 +494,56 @@ int main(int argc, char* argv[])
         state.lastFrame = currentFrame;
         // input
         // -----
-        player->ProcessKeyboard(window);
+        //player->ProcessKeyboard(window);
         processHoldKeys(window);
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
         if (state.show_menu)
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-            ImGui::Begin("Psychspiration");                          // Create a window called "Hello, world!" and append into it.
-
+            ImGui::Begin("Psychspiration");  // Create a window called "Hello, world!" and append into it.
+            
+            //ImGui::Combo("Active Scene :", &item_current,sceneList, sizeof(sceneList));
+            if (ImGui::BeginCombo("Active Scene :", current_scene))
+            {
+                for (int i = 0; i < sceneList.size(); i++)
+                {
+                    bool is_selected = (current_scene == nullptr) ? false : (sceneList[i].compare(current_scene) == 0);
+                    if (ImGui::Selectable(sceneList[i].c_str(), is_selected))
+                    {
+                        scene_change = true;
+                        current_scene = sceneList[i].c_str();
+                    }
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
             ImGui::Text("I love IMGUI");               // Display some text (you can use a format strings too)
             ImGui::Checkbox("Renderer", &state.show_renderer);      // Edit bools storing our window open/close state
             if (state.show_renderer)
             {
                 ImGui::Begin("Renderer");
+                if (ImGui::InputFloat3("Sun Direction", sundir))
+                {
+                    dlight.direction.x = sundir[0];
+                    dlight.direction.y = sundir[1];
+                    dlight.direction.z = sundir[2];
+                }
                 ImGui::Checkbox("Shadows", &state.shadows);
                 ImGui::Checkbox("Normals", &state.normals);
                 ImGui::End();
             }
-            ImGui::SliderFloat("float", &User1.exposure, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::Checkbox("hdr", &User1.hdr);
+            if (User1.hdr)
+            {
+                ImGui::SliderFloat("Exposure", &User1.exposure, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            }
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
             int res[2] = { User1.SCR_WIDTH, User1.SCR_HEIGHT };        
@@ -512,19 +556,30 @@ int main(int argc, char* argv[])
             
             //ImGui::Text("counter = %d", counter);
              
-            ImGui::Text("%s", to_string(player->obj->transform).c_str());
+            //ImGui::Text("%s", to_string(player->obj->transform).c_str());
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
+        if (scene_change)
+        {
+            delete scene;
+            modelManager = new ModelManager();
+            scene = new Scene(current_scene, eventHandler, modelManager);
+            scene->loadObjects();
+            scene->setPhysics();
+            scene_change = false;
+        }
+        
 
         // update instance buffer 
         //scene.fillDrawList(); 
-        scene.setInstanceCount();
-        scene.setInstanceOffsets();
-        scene.fillInstanceBuffer();
+        scene->dontCull();
+        scene->setInstanceCount();
+        scene->setInstanceOffsets();
+        scene->fillInstanceBuffer();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene.liveObjects.size(), scene.instancedTransforms, GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->liveObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
         // frustrum shit veiw matrices and ****
         camera->constructViewMatrix();
@@ -574,7 +629,7 @@ int main(int argc, char* argv[])
         glClear(GL_DEPTH_BUFFER_BIT);
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        scene.drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
+        scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
 
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
@@ -582,7 +637,7 @@ int main(int argc, char* argv[])
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
         glCullFace(GL_FRONT);
-        scene.drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
+        scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
         glCullFace(GL_BACK);
         //helmet.draw(simpleDepthShader);
          
@@ -616,7 +671,7 @@ int main(int argc, char* argv[])
             pbrShader.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
             pbrShader.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
             pbrShader.setBool("existnormals", 1);
-            pbrShader.setInt("numLights", scene.numLights);
+            pbrShader.setInt("numLights", scene->numLights);
             pbrShader.setFloat("far_plane", cameraPlayer.far_plane);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
@@ -636,14 +691,14 @@ int main(int argc, char* argv[])
             pbrShader_instanced.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
             pbrShader_instanced.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
             pbrShader_instanced.setBool("existnormals", 1);
-            pbrShader_instanced.setInt("numLights", scene.numLights);
+            pbrShader_instanced.setInt("numLights", scene->numLights);
             pbrShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
             glActiveTexture(GL_TEXTURE12);
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glActiveTexture(GL_TEXTURE11);
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             //scene.drawObjects(pbrShader);
-            scene.drawObjectsInstanced(pbrShader_instanced);
+            scene->drawObjectsInstanced(pbrShader_instanced);
             //helmet.draw(pbrShader);
             glActiveTexture(GL_TEXTURE0);
             //draw the bulbs
@@ -653,10 +708,10 @@ int main(int argc, char* argv[])
             lightCubeShader.setMat4("projection", camera->Projection);
             lightCubeShader.setMat4("view", camera->View);
             lightCubeShader.setMat4("model", glm::mat4(1.0f));
-            for (unsigned int i = 0; i < scene.numLights; i++)
+            for (unsigned int i = 0; i < scene->numLights; i++)
             {
                 model1 = glm::mat4(1.0f);
-                model1 = glm::translate(model1, scene.lightList[i].position);
+                model1 = glm::translate(model1, scene->lightList[i].position);
                 model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
@@ -667,7 +722,7 @@ int main(int argc, char* argv[])
             model1 = glm::scale(model1, glm::vec3(0.5f));
             lightCubeShader.setMat4("model", model1);
             bulb.Draw(lightCubeShader);
-            player->obj->draw(pbrShader);
+            //player->obj->draw(pbrShader);
             model1 = glm::mat4(1.0f);
             model1 = glm::translate(model1, glm::vec3(0));
             model1 = glm::scale(model1, glm::vec3(0.5f));
@@ -686,7 +741,7 @@ int main(int argc, char* argv[])
             wireShader.setMat4("model", glm::mat4(1.0f));
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable (GL_CULL_FACE);
-            scene.drawHulls(wireShader);
+            scene->drawHulls(wireShader);
             //chimera.Draw(wireShader);
             /*glBindVertexArray(VAO_frustrum);
             glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);

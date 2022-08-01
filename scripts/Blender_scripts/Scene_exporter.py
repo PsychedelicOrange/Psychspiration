@@ -4,6 +4,9 @@ from mathutils import Matrix
 import mathutils
 from subprocess import Popen, CREATE_NEW_CONSOLE,PIPE,STDOUT
 import json
+#config
+psych_root = r'C:\Users\parth\source\repos\Psych_debug'
+psych_executable = r'C:\Users\parth\source\repos\Psych_debug\x64\Debug\Psych_debug.exe'
 #settings
 export_models = True
 export_hulls = True
@@ -37,9 +40,9 @@ def get_export_name(dup_name):
 def to_dds(name1,name2): # opens batch script to convert textures to dds 
     _name1 = name1[name1.rfind('/'):]
     _name2 = name2[name2.rfind('/'):]
-    print(r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat'+TexturePath+' '+_name1+' '+_name2)
+    print(psych_root + r'\scripts\Blender_scripts\to_dds.bat'+TexturePath+' '+_name1+' '+_name2)
     if(not os.path.exists(TexturePath+_name2)):
-        p = Popen([r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\to_dds.bat',TexturePath,_name1,_name2],creationflags=CREATE_NEW_CONSOLE)
+        p = Popen([psych_root + r'\scripts\Blender_scripts\to_dds.bat',TexturePath,_name1,_name2],creationflags=CREATE_NEW_CONSOLE)
         p.wait()
 def run_vhacd(name):
     script = (r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\TestVHACD.exe "{}" -o obj'.format(name))
@@ -167,11 +170,14 @@ if(export_models_metadata):
     json_string = json.dumps(data)
     #print(json_string)    
     # open a file to write to
+    if os.path.exists(filename):
+        os.remove(filename)
     file = open(filename, "w")
     # write the data to file
     file.write(json_string)
     # close the file
     file.close()
+p = Popen([psych_executable,],creationflags=CREATE_NEW_CONSOLE)
 # writing lights
 #file2 = open(filename2,"w")
 #file2.write(result_lights)

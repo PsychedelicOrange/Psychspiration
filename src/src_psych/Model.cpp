@@ -43,10 +43,10 @@ const aiScene* Model::loadModel(const std::string& path)
 {
     //std::cout << "inside loadmodel()\t no of meshes: " << std::endl;
     // read file via ASSIMP
-    std::string relativePath = getRelativePath();
+    //std::string relativePath = getRelativePath();
     Assimp::Importer importer;
     //std::cout << relativePath + path;
-    const aiScene* scene = importer.ReadFile(relativePath+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
+    const aiScene* scene = importer.ReadFile(pathResource+ path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_GenBoundingBoxes);
     // check for errors
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
     {

@@ -7,3 +7,7 @@ lib/
 Psych_debug.sln
 .vs/
 x64/
+Resources/Models
+Resources/Hulls
+Resources/Scenes
+Resources/Textures
