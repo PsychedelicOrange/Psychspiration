@@ -40,7 +40,7 @@ struct GPULight {
 };
 struct DirectionalLight {
     DirectionalLight() {
-        direction = { -20.0f, 40.0f, -10.0f }; color = { 1,1,1 }; intensity = 100.0f;
+        direction = { -20.0f, 40.0f, -10.0f }; color = { 0.95,0.91,0.60 }; intensity = 100.0f;
     }
     glm::vec3 direction;
     glm::vec3 color;

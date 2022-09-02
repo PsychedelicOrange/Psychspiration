@@ -1,5 +1,4 @@
 #pragma once
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -163,6 +162,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
     // glfw window creation
+    int* count = new int;
     //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
     GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
@@ -248,14 +248,16 @@ int main(int argc, char* argv[])
     Scene* scene = new Scene(User1.resourcePath, eventHandler, modelManager);
     //load models,textures into memory
     scene->loadObjects();
-    scene->setPhysics();
+    //scene->setPhysics();
     //player
     //Object* objPlayer = new Object("player", "samsung_box",modelManager);
     //objPlayer->load();
     //Player* player = new Player(objPlayer, &cameraPlayer, eventHandler,  physics);
+    
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
     // lights UBO
     unsigned int lightUBO;
      glGenBuffers(1, &lightUBO);
@@ -529,12 +531,15 @@ int main(int argc, char* argv[])
             if (state.show_renderer)
             {
                 ImGui::Begin("Renderer");
-                if (ImGui::InputFloat3("Sun Direction", sundir))
+                ImGui::SliderFloat("SunDir X: ", &dlight.direction.x, 0.0f, 1.0f);
+                ImGui::SliderFloat("SunDir Y: ", &dlight.direction.y, 0.0f, 1.0f);
+                ImGui::SliderFloat("SunDir Z: ", &dlight.direction.z, 0.0f, 1.0f);
+                /*if (ImGui::InputFloat3("Sun Direction", sundir))
                 {
                     dlight.direction.x = sundir[0];
                     dlight.direction.y = sundir[1];
                     dlight.direction.z = sundir[2];
-                }
+                }*/
                 ImGui::Checkbox("Shadows", &state.shadows);
                 ImGui::Checkbox("Normals", &state.normals);
                 ImGui::End();
@@ -566,7 +571,7 @@ int main(int argc, char* argv[])
             modelManager = new ModelManager();
             scene = new Scene(current_scene, eventHandler, modelManager);
             scene->loadObjects();
-            scene->setPhysics();
+            //scene->setPhysics();
             scene_change = false;
         }
         
