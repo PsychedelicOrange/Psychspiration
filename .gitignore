@@ -6,6 +6,7 @@ Psych_debug/
 lib/
 Psych_debug.sln
 .vs/
+.vscode/
 x64/
 Resources/Models
 Resources/Hulls
