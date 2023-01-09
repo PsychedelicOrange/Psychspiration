@@ -33,7 +33,7 @@ public:
 	std::string path;
 	Model* model;
 	glm::mat4 transform;
-	Aabb aabb;
+	Aabb* aabb; Model* Aabbmodel;
 
 	//physics
 	bool dynamic;
@@ -50,6 +50,7 @@ public:
 	void draw(Shader ourShader);
 	void drawInstanced(Shader ourShader);
 	void drawHulls(Shader ourShader);
+	void drawAabb(Shader ourShader);
 
 	void printobj();
 

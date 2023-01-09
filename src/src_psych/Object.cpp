@@ -5,6 +5,7 @@
 Object::Object(std::string name)
 {
     this->name = name;
+    this->Aabbmodel = new Model();
 }
 Object::Object(std::string name, std::string path,ModelManager* modelManager,  glm::mat4 transform, bool dynamic)
 {
@@ -13,6 +14,7 @@ Object::Object(std::string name, std::string path,ModelManager* modelManager,  g
     this->modelManager = modelManager;
     this->transform = transform;
     this->dynamic = dynamic;
+    this->Aabbmodel = new Model();
 }
 Object::Object(std::string name, Model* model, glm::mat4 transform, bool dynamic)
 {
@@ -20,6 +22,7 @@ Object::Object(std::string name, Model* model, glm::mat4 transform, bool dynamic
     this->name = name;
     this->transform = transform;
     this->dynamic = dynamic;
+    this->Aabbmodel = new Model();
 }
 
 void Object::load()
@@ -30,7 +33,7 @@ void Object::load()
     //this->aabb = { glm::vec3(glm::vec4(this->model->mMin,1)*this->transform),glm::vec3(glm::vec4(this->model->mMax,1) * this->transform) };s
     glm::vec3 min = this->model->mMin;
     glm::vec3 max = this->model->mMax;
-    this->aabb = {min, max,this->transform};
+    this->aabb = new Aabb{min, max,this->transform};
 }
 void Object::loadHulls()
 {
@@ -38,7 +41,6 @@ void Object::loadHulls()
      {
          hull_->model = modelManager->getHull(hull_->path );
      }
- 
 }
 void Object::draw(Shader ourShader)
 {
@@ -73,6 +75,21 @@ void Object::drawHulls(Shader ourShader)
         ourShader.setMat4("model",this->transform);
         hulls[i]->model->Draw(ourShader);
     }
+}
+
+void Object::drawAabb(Shader ourShader)
+{
+    std::vector<Vertex> vertices;
+    for (int i = 0; i < 8; i++)
+    {
+        Vertex vertice; vertice.Position = aabb->coords[i];
+        vertices.push_back(vertice);
+    }
+    std::vector<Texture> texCoords;
+    std::vector<unsigned int> indices = { 0,1,2,    0,2,3,  0,4,7,  0,7,3,  4,7,6,  4,5,6,  6,5,1,  1,2,6,  4,0,1,  4,5,1,  7,3,2,  2,6,7 };
+    Mesh* aabbMesh = new Mesh(vertices, indices,texCoords);
+    ourShader.setMat4("model", this->transform);
+    aabbMesh->Draw(ourShader);
 }
 
 glm::mat4 Object::getTransform()

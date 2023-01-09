@@ -53,6 +53,7 @@ Scene::Scene(std::string sceneName,EventHandler* eventHandler,ModelManager* mode
     this->eventHandler = eventHandler;
     this->modelManager = modelManager;
     this->physics = new Physics();
+    this->instancedTransforms = NULL;
     parseScene(getStringFromDisk("\\Scenes\\" + sceneName + ".scene"));
 }
 //Scene::Scene(char* path, Physics* physics, EventHandler* eventHandler, ModelManager* modelManager)
@@ -117,7 +118,7 @@ void Scene::fillDrawList()
 {
     visibleObjects.clear();
     for (auto obj : liveObjects)
-        if (obj.second->aabb.isOnFrustum(obj.second->getTransform())) 
+        if (obj.second->aabb->isOnFrustum(obj.second->getTransform())) 
             visibleObjects.push_back(obj.second);
 }
 void Scene::setInstanceCount()
@@ -142,7 +143,8 @@ void Scene::setInstanceOffsets()
 }
 void Scene::fillInstanceBuffer()
 {
-    delete instancedTransforms;
+    if(instancedTransforms != NULL)
+        delete[] instancedTransforms;
     instancedTransforms = new glm::mat4[visibleObjects.size()];
     for (auto uniqueModel : modelManager->Models)
     {
@@ -152,8 +154,8 @@ void Scene::fillInstanceBuffer()
     {
        instancedTransforms[obj->model->instanceOffset + ++(obj->model->instanceCurr)] = obj->transform;
     }
-    //for (int i = 0; i < objects.size(); i++)
-    //    std::cout << "\n " << glm::to_string(instancedTransforms[i]);
+    //for (int i = 0; i < visibleObjects.size(); i++)
+     //   std::cout << "\n " << glm::to_string(instancedTransforms[i]);
 }
 void Scene::loadObjects()
 {
@@ -228,6 +230,13 @@ void Scene::drawHulls(Shader ourShader)
         objects[i]->drawHulls(ourShader);
     }
     */
+}
+void Scene::drawAabb(Shader ourShader)
+{
+    for (auto obj : liveObjects)
+    {
+        obj.second->drawAabb(ourShader);
+    }
 }
 void Scene::setPhysics()
 {

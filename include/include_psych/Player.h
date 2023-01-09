@@ -26,7 +26,7 @@ public:
 		this->obj = obj;
 		this->physics = physics;
 		this->eventHandler = eventHandler;
-		playerShape = new btBoxShape(btVector3(obj->aabb.extents.x, obj->aabb.extents.y, obj->aabb.extents.z));
+		playerShape = new btBoxShape(btVector3(obj->aabb->extents.x, obj->aabb->extents.y, obj->aabb->extents.z));
 		ghostObject = new btPairCachingGhostObject();
 		btTransform t; t.setFromOpenGLMatrix(&obj->transform[0][0]);
 		ghostObject->setWorldTransform(t);

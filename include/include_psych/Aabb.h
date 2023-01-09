@@ -10,7 +10,7 @@ public :
     glm::vec3 extents{ 0.f, 0.f, 0.f };
     static Frustum* camFrustum;
     Aabb(){}
-    Aabb(const glm::vec3& min, const glm::vec3& max);
+    //Aabb(const glm::vec3& min, const glm::vec3& max);
     void applyTransform(glm::mat4 transform);
     void getMinMaxFromCoords();
     Aabb(const glm::vec3& min, const glm::vec3& max, glm::mat4 transform);

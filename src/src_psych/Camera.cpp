@@ -79,6 +79,11 @@ void Camera::constructFrustum()
     frustum = new Frustum(yfov, aspectratio, near_plane, far_plane);
 }
 
+void Camera::updateForCulling()
+{
+    frustum->updateForCulling(Position, Front, Right, Up);
+}
+
 // calculates the front vector from the Camera's (updated) Euler Angles
 void Camera::updateCameraVectors()
 {

@@ -17,6 +17,5 @@
     "assimp",
     "bullet3",
     "nlohmann-json"
-
   ]
 }

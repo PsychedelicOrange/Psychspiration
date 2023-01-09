@@ -17,6 +17,15 @@ git clone https://github.com/Microsoft/vcpkg.git
 ```
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=.\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
 ```
+### Setup debug in VIsual Studio 2019
+* Tools > Options > Debugging
+* Uncheck "Enable Just My Code"
+* Psychspiration Properties > C/C++
+*  TOOLS->Options->Debugging->General, disable "Require source files to exactly match the original version" .
+* add the /Zi parameter 
+(see https://stackoverflow.com/a/39776980)
+
+
 # 2. How to export scenes from Blender
 ## Resource Directory Structure
 ```

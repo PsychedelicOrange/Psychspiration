@@ -59,6 +59,7 @@ public:
     void ProcessMouseScroll(float yoffset);
     //frustum
     void constructFrustum();
+    void updateForCulling();
 private:
     // calculates the front vector from the Camera's (updated) Euler Angles
     void updateCameraVectors();

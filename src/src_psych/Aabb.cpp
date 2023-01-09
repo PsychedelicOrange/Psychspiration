@@ -12,15 +12,38 @@ Aabb::Aabb(const glm::vec3& min, const glm::vec3& max,glm::mat4 transform)
     coords[5] = glm::vec3(min.x, max.y, min.z);
     coords[6] = min;
     coords[7] = glm::vec3(min.x, min.y, max.z);
-    applyTransform(transform);
     getMinMaxFromCoords();
+    applyTransform(transform);
 }
 void Aabb::applyTransform(glm::mat4 transform)
 {
-    for (int i = 0; i < 8; i++)
+    /*for (int i = 0; i < 8; i++)
     {
         coords[i] = glm::vec4(coords[i], 1) * transform;
-    }
+    }*/
+    //Get global scale thanks to our transform
+    const glm::vec3 globalCenter{ transform * glm::vec4(center, 1.f) };
+
+    // Scaled orientation
+    const glm::vec3 right = transform[0] * extents.x;
+    const glm::vec3 up = transform[1] * extents.y;
+    const glm::vec3 forward = -transform[2] * extents.z;
+
+    const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, right)) +
+        std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, up)) +
+        std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forward));
+
+    const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, right)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, up)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forward));
+
+    const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, right)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, up)) +
+        std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forward));
+
+    //We not need to divise scale because it's based on the half extention of the AABB
+    center = globalCenter;
+    extents = glm::vec3(newIi, newIj, newIk);
 }
 void Aabb::getMinMaxFromCoords()
 {
@@ -55,30 +78,6 @@ bool Aabb::isOnOrForwardPlan(const Plane& plan)
 }
 bool Aabb::isOnFrustum(glm::mat4 transform)
 {
-    ////Get global scale thanks to our transform
-    //const glm::vec3 globalCenter{ transform * glm::vec4(center, 1.f) };
-
-    //// Scaled orientation
-    //const glm::vec3 right = transform[0] * extents.x;
-    //const glm::vec3 up = transform[1] * extents.y;
-    //const glm::vec3 forward = -transform[2] * extents.z;
-
-    //const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, right)) +
-    //    std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, up)) +
-    //    std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forward));
-
-    //const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, right)) +
-    //    std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, up)) +
-    //    std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forward));
-
-    //const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, right)) +
-    //    std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, up)) +
-    //    std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forward));
-
-    ////We not need to divise scale because it's based on the half extention of the AABB
-    //center = globalCenter;
-    //extents = glm::vec3(newIi, newIj, newIk);
-
     return (isOnOrForwardPlan(camFrustum->leftFace) &&
         isOnOrForwardPlan(camFrustum->rightFace) &&
         isOnOrForwardPlan(camFrustum->topFace) &&

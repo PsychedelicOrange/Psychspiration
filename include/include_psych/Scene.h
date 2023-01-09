@@ -58,6 +58,7 @@ public:
     int find(std::string t);
     std::vector<Object*>::iterator find_it(std::string t);
     void drawHulls(Shader ourShader);
+    void drawAabb(Shader ourShader);
     void setPhysics();
     void updatePhysics();
     void printdetail();

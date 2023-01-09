@@ -577,15 +577,17 @@ int main(int argc, char* argv[])
         
 
         // update instance buffer 
-        //scene.fillDrawList(); 
-        scene->dontCull();
+        scene->fillDrawList(); 
+        //scene->dontCull();
         scene->setInstanceCount();
         scene->setInstanceOffsets();
         scene->fillInstanceBuffer();
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->liveObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
+        //glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->liveObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->visibleObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
+        
         // frustrum shit veiw matrices and ****
         camera->constructViewMatrix();
         cameraPlayer.constructViewMatrix();
@@ -603,6 +605,7 @@ int main(int argc, char* argv[])
         // use frustrum to fit ortho projection for directional shadow mapping 
         cameraPlayer.frustum->constructLS(lightView);
         xyminmax = cameraPlayer.frustum->getFrustrumMinMax(xyminmax);
+        cameraPlayer.updateForCulling();
         
         //float worldunitpertexel = cameraPlayer.frustum->diagnolFrustrum / SHADOW_MAP_MAX_SIZE_DIR;
         //for (int i = 0; i < 4; i++)
@@ -747,11 +750,12 @@ int main(int argc, char* argv[])
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable (GL_CULL_FACE);
             scene->drawHulls(wireShader);
+            //scene->drawAabb(wireShader);
             //chimera.Draw(wireShader);
-            /*glBindVertexArray(VAO_frustrum);
+            glBindVertexArray(VAO_frustrum);
             glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);
             glEnable(GL_CULL_FACE);
-            glBindVertexArray(0);*/
+            glBindVertexArray(0);
             //helmet.draw(pbrShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
