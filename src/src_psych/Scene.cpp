@@ -8,7 +8,7 @@
 #include <iostream>
 #include <map>
 #include <thread>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 using Json = nlohmann::json;
 glm::mat4 getmat4_json(Json temp)
 {
@@ -267,36 +267,6 @@ void Scene::printdetail()
     }*/
 
 }
-
-//std::vector<Object*>::iterator Scene::find_it(std::string t)
-//{
-//    for (auto obj :     )
-//    {
-//        if (obj->name == t)
-//            return obj;
-//    }
-//}
-//int Scene::find(std::string t)
-//{
-//    for (int i = 0; i < objects.size(); i++)
-//    {
-//        if (t == objects[i]->name)
-//            return i;
-//    }
-//    std::cout << "ERROR:: HULL COULD'NT FIND GRAPHIC MODEL";
-//}
-//
-//void Scene::setScale(float scale)
-//{
-//    for (auto obj : liveObjects)
-//    {
-//        (obj.second)->transform = glm::scale((obj.second)->transform, glm::vec3(scale));;
-//    }
-//   /* for (int i = 0; i < objects.size(); i++)
-//    {
-//        objects[i]->transform = glm::scale(objects[i]->transform, glm::vec3(scale));
-//    }*/
-//}
 void Scene::setUpEvents(EventHandler* eventHandler)
 {
     //eventHandler->registerCallback("SpawnObject", &Scene::loadObject,this);

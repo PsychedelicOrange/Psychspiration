@@ -62,3 +62,4 @@ Resources
 	1. Convert all objects to meshes, apply modifiers, etc.
 	2. V-HACD all desired moving physics objects 
 	3. Parent the generated hulls to the Main(graphical) object
+s

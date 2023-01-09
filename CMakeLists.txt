@@ -29,7 +29,7 @@ endforeach()
 
 find_package(glad CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
-#find_package(gli CONFIG REQUIRED)
+find_package(gli CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 find_package(Bullet CONFIG REQUIRED)
@@ -42,7 +42,7 @@ set(SOURCES
   include/include_psych/Camera.h
   include/include_psych/EventHandler.h
   include/include_psych/FileIO.h
-  include/include_psych/Frustrum.h
+  include/include_psych/Frustum.h
   include/include_psych/Light.h
   include/include_psych/Mesh.h
   include/include_psych/Model.h
@@ -96,6 +96,7 @@ target_link_libraries(Psychspiration
     imgui::imgui
     glfw
     glm::glm
+    gli
     assimp::assimp
     LinearMath BulletCollision BulletDynamics BulletSoftBody
     nlohmann_json)
