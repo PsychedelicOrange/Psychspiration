@@ -5,8 +5,8 @@ import mathutils
 from subprocess import Popen, CREATE_NEW_CONSOLE,PIPE,STDOUT
 import json
 #config
-psych_root = r'C:\Users\parth\source\repos\Psych_debug'
-psych_executable = r'C:\Users\parth\source\repos\Psych_debug\x64\Debug\Psych_debug.exe'
+psych_root = r'C:\Data\psych_test\Psychspiration'
+psych_executable = r'C:\Data\psych_test\Psychspiration\build\Debug\Psychspiration.exe'
 #settings
 export_models = True
 export_hulls = True
@@ -177,7 +177,7 @@ if(export_models_metadata):
     file.write(json_string)
     # close the file
     file.close()
-p = Popen([psych_executable,],creationflags=CREATE_NEW_CONSOLE)
+#p = Popen([psych_executable,],creationflags=CREATE_NEW_CONSOLE)
 # writing lights
 #file2 = open(filename2,"w")
 #file2.write(result_lights)

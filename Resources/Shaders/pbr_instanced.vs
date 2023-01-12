@@ -37,6 +37,7 @@ void main()
     int instantIndex = instanceOffset+gl_InstanceID;
     //int instantIndex = gl_InstanceID;
     FragPos = vec3(models[instantIndex] * vec4(aPos, 1.0));
+    //FragPos = vec3(model * vec4(aPos,1));
     TexCoords = aTexCoords;
     vec3 T = normalize(vec3(models[instantIndex ]* vec4(aTangent,   0.0)));
     vec3 B = normalize(vec3(models[instantIndex ]* vec4(aBitangent, 0.0)));

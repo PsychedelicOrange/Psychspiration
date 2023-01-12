@@ -30,12 +30,15 @@ layout (std140, binding = 3) uniform lightUBO{
     GPULight gpuLight[100]; //max lights do later using shader io before init
 };
 uniform vec3 viewPos;
-uniform float albedo;
+uniform vec3 albedo;
 uniform float metallic;
 uniform float roughness;
 uniform float ao;
 uniform samplerCubeArray depthMap;
 uniform sampler2D depthMap_dir;
+uniform sampler2D   brdfLUT;  
+uniform samplerCube irradianceMap;
+uniform samplerCube prefilterMap;
 uniform float far_plane;
 uniform int numLights;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
@@ -52,7 +55,6 @@ uniform bool doshadows;
 uniform bool donormals;
 uniform bool existnormals;
 uniform Material material;
-
 // array of offset direction for sampling (shadows)
 vec3 gridSamplingDisk[20] = vec3[]
 (
@@ -65,20 +67,21 @@ vec3 gridSamplingDisk[20] = vec3[]
 
 void main()
 {
-
-    vec3 albedo     = texture(material.texture_diffuse1,TexCoords).rgb;
+    vec4 texcolor = texture(material.texture_diffuse1,TexCoords).rgba;
+    vec3 albedo     = pow(texcolor.rgb,vec3(2.2));
     float metallic  = texture(material.texture_roughmetal1,TexCoords).b;
     float roughness = texture(material.texture_roughmetal1,TexCoords).g;
-    roughness *= 0.6;
-    float ao =0.03f;
-    vec3 ambient = albedo * ao;
+    //albedo = vec3(0.5,0,0);
+    //roughness *= 0.6;
+    //float ao =0.03f;
+    //vec3 ambient = albedo * ao;
     bool normals = (donormals && existnormals);
     vec3 N = vec3(0.0);
     vec3 V;
     vec3 fragPos;
-
-     if(normals)
+    if(normals)
     {
+        //N = pow(texture(material.texture_normal1,TexCoords).rgb,vec3(2.2));
         N = texture(material.texture_normal1,TexCoords).rgb;
         N = normalize(N * 2.0 - 1.0); 
         V = normalize(TangentViewPos - TangentFragPos);
@@ -90,7 +93,6 @@ void main()
 	     V = normalize(viewPos - FragPos);
          fragPos = FragPos;
     }
-
      vec3 F0 = vec3(0.04f);
      F0 = mix(F0,albedo,metallic);
 	 
@@ -113,7 +115,7 @@ void main()
         float attenuation = 1.0 / (distance * distance); // attenuation based on inverse square law
 
 		    vec3 H = normalize (V+L);
-            vec3 radiance = gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation ;//* 0.1f;
+            vec3 radiance = gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation * 0.1;//* 0.1f;
 		    // calculate Cook-Terrence specular BRDF 
 		        // F
 		        vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
@@ -121,7 +123,11 @@ void main()
                 float NDF = DistributionGGX(N, H, roughness); 
                 // G
                 float G   = GeometrySmith(N, V, L, roughness);       
-                vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
+                vec3 numerator    = NDF * G * F;
+                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
+                vec3 specular = numerator / denominator;
+
+                //vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
 
             vec3 ks = F;
             vec3 kd = vec3(1.0)- ks;
@@ -131,7 +137,6 @@ void main()
             Lo *= shadow;
             Lt += Lo;
 	}
-    //Lt=vec3(0);
     // directional light
     vec3 L;
     if(normals)
@@ -151,13 +156,27 @@ void main()
     vec3 Lo = (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
     float shadow = doshadows ? ShadowCalculation_dir(N):1.0; 
     Lo*= shadow;
-    Lt+= Lo; 
+    //Lt+= Lo; 
+    // ambient IBL
+    vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metallic;	  
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+    vec3 diffuse      = irradiance * albedo;
+    const float MAX_REFLECTION_LOD = 4.0;
+    vec3 R = reflect(-V, N); 
+    vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+    vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 amb_specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+    vec3 ambient = (kD * diffuse + amb_specular) * ao;
     //float diffuse = max(dot(N,L));
+    ambient = vec3(0);
     vec3 color = ambient + Lt;
-    //vec3 color = Lt;
+    //color = ambient ;
     //gamma correction done in glEnable sRGB
     //FragColor = vec4(gpuLight[1].position);
-    FragColor = vec4(vec3(color),1.0);
+    FragColor = vec4(vec3(color),texcolor.a);
     //FragColor = vec4(1,1,1,1.f);
 }
 vec3 fresnelSchlick(float cosTheta, vec3 F0)

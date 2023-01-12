@@ -6,10 +6,12 @@
 #include <glm/gtx/string_cast.hpp>
 #include <EventHandler.h>
 #include <FileIO.h>
+#include <Hdr.h>
 #include <Scene.h>
 #include <Settings.h>
 #include <Shader.h>
 #include <State.h>
+#include <Skybox.h>
 #include <Camera.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -135,7 +137,7 @@ public:
         glDeleteProgram(shaderProgram);
     }
 };
-
+int nrRows = 7, nrColumns = 7, spacing =2.5;
 //Engine classes
 EventHandler* eventHandler = new EventHandler();
 State state(eventHandler);
@@ -194,6 +196,10 @@ int main(int argc, char* argv[])
     //glEnable(GL_DEPTH_CLAMP);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     //stbi_set_flip_vertically_on_load(true);
     // Setup Dear Imgui
     // Setup Dear ImGui context
@@ -236,7 +242,21 @@ int main(int argc, char* argv[])
     Model bulb("\\Models\\bulb.gltf");
     Model chimera("\\Models\\Suzanne.gltf");
 
+    Hdr hdr("Factory_Catwalk_2k.hdr");
+    hdr.renderToCubeMap();
+    hdr.renderToIrradianceMap();
+    hdr.renderToPrefilterMap();
+    hdr.renderTobrdfLUT();
+    //Skybox skybox(hdr.texture.id);
     
+    /*Skybox skybox(std::vector<std::string> { "right.jpg",
+        "left.jpg",
+        "top.jpg",
+        "bottom.jpg",
+        "front.jpg",
+        "back.jpg"});*/
+    Skybox skybox;
+    skybox.texture.id = hdr.prefilterMap;
     // Load Scene
    /* Scene* scene;
     Scene* scene_;
@@ -275,12 +295,13 @@ int main(int argc, char* argv[])
         lights_buffer[i].intensity = scene->lightList[i].power;
         lights_buffer[i].range = scene->lightList[i].size;
         //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
+        //std::cout << i << "th light ::" << scene->lightList[i].power;
     }
     glUnmapBuffer(GL_UNIFORM_BUFFER);
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // calculating projection matrix and getting frustrum coords
-    cameraPlayer.yfov = 90.0f;
+    cameraPlayer.yfov = 45.0f;
     cameraPlayer.aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
     cameraPlayer.constructProjection();
     cameraPlayer.constructFrustum();
@@ -645,7 +666,7 @@ int main(int argc, char* argv[])
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
         glCullFace(GL_FRONT);
-        scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
+        //scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
         glCullFace(GL_BACK);
         //helmet.draw(simpleDepthShader);
          
@@ -701,6 +722,15 @@ int main(int argc, char* argv[])
             pbrShader_instanced.setBool("existnormals", 1);
             pbrShader_instanced.setInt("numLights", scene->numLights);
             pbrShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
+            pbrShader_instanced.setInt("irradianceMap", 10);
+            pbrShader_instanced.setInt("prefilterMap", 9);
+            pbrShader_instanced.setInt("brdfLUT", 8);
+            glActiveTexture(GL_TEXTURE8);
+            glBindTexture(GL_TEXTURE_2D, hdr.brdfLUT);
+            glActiveTexture(GL_TEXTURE9);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, hdr.prefilterMap);
+            glActiveTexture(GL_TEXTURE10);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, hdr.irradianceMap);
             glActiveTexture(GL_TEXTURE12);
             glBindTexture(GL_TEXTURE_2D, depthMap);
             glActiveTexture(GL_TEXTURE11);
@@ -708,6 +738,8 @@ int main(int argc, char* argv[])
             //scene.drawObjects(pbrShader);
             scene->drawObjectsInstanced(pbrShader_instanced);
             //helmet.draw(pbrShader);
+            pbrShader_instanced.setVec3("albedo", 0.5f, 0.0f, 0.0f);
+
             glActiveTexture(GL_TEXTURE0);
             //draw the bulbs
             
@@ -723,7 +755,7 @@ int main(int argc, char* argv[])
                 model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
                 // model1 = model1 * world_trans_intitial
                 lightCubeShader.setMat4("model", model1);
-                bulb.Draw(lightCubeShader);
+                //bulb.Draw(lightCubeShader);
             }
             model1 = glm::mat4(1.0f);
             model1 = glm::translate(model1, dlight.direction);
@@ -749,15 +781,18 @@ int main(int argc, char* argv[])
             wireShader.setMat4("model", glm::mat4(1.0f));
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable (GL_CULL_FACE);
-            scene->drawHulls(wireShader);
+            //scene->drawHulls(wireShader);
             //scene->drawAabb(wireShader);
             //chimera.Draw(wireShader);
             glBindVertexArray(VAO_frustrum);
-            glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);
+            //glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);
             glEnable(GL_CULL_FACE);
             glBindVertexArray(0);
             //helmet.draw(pbrShader);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glm::mat4 view = glm::mat4(glm::mat3(camera->View)); // remove translation from the view matrix
+            ///hdr.draw(view);
+            skybox.draw(view, camera->Projection);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
@@ -924,7 +959,7 @@ void renderSphere()
 
         const unsigned int X_SEGMENTS = 64;
         const unsigned int Y_SEGMENTS = 64;
-        const float PI = (float)3.14159265359;
+        const float PI = 3.14159265359f;
         for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
         {
             for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
@@ -962,7 +997,7 @@ void renderSphere()
             }
             oddRow = !oddRow;
         }
-        indexCount = indices.size();
+        indexCount = static_cast<unsigned int>(indices.size());
 
         std::vector<float> data;
         for (unsigned int i = 0; i < positions.size(); ++i)

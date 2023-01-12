@@ -29,6 +29,8 @@ public:
         this->path = "embedded";
     }
     unsigned int TextureFromFile(std::string path);
+    unsigned int uploadTextureCubeMap(std::vector<std::string> facePaths);
+    unsigned int HdrTextureFromFile(std::string path);
     void uploadTexture(gli::texture Texture, gli::gl::format Format, GLenum Target);
     void uploadTextureDMA(gli::texture Texture, gli::gl::format Format, GLenum Target);
     unsigned int TextureEmbedded(const aiTexture* texture, std::string typeName);

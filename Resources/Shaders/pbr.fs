@@ -34,6 +34,8 @@ uniform float metallic;
 uniform float roughness;
 uniform float ao;
 uniform samplerCubeArray depthMap;
+uniform samplerCube skybox;
+
 uniform float far_plane;
 uniform int numLights;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
@@ -60,6 +62,7 @@ void main()
 {
 
     vec3 albedo     = texture(material.texture_diffuse1,TexCoords).rgb;
+    //vec3 albedo = {1,0,0};
     float metallic  = texture(material.texture_roughmetal1,TexCoords).b;
     float roughness = texture(material.texture_roughmetal1,TexCoords).g;
     roughness *= 0.6; 

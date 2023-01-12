@@ -4,7 +4,7 @@ class State
 {
 public:
 	//toggle
-	bool shadows = true; 
+	bool shadows = false; 
 	bool normals = true; 
 	bool cameraDebugBool = false; 
 	
