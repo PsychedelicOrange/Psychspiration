@@ -13,6 +13,7 @@
 #include <State.h>
 #include <Skybox.h>
 #include <Camera.h>
+#include <Culling.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -242,21 +243,22 @@ int main(int argc, char* argv[])
     Model bulb("\\Models\\bulb.gltf");
     Model chimera("\\Models\\Suzanne.gltf");
 
-    Hdr hdr("Factory_Catwalk_2k.hdr");
+    Hdr hdr("Newport_Loft_Ref.hdr");
     hdr.renderToCubeMap();
     hdr.renderToIrradianceMap();
     hdr.renderToPrefilterMap();
     hdr.renderTobrdfLUT();
     //Skybox skybox(hdr.texture.id);
-    
-    /*Skybox skybox(std::vector<std::string> { "right.jpg",
-        "left.jpg",
-        "top.jpg",
-        "bottom.jpg",
-        "front.jpg",
-        "back.jpg"});*/
     Skybox skybox;
     skybox.texture.id = hdr.prefilterMap;
+
+    cameraPlayer.yfov = 45.0f;
+    cameraPlayer.aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
+    
+    Culling culling(glm::inverse(cameraPlayer.constructProjection()));
+    //constructClusters (get cluster Aabb's)
+    culling.dispatch();
+
     // Load Scene
    /* Scene* scene;
     Scene* scene_;
@@ -280,7 +282,7 @@ int main(int argc, char* argv[])
     
     // lights UBO
     unsigned int lightUBO;
-     glGenBuffers(1, &lightUBO);
+    glGenBuffers(1, &lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
     glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
     GLint bufMask = GL_READ_WRITE;
@@ -301,9 +303,7 @@ int main(int argc, char* argv[])
     glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // calculating projection matrix and getting frustrum coords
-    cameraPlayer.yfov = 45.0f;
-    cameraPlayer.aspectratio = (float)(User1.SCR_WIDTH) / (float)(User1.SCR_HEIGHT);
-    cameraPlayer.constructProjection();
+ // moved up for culling
     cameraPlayer.constructFrustum();
 
     cameraDebug.yfov = 90.0f;
@@ -598,8 +598,8 @@ int main(int argc, char* argv[])
         
 
         // update instance buffer 
-        scene->fillDrawList(); 
-        //scene->dontCull();
+        //scene->fillDrawList(); 
+        scene->dontCull();
         scene->setInstanceCount();
         scene->setInstanceOffsets();
         scene->fillInstanceBuffer();
@@ -658,7 +658,7 @@ int main(int argc, char* argv[])
         glClear(GL_DEPTH_BUFFER_BIT);
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
+        //scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
 
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
@@ -781,6 +781,16 @@ int main(int argc, char* argv[])
             wireShader.setMat4("model", glm::mat4(1.0f));
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable (GL_CULL_FACE);
+            for (int i = 0; i < scene->lightList.size(); i++)
+            {
+                model1 = glm::mat4(1.0f);
+                model1 = glm::translate(model1, scene->lightList[i].position);
+                model1 = glm::scale(model1, glm::vec3(scene->lightList[i].size/20)); // Make it a smaller cube
+                // model1 = model1 * world_trans_intitial
+                wireShader.setMat4("model", model1);
+                //renderSphere();
+                //bulb.Draw(lightCubeShader);
+            }
             //scene->drawHulls(wireShader);
             //scene->drawAabb(wireShader);
             //chimera.Draw(wireShader);

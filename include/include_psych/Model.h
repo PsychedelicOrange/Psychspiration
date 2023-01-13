@@ -8,6 +8,9 @@
 #include <vector>
 #include <bullet/btBulletDynamicsCommon.h>
 #include <AABB.h>
+struct Material {
+
+};
 class Model
 {
 public:
@@ -23,6 +26,7 @@ public:
     std::string directory;
     std::string format;
     bool gammaCorrection;
+
 
     
     // constructor, expects a filepath to the 3D model.

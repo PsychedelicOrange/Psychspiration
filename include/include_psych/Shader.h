@@ -8,6 +8,7 @@ public:
     // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader(std::string vertexPath, std::string fragmentPath, std::string geometryPath);
+    Shader(std::string computePath);
     void use();
     void delete_();
     void setBool(const std::string& name, bool value) const;

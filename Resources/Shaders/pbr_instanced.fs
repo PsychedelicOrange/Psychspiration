@@ -103,7 +103,10 @@ void main()
         vec3 Lo = vec3(0.0f);
         vec3 L ;
         float distance = length(gpuLight[i].position.xyz- fragPos);
-       
+        if(distance > gpuLight[i].range)
+        {
+        continue;
+        }
         if(normals)
         {
             L = normalize (TBNinverse * gpuLight[i].position.xyz- fragPos); // make it offline bro so it fast
@@ -112,10 +115,10 @@ void main()
         else{
 	        L = normalize (gpuLight[i].position.xyz- fragPos);
         }
-        float attenuation = 1.0 / (distance * distance); // attenuation based on inverse square law
-
 		    vec3 H = normalize (V+L);
-            vec3 radiance = gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation * 0.1;//* 0.1f;
+            float d = gpuLight[i].range;
+            float intensity = gpuLight[i].intensity * (d-distance)/(d*pow(distance,2)) ;//* 0.1f;
+            vec3 radiance = intensity * gpuLight[i].color.xyz;//* 0.1f;
 		    // calculate Cook-Terrence specular BRDF 
 		        // F
 		        vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
@@ -171,8 +174,8 @@ void main()
 
     vec3 ambient = (kD * diffuse + amb_specular) * ao;
     //float diffuse = max(dot(N,L));
-    ambient = vec3(0);
-    vec3 color = ambient + Lt;
+    //ambient = vec3(0);
+    vec3 color = ambient + Lt ;
     //color = ambient ;
     //gamma correction done in glEnable sRGB
     //FragColor = vec4(gpuLight[1].position);

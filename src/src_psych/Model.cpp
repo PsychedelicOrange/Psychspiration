@@ -231,6 +231,9 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
 {
     std::vector<Texture> textures;
+    aiColor3D color(0.f, 0.f, 0.f);
+    mat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
         aiString str;
