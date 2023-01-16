@@ -4,15 +4,37 @@
 #include <bullet/btBulletDynamicsCommon.h>
 
 // constructor
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures)
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, Material material)
 {
     this->vertices = vertices;
     this->indices = indices;
     this->textures = textures;
     this->vertices_flat = vertices_flat;
     this->indices_flat = indices_flat;
+    this->material = material;
     // now that we have all the required data, set the vertex buffers and its attribute pointers.
     setupMesh();
+    setupMaterial();
+}
+void Mesh::setupMaterial()
+{
+    std::cout << textures.size();
+    for (unsigned int i = 0; i < (textures.size()); i++)
+    {
+        std::string name = textures[i].type;
+        if (name == "texture_diffuse")
+        {
+            texturesExist[0] = 1;
+        }
+        else if (name == "texture_normal")
+        {
+            texturesExist[1] = 1;
+        }
+        else if (name == "texture_roughmetal")
+        {
+            texturesExist[2] = 1;
+        }
+    }
 }
 void Mesh::Draw(Shader& shader)
 {
@@ -69,59 +91,22 @@ void Mesh::setupMesh()
 }
 void Mesh::setupTextures(Shader& shader)
 {
-    // bind appropriate textures
-    unsigned int diffuseNr = 1;
-    unsigned int specularNr = 1;
-    unsigned int normalNr = 1;
-    unsigned int heightNr = 1;
-    unsigned int roughmetalNr = 1;
 
     for (unsigned int i = 0; i < (textures.size()); i++)
-    {
-        // retrieve texture number (the N in diffuse_textureN)
-        std::string number;
-        std::string name = textures[i].type;
-        if (name == "texture_diffuse")
-        {
-            number = std::to_string(diffuseNr++);
-        }
-        else if (name == "texture_specular")
-        {
-            number = std::to_string(specularNr++);
-        }
-        else if (name == "texture_normal")
-        {
-            number = std::to_string(normalNr++);
-        }
-        else if (name == "texture_height")
-        {
-            number = std::to_string(heightNr++); // transfer unsigned int to stream
-        }
-        else if (name == "texture_roughmetal")
-        {
-            number = std::to_string(roughmetalNr++);
-        }
-        // now set the sampler to the correct texture unit 
-        // glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
-        shader.setInt(("material." + name + number).c_str(), i);
+    { 
+        std::string name = (textures[i].type);
+        shader.setInt(name.c_str(), i);
         glActiveTexture(GL_TEXTURE0 + i);
-        //std::cout << " " << (name + number).c_str() << " " << i << std::endl;
-        if (normalNr > 1)
-        {
-            shader.setBool("existnormals", 1);
-            /*shader.setInt("material.texture_normal1", 1);
-              glActiveTexture(GL_TEXTURE1);
-              glBindTexture(GL_TEXTURE_2D, textures[i].id);*/
-        }
-        else
-        {
-            shader.setBool("existnormals", 0);
-        }
-        //shader.setInt((name + number).c_str(), i);
-        //std::cout << (GL_TEXTURE0);
-        // and finally bind the texture
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
+
+    shader.setBool("existnormals", texturesExist[1]);
+    shader.setBool("existdiffuse", texturesExist[0]);
+    shader.setBool("existroughmetal", texturesExist[2]);
+    shader.setVec3("u_albedo", material.albedo);
+    shader.setFloat("u_metallic", material.metallic);//material->metallic
+    shader.setFloat("u_roughness", material.roughness);//material->roughness
+
 }
 void Mesh::draw(Shader& shader)
 {

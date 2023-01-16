@@ -168,22 +168,28 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     // specular: texture_specularN
     // normal: texture_normalN
 
+    Material meshMaterial;
+    aiColor3D color(0.f, 0.f, 0.f);
+    float metallic, roughness, emmisive;
+    material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+    material->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
+    material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+    material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisive);
+    meshMaterial.albedo = glm::vec3(color.r, color.g, color.b);
+    meshMaterial.metallic = metallic;
+    meshMaterial.roughness = roughness;
+    meshMaterial.emmisive = emmisive;
+    //std::cout << "Color : " << meshMaterial.albedo.r << " metallic " << metallic << "roughness " << roughness << "\n";
     if (this->format == ".obj" || this->format == ".gltf")
     {
 
         // 1. diffuse maps
         std::vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-        // 2. specular maps
-        std::vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
-        textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
         // 3. normal maps
         std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_NORMALS, "texture_normal");
         textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
-        // 4. height maps
-        std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_ao");
-        textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-
+        // 4. roughmetal
         std::vector<Texture> roughmetalMaps = loadMaterialTextures(material, aiTextureType_UNKNOWN, "texture_roughmetal");
         textures.insert(textures.end(), roughmetalMaps.begin(), roughmetalMaps.end());
 
@@ -211,7 +217,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 
     }
     
-    Mesh temp_mesh = Mesh(vertices, indices, textures);
+    Mesh temp_mesh = Mesh(vertices, indices, textures,meshMaterial);
     temp_mesh.vertices_flat = new float[vertices.size() * 3];
     for (int i = 0; i < vertices.size(); i++)
     {
@@ -231,9 +237,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
 {
     std::vector<Texture> textures;
-    aiColor3D color(0.f, 0.f, 0.f);
-    mat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
     {
         aiString str;

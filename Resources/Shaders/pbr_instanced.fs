@@ -9,15 +9,6 @@ in mat3 TBNinverse;
 in vec4 FragPosLightSpace;
 const float PI = 3.14159265359;
 
-struct Material {
-    sampler2D texture_diffuse1;
-    sampler2D texture_normal1;
-    sampler2D texture_specular1;
-    sampler2D texture_height1;
-    sampler2D texture_roughmetal1;
-    float shininess;
-}; 
-
 struct GPULight {
     vec4 position;
     vec4 color;
@@ -30,15 +21,18 @@ layout (std140, binding = 3) uniform lightUBO{
     GPULight gpuLight[100]; //max lights do later using shader io before init
 };
 uniform vec3 viewPos;
-uniform vec3 albedo;
-uniform float metallic;
-uniform float roughness;
+uniform vec3 u_albedo;
+uniform float u_metallic;
+uniform float u_roughness;
 uniform float ao;
 uniform samplerCubeArray depthMap;
 uniform sampler2D depthMap_dir;
 uniform sampler2D   brdfLUT;  
 uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
+uniform sampler2D texture_diffuse;
+uniform sampler2D texture_normal;
+uniform sampler2D texture_roughmetal;
 uniform float far_plane;
 uniform int numLights;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
@@ -54,7 +48,9 @@ uniform float dir_intensity;
 uniform bool doshadows;
 uniform bool donormals;
 uniform bool existnormals;
-uniform Material material;
+uniform bool existdiffuse;
+uniform bool existroughmetal;
+
 // array of offset direction for sampling (shadows)
 vec3 gridSamplingDisk[20] = vec3[]
 (
@@ -67,31 +63,29 @@ vec3 gridSamplingDisk[20] = vec3[]
 
 void main()
 {
-    vec4 texcolor = texture(material.texture_diffuse1,TexCoords).rgba;
-    vec3 albedo     = pow(texcolor.rgb,vec3(2.2));
-    float metallic  = texture(material.texture_roughmetal1,TexCoords).b;
-    float roughness = texture(material.texture_roughmetal1,TexCoords).g;
-    //albedo = vec3(0.5,0,0);
-    //roughness *= 0.6;
-    //float ao =0.03f;
-    //vec3 ambient = albedo * ao;
+    vec3 albedo = u_albedo; float metallic = u_metallic,roughness = u_roughness;
+    if(existdiffuse)
+    {
+        vec4 texcolor = texture(texture_diffuse,TexCoords).rgba;
+        albedo     = pow(texcolor.rgb,vec3(2.2));
+    }
+    if(existroughmetal)
+    {
+        metallic  = texture(texture_roughmetal,TexCoords).b;
+        roughness = texture(texture_roughmetal,TexCoords).g;
+    }
     bool normals = (donormals && existnormals);
-    vec3 N = vec3(0.0);
-    vec3 V;
-    vec3 fragPos;
+    //else block
+    vec3 N = normalize(Normal);
+    vec3 V = normalize(viewPos - FragPos);
+    vec3 fragPos = FragPos;
     if(normals)
     {
-        //N = pow(texture(material.texture_normal1,TexCoords).rgb,vec3(2.2));
-        N = texture(material.texture_normal1,TexCoords).rgb;
+        //N = pow(texture(texture_normal1,TexCoords).rgb,vec3(2.2));
+        N = texture(texture_normal,TexCoords).rgb;
         N = normalize(N * 2.0 - 1.0); 
         V = normalize(TangentViewPos - TangentFragPos);
         fragPos = TangentFragPos;
-    }
-    else
-    {
-         N = normalize(Normal);
-	     V = normalize(viewPos - FragPos);
-         fragPos = FragPos;
     }
      vec3 F0 = vec3(0.04f);
      F0 = mix(F0,albedo,metallic);
@@ -171,15 +165,14 @@ void main()
     vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;    
     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 amb_specular = prefilteredColor * (F * brdf.x + brdf.y);
-
-    vec3 ambient = (kD * diffuse + amb_specular) * ao;
+    vec3 ambient = (kD * diffuse + amb_specular) ;//* ao;
     //float diffuse = max(dot(N,L));
     //ambient = vec3(0);
     vec3 color = ambient + Lt ;
     //color = ambient ;
     //gamma correction done in glEnable sRGB
     //FragColor = vec4(gpuLight[1].position);
-    FragColor = vec4(vec3(color),texcolor.a);
+    FragColor = vec4(vec3(color),(1.0f));
     //FragColor = vec4(1,1,1,1.f);
 }
 vec3 fresnelSchlick(float cosTheta, vec3 F0)

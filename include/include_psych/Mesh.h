@@ -14,6 +14,12 @@ struct Vertex {
     glm::vec3 Tangent;
     // bitangent
     glm::vec3 Bitangent;
+}; 
+struct Material {
+    glm::vec3 albedo = { 0.5,0.5,0.5 };
+    float metallic = 0;
+    float roughness = 0.5;
+    float emmisive = 0;
 };
 
 class Mesh {
@@ -22,13 +28,16 @@ public:
     std::vector<Vertex>       vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture>      textures;
+    Material material;
     unsigned int VAO;
     //physics 
     float* vertices_flat;
     unsigned int * indices_flat;
     btCollisionShape* colShape;
+    bool texturesExist[3] = {0,0,0}; // diffuse,normal,roughmetal
     // constructor
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures,Material material = Material());
+    void setupMaterial();
     void Draw(Shader& shader);
     void DrawInstanced(Shader& shader,int instancedCount);
     void DrawShadowInstanced(Shader& shader, int instancedCount);

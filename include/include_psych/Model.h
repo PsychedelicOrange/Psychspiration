@@ -8,9 +8,7 @@
 #include <vector>
 #include <bullet/btBulletDynamicsCommon.h>
 #include <AABB.h>
-struct Material {
 
-};
 class Model
 {
 public:

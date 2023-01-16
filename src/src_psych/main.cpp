@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
     Model bulb("\\Models\\bulb.gltf");
     Model chimera("\\Models\\Suzanne.gltf");
 
-    Hdr hdr("Newport_Loft_Ref.hdr");
+    Hdr hdr("cornellbox.hdr");
     hdr.renderToCubeMap();
     hdr.renderToIrradianceMap();
     hdr.renderToPrefilterMap();
@@ -588,11 +588,13 @@ int main(int argc, char* argv[])
         }
         if (scene_change)
         {
+            std::cout << "old scene : "<< scene->lightList.size();
             delete scene;
             modelManager = new ModelManager();
             scene = new Scene(current_scene, eventHandler, modelManager);
             scene->loadObjects();
             //scene->setPhysics();
+            std::cout << "new scene : " << scene->lightList.size();
             scene_change = false;
         }
         
@@ -658,7 +660,7 @@ int main(int argc, char* argv[])
         glClear(GL_DEPTH_BUFFER_BIT);
         //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
-        //scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
+        scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
 
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
@@ -719,7 +721,7 @@ int main(int argc, char* argv[])
             pbrShader_instanced.setVec3("spotLight.direction", camera->Front);
             pbrShader_instanced.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
             pbrShader_instanced.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
-            pbrShader_instanced.setBool("existnormals", 1);
+            //pbrShader_instanced.setBool("existnormals", 1);
             pbrShader_instanced.setInt("numLights", scene->numLights);
             pbrShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
             pbrShader_instanced.setInt("irradianceMap", 10);
@@ -738,7 +740,7 @@ int main(int argc, char* argv[])
             //scene.drawObjects(pbrShader);
             scene->drawObjectsInstanced(pbrShader_instanced);
             //helmet.draw(pbrShader);
-            pbrShader_instanced.setVec3("albedo", 0.5f, 0.0f, 0.0f);
+            //pbrShader_instanced.setVec3("albedo", 0.5f, 0.0f, 0.0f);
 
             glActiveTexture(GL_TEXTURE0);
             //draw the bulbs
@@ -781,14 +783,15 @@ int main(int argc, char* argv[])
             wireShader.setMat4("model", glm::mat4(1.0f));
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDisable (GL_CULL_FACE);
+            
             for (int i = 0; i < scene->lightList.size(); i++)
             {
                 model1 = glm::mat4(1.0f);
                 model1 = glm::translate(model1, scene->lightList[i].position);
-                model1 = glm::scale(model1, glm::vec3(scene->lightList[i].size/20)); // Make it a smaller cube
+                model1 = glm::scale(model1, glm::vec3(scene->lightList[i].size)); 
                 // model1 = model1 * world_trans_intitial
                 wireShader.setMat4("model", model1);
-                //renderSphere();
+                renderSphere();
                 //bulb.Draw(lightCubeShader);
             }
             //scene->drawHulls(wireShader);

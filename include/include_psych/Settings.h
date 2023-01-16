@@ -22,7 +22,7 @@ public:
 		SCR_WIDTH = 1920;
 		SCR_HEIGHT = 1080;
 		exposure = 0.5;
-		resourcePath = "material";
+		resourcePath = "cornellbox";
 		hdr = 1;
 		//update();
 		eventHandler->registerCallback("Update_Settings", [=]() {update(); });
