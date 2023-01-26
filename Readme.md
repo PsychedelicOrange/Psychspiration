@@ -1,35 +1,34 @@
 # Psychspiration
 
-## Mission Statement as of :
-
-(29/08/21)
-A game engine based on opengl that provides basic model importing and placement. // basically all that goes into the visual side of games //
-(07/05/22)
-Moving towards supporting open-world games.
-
+Hobby Game Engine 
+![Engine Screenshot](https://live.staticflickr.com/65535/52650553805_552e7114ce_b.jpg)
+[More Screenshots](https://www.flickr.com/photos/197526599@N02/albums/72177720305537764/with/52650382154/)
+[Demo Download]()
+[Build Instructions](./documentation/Documentation.md)
 # Features
 
 * PBR shading based on learnopengl.com
 * Supports dynamic point,directional lights with shadows (PCF)
 * Import scenes from blender (Custom .py exporter)
-* MSAA, Anti-Aliasing, HDR
+* MSAA, Anti-Aliasing, HDR, Transparency,Instanced rendering 
 * Integrated Bullet Physics (*broken in current version*)
 
+# Build Instruction
 # Goals
 ## Graphics Feature Addition
-* [ ] Better GLTF Support
-* [ ] Transparency
-* [ ] IBL
+* [x] Better GLTF Support
+* [x] Transparency
+* [x] IBL
 * [ ] GI
 * [ ] SSR
 ## Graphics Optimization
 * [x] Instanced rendering
-* [ ] View Frustrum Culling
+* [x] View Frustrum Culling
 ## Asset pipeline / setting up tool chain btw blender / engine
 * [ ] Make a gui for a resource Manager for deleting/viewing/creating Scenes
 * [ ] Compress textures ? (.dds 10 mipmaps take up soo much extra space)
 ## Building / distributing
-* [ ] Make Project more portable and easy to set up 
+* [x] Easy to setup dev env
 * [ ] Achieve distributable builds
 * [ ] Set up one click build button
 
