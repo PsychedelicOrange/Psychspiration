@@ -170,15 +170,24 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
 
     Material meshMaterial;
     aiColor3D color(0.f, 0.f, 0.f);
-    float metallic, roughness, emmisive;
+    aiString aiAlphaMode;
+    float metallic, roughness, emmisive, alphaClip;
     material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
     material->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
     material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
     material->Get(AI_MATKEY_COLOR_EMISSIVE, emmisive);
+    material->Get(AI_MATKEY_GLTF_ALPHAMODE, aiAlphaMode);
+    material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, alphaClip);
     meshMaterial.albedo = glm::vec3(color.r, color.g, color.b);
     meshMaterial.metallic = metallic;
     meshMaterial.roughness = roughness;
     meshMaterial.emmisive = emmisive;
+    meshMaterial.alphaMode = aiAlphaMode.C_Str();
+    meshMaterial.alphaClip = alphaClip;
+    if (meshMaterial.alphaMode != "OPAQUE")
+    {
+        this->hasTransparentMesh = 1;
+    }
     //std::cout << "Color : " << meshMaterial.albedo.r << " metallic " << metallic << "roughness " << roughness << "\n";
     if (this->format == ".obj" || this->format == ".gltf")
     {
@@ -192,7 +201,9 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
         // 4. roughmetal
         std::vector<Texture> roughmetalMaps = loadMaterialTextures(material, aiTextureType_UNKNOWN, "texture_roughmetal");
         textures.insert(textures.end(), roughmetalMaps.begin(), roughmetalMaps.end());
-
+        // emmisive
+        std::vector<Texture> emmisiveMaps = loadMaterialTextures(material, aiTextureType_EMISSIVE, "texture_emmisive");
+        textures.insert(textures.end(), emmisiveMaps.begin(), emmisiveMaps.end());
     }
     //
     if (this->format == ".glb")

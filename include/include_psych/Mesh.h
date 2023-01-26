@@ -20,6 +20,9 @@ struct Material {
     float metallic = 0;
     float roughness = 0.5;
     float emmisive = 0;
+    float alphaClip = 0.5;
+    std::string alphaMode;
+
 };
 
 class Mesh {
@@ -34,7 +37,7 @@ public:
     float* vertices_flat;
     unsigned int * indices_flat;
     btCollisionShape* colShape;
-    bool texturesExist[3] = {0,0,0}; // diffuse,normal,roughmetal
+    bool texturesExist[4] = {0,0,0,0}; // diffuse,normal,roughmetal,emmisive
     // constructor
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures,Material material = Material());
     void setupMaterial();

@@ -24,6 +24,7 @@ uniform vec3 viewPos;
 uniform vec3 u_albedo;
 uniform float u_metallic;
 uniform float u_roughness;
+uniform float u_emmisive;
 uniform float ao;
 uniform samplerCubeArray depthMap;
 uniform sampler2D depthMap_dir;
@@ -33,6 +34,7 @@ uniform samplerCube prefilterMap;
 uniform sampler2D texture_diffuse;
 uniform sampler2D texture_normal;
 uniform sampler2D texture_roughmetal;
+uniform sampler2D texture_emmisive;
 uniform float far_plane;
 uniform int numLights;
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
@@ -50,7 +52,10 @@ uniform bool donormals;
 uniform bool existnormals;
 uniform bool existdiffuse;
 uniform bool existroughmetal;
-
+uniform bool existemmisive;
+uniform bool existOpacity;
+uniform bool existClip;
+//uniform float ClipThreshold;
 // array of offset direction for sampling (shadows)
 vec3 gridSamplingDisk[20] = vec3[]
 (
@@ -63,10 +68,11 @@ vec3 gridSamplingDisk[20] = vec3[]
 
 void main()
 {
+    vec4 texcolor;
     vec3 albedo = u_albedo; float metallic = u_metallic,roughness = u_roughness;
     if(existdiffuse)
     {
-        vec4 texcolor = texture(texture_diffuse,TexCoords).rgba;
+        texcolor = texture(texture_diffuse,TexCoords).rgba;
         albedo     = pow(texcolor.rgb,vec3(2.2));
     }
     if(existroughmetal)
@@ -153,26 +159,37 @@ void main()
     vec3 Lo = (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
     float shadow = doshadows ? ShadowCalculation_dir(N):1.0; 
     Lo*= shadow;
-    //Lt+= Lo; 
+    Lt+= Lo; 
     // ambient IBL
     vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
     vec3 irradiance = texture(irradianceMap, N).rgb;
     vec3 diffuse      = irradiance * albedo;
-    const float MAX_REFLECTION_LOD = 4.0;
+    const float MAX_REFLECTION_LOD = 1.0;
     vec3 R = reflect(-V, N); 
     vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;    
     vec2 brdf  = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
     vec3 amb_specular = prefilteredColor * (F * brdf.x + brdf.y);
-    vec3 ambient = (kD * diffuse + amb_specular) ;//* ao;
-    //float diffuse = max(dot(N,L));
-    //ambient = vec3(0);
-    vec3 color = ambient + Lt ;
+    vec3 ambient = (kD * diffuse );//+ amb_specular) ;//* ao;
+    //emmisive
+    vec3 emmisive = vec3(u_emmisive);
+    if(existemmisive)
+    {
+        emmisive = vec3(texture(texture_emmisive,TexCoords));
+    }
+    vec3 color = ambient + Lt + emmisive ;
     //color = ambient ;
     //gamma correction done in glEnable sRGB
     //FragColor = vec4(gpuLight[1].position);
-    FragColor = vec4(vec3(color),(1.0f));
+    if(!existOpacity)
+    {
+        FragColor = vec4(vec3(color),(1.0f));
+    }else{
+        FragColor = vec4(vec3(color),texcolor.a);
+        //FragColor = vec4(texcolor.a);
+    }
+    
     //FragColor = vec4(1,1,1,1.f);
 }
 vec3 fresnelSchlick(float cosTheta, vec3 F0)

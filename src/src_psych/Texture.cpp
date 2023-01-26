@@ -43,6 +43,7 @@ unsigned int Texture::TextureFromFile(std::string path)
         glTexParameteri(Target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(Target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(Target, GL_TEXTURE_MAX_ANISOTROPY, 4);
+
         glm::tvec3<GLsizei> const Extent(Texture.extent());
         GLsizei const FaceTotal = static_cast<GLsizei>(Texture.layers() * Texture.faces());
 
@@ -71,7 +72,11 @@ unsigned int Texture::TextureFromFile(std::string path)
             assert(0);
             break;
         }
-
+        //if (Texture.target() == gli::TARGET_2D)
+        //{
+            //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        //}
         // from here its different for dma or usual
         /*if (first_pbo)
         {
@@ -131,8 +136,10 @@ unsigned int Texture::TextureFromFile(std::string path)
             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4);

@@ -18,7 +18,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std:
 }
 void Mesh::setupMaterial()
 {
-    std::cout << textures.size();
+    //std::cout << textures.size();
     for (unsigned int i = 0; i < (textures.size()); i++)
     {
         std::string name = textures[i].type;
@@ -33,6 +33,10 @@ void Mesh::setupMaterial()
         else if (name == "texture_roughmetal")
         {
             texturesExist[2] = 1;
+        }
+        else if (name == "texture_emmisive")
+        {
+            texturesExist[3] = 1;
         }
     }
 }
@@ -98,15 +102,22 @@ void Mesh::setupTextures(Shader& shader)
         shader.setInt(name.c_str(), i);
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
 
     shader.setBool("existnormals", texturesExist[1]);
     shader.setBool("existdiffuse", texturesExist[0]);
     shader.setBool("existroughmetal", texturesExist[2]);
+    shader.setBool("existemmisive", texturesExist[3]);
+    shader.setBool("existOpacity",(material.alphaMode != "OPAQUE"));
+    shader.setBool("existClip", (material.alphaMode == "MASK"));
+    //shader.setFloat("ClipThreshold", (material.alphaClip));
     shader.setVec3("u_albedo", material.albedo);
     shader.setFloat("u_metallic", material.metallic);//material->metallic
     shader.setFloat("u_roughness", material.roughness);//material->roughness
-
+    shader.setFloat("u_emmisive", material.emmisive);
+    
 }
 void Mesh::draw(Shader& shader)
 {

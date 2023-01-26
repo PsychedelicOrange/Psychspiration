@@ -9,7 +9,9 @@
 #include <map>
 #include <thread>
 #include <nlohmann/json.hpp>
+#include <set>
 using Json = nlohmann::json;
+bool compareDistance(glm::vec3 a, glm::vec3 b, glm::vec3 c);
 glm::mat4 getmat4_json(Json temp)
 {
     float temp_arr[16];
@@ -98,7 +100,8 @@ void Scene::parseScene(std::string data)
             light["power"].get<float>(), light["range"].get<float>(), getvec3_json(light["color"]), light["use_shadow"].get<bool>()));
     }
     numLights = lightList.size();
-    std::cout << glm::to_string(lightList[0].position);
+    scenelight = new SceneLight();
+    updateLightBuffer();
 }
 
 void Scene::dontCull()
@@ -114,12 +117,48 @@ void Scene::artificialCull()
         if (obj.second->name[0]!='P')
             visibleObjects.push_back(obj.second);
 }
+void Scene::fillDrawList(glm::vec3 cameraLoc)
+{
+    visibleObjects.clear();
+    transparentObjects.clear();
+    auto cmp = [cameraLoc](Object* a, Object* b) { return glm::distance(a->aabb->center, cameraLoc) > glm::distance(b->aabb->center, cameraLoc); };
+    std::set<Object*, decltype(cmp)>transparentObjects (cmp);
+
+    for (auto obj : liveObjects)
+    {
+        bool isInFrustum = obj.second->aabb->isOnFrustum(obj.second->getTransform());
+        bool isOpaque = !obj.second->model->hasTransparentMesh;
+        if (isInFrustum && isOpaque)
+        {
+            visibleObjects.push_back(obj.second);
+        }
+        else if(isInFrustum && !isOpaque)
+        {
+            transparentObjects.insert(obj.second);
+        }
+    }
+    for (auto obj : transparentObjects)
+    {
+        this->transparentObjects.push_back(obj);
+    }
+};
+bool compareDistance(glm::vec3 a, glm::vec3 b,glm::vec3 c)
+{
+    glm::vec3 ac = a - c;
+    glm::vec3 bc = b - c;
+    return ((ac.x * ac.x )+ (ac.y * ac.y )+ (ac.z * ac.z )> (bc.x * bc.x )+ (bc.y * bc.y) + (bc.z * bc.z));
+}
 void Scene::fillDrawList()
 {
     visibleObjects.clear();
     for (auto obj : liveObjects)
-        if (obj.second->aabb->isOnFrustum(obj.second->getTransform())) 
+    {
+        bool isInFrustum = obj.second->aabb->isOnFrustum(obj.second->getTransform());
+        if (isInFrustum)
+        {
             visibleObjects.push_back(obj.second);
+        }
+    }
 }
 void Scene::setInstanceCount()
 {
@@ -174,6 +213,14 @@ void Scene::drawObjects(Shader ourShader)
         obj.second->draw(ourShader);
     }
 }
+void Scene::drawTransparentObjects(Shader ourShader)
+{
+    for (auto obj : transparentObjects)
+    {
+        obj->draw(ourShader);
+        //std::cout << obj->name;
+    }
+}
 void Scene::drawObjectsInstanced(Shader ourShader)
 {
     for (auto obj : modelManager->Models)
@@ -184,8 +231,13 @@ void Scene::drawObjectsInstanced(Shader ourShader)
             ourShader.setInt("instanceOffset", obj.second->instanceOffset);
             obj.second->DrawInstanced(ourShader);
         }
-            
     }
+    /*for (auto obj : visibleObjects)
+    {
+        ourShader.use();
+        ourShader.setInt("instanceOffset",obj->model->instanceOffset);
+        obj->model->DrawInstanced(ourShader);
+    }*/
    /* ourShader.use();
     for (auto uniqueModels : modelManager->Models)
     {
@@ -284,6 +336,10 @@ void Scene::removeObject(std::string objectName)
 {
     liveObjects["helmet.002"]->model->instanceCount--;
     liveObjects.erase("helmet.002");
+}
+void Scene::updateLightBuffer()
+{
+    scenelight->updateBuffer(this->lightList);
 }
 Scene::~Scene()
 {

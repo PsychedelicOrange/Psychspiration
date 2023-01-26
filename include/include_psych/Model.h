@@ -24,6 +24,7 @@ public:
     std::string directory;
     std::string format;
     bool gammaCorrection;
+    bool hasTransparentMesh=0;
 
 
     

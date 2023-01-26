@@ -138,6 +138,8 @@ public:
         glDeleteProgram(shaderProgram);
     }
 };
+//perforamnce profilling
+float PointLightshadowPass, DirectionalLightshadowPass, Frustumculling, InstancedRendering,transparentRendering, DebugRendering;
 int nrRows = 7, nrColumns = 7, spacing =2.5;
 //Engine classes
 EventHandler* eventHandler = new EventHandler();
@@ -166,7 +168,7 @@ int main(int argc, char* argv[])
 #endif
     // glfw window creation
     int* count = new int;
-    //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
+   //GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", (glfwGetMonitors(count))[0], NULL);
     GLFWwindow* window = glfwCreateWindow(User1.SCR_WIDTH, User1.SCR_HEIGHT, "Psychspiration", 0, NULL);
     if (window == NULL)
     {
@@ -233,7 +235,7 @@ int main(int argc, char* argv[])
     // Load Shaders
     Shader wireShader("model_simple.vs", "model_simple.fs", "0");
     Shader lightCubeShader("vertex_lightcube.vs", "fragment_lightcube.fs", "0");
-    Shader pbrShader("pbr.vs", "pbr.fs", "0");
+    Shader pbrShader("pbr.vs", "pbr_instanced.fs", "0");
     Shader pbrShader_instanced("pbr_instanced.vs", "pbr_instanced.fs", "0");
     Shader hdrShader("quad.vs", "hdr.fs","0");
     Shader simpleDepthShader("pointshadow.vs", "pointshadow - Copy.fs", "pointshadow - Copy.gs");
@@ -243,7 +245,7 @@ int main(int argc, char* argv[])
     Model bulb("\\Models\\bulb.gltf");
     Model chimera("\\Models\\Suzanne.gltf");
 
-    Hdr hdr("cornellbox.hdr");
+    Hdr hdr("Newport_Loft_Ref.hdr");
     hdr.renderToCubeMap();
     hdr.renderToIrradianceMap();
     hdr.renderToPrefilterMap();
@@ -276,32 +278,32 @@ int main(int argc, char* argv[])
     //objPlayer->load();
     //Player* player = new Player(objPlayer, &cameraPlayer, eventHandler,  physics);
     
+    scene->updateLightBuffer();
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-    // lights UBO
-    unsigned int lightUBO;
-    glGenBuffers(1, &lightUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
-    glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
-    GLint bufMask = GL_READ_WRITE;
-    GPULight* lights_buffer;
-    lights_buffer = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
+    //// lights UBO
+    //unsigned int lightUBO;
+    //glGenBuffers(1, &lightUBO);
+    //glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
+    //glBufferData(GL_UNIFORM_BUFFER, maxLights * sizeof(GPULight), NULL, GL_DYNAMIC_DRAW);
+    //GLint bufMask = GL_READ_WRITE;
+    //GPULight* lights_buffer;
+    //lights_buffer = (struct GPULight*)glMapBuffer(GL_UNIFORM_BUFFER, bufMask);
 
-    for (unsigned int i = 0; i < scene->numLights; ++i) {
-        //Fetching the light from the current scene
-        lights_buffer[i].position = glm::vec4(scene->lightList[i].position, 1.0f);
-        lights_buffer[i].color = glm::vec4(scene->lightList[i].color, 1.0f);
-        lights_buffer[i].enabled = 1;
-        lights_buffer[i].intensity = scene->lightList[i].power;
-        lights_buffer[i].range = scene->lightList[i].size;
-        //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
-        //std::cout << i << "th light ::" << scene->lightList[i].power;
-    }
-    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    //for (unsigned int i = 0; i < scene->numLights; ++i) {
+    //    //Fetching the light from the current scene
+    //    lights_buffer[i].position = glm::vec4(scene->lightList[i].position, 1.0f);
+    //    lights_buffer[i].color = glm::vec4(scene->lightList[i].color, 1.0f);
+    //    lights_buffer[i].enabled = 1;
+    //    lights_buffer[i].intensity = scene->lightList[i].power;
+    //    lights_buffer[i].range = scene->lightList[i].size;
+    //    //std::cout << i << "th light ::" << std::endl <<"\tposition: " << lights[i].position.x << " " << lights[i].position.y << " " << lights[i].position.z<<std::endl;
+    //    //std::cout << i << "th light ::" << scene->lightList[i].power;
+    //}
+    //glUnmapBuffer(GL_UNIFORM_BUFFER);
+    //glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUBO);
+    //glBindBuffer(GL_UNIFORM_BUFFER, 0);
     // calculating projection matrix and getting frustrum coords
  // moved up for culling
     cameraPlayer.constructFrustum();
@@ -395,7 +397,7 @@ int main(int argc, char* argv[])
     float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
     pbrShader.use();
-    pbrShader.setInt("depthMap", 11);
+    pbrShader.setInt("depthMap", 12);
     pbrShader_instanced.use();
     pbrShader_instanced.setInt("depthMap_dir",12);
 
@@ -485,6 +487,11 @@ int main(int argc, char* argv[])
     pbrShader_instanced.setVec3("dir_color", dlight.color);
     pbrShader_instanced.setFloat("dir_intensity", 100);
     pbrShader_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    pbrShader.use();
+    pbrShader.setVec3("dir_direction", glm::normalize(dlight.direction));
+    pbrShader.setVec3("dir_color", dlight.color);
+    pbrShader.setFloat("dir_intensity", 100);
+    pbrShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
     Line test(glm::vec3(0, 0, 0), dlight.direction);
     test.setColor(glm::vec3(1, 1, 0));
@@ -500,7 +507,7 @@ int main(int argc, char* argv[])
     float tempdir = dlight.direction.y;
     while (!glfwWindowShouldClose(window))
     {
-        if (state.play )
+        if (state.play)
         {
             scene->physics->stepSim();
             scene->updatePhysics();
@@ -525,12 +532,12 @@ int main(int argc, char* argv[])
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         if (state.show_menu)
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+            // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
             ImGui::Begin("Psychspiration");  // Create a window called "Hello, world!" and append into it.
-            
+
             //ImGui::Combo("Active Scene :", &item_current,sceneList, sizeof(sceneList));
             if (ImGui::BeginCombo("Active Scene :", current_scene))
             {
@@ -547,7 +554,13 @@ int main(int argc, char* argv[])
                 }
                 ImGui::EndCombo();
             }
-            ImGui::Text("I love IMGUI");               // Display some text (you can use a format strings too)
+            std::string perf = "PointLightshadowPass: " + std::to_string(PointLightshadowPass) + "\n" +
+                "DirectionalLightshadowPass: " + std::to_string(DirectionalLightshadowPass) + "\n" +
+                "Frustumculling: " + std::to_string(Frustumculling) + "\n" +
+                "InstancedRendering: " + std::to_string(InstancedRendering) + "\n" +
+                "TransparentRendering: " + std::to_string(transparentRendering) + "\n" +
+                "DebugRendering: " + std::to_string(DebugRendering);
+            ImGui::Text(perf.c_str());
             ImGui::Checkbox("Renderer", &state.show_renderer);      // Edit bools storing our window open/close state
             if (state.show_renderer)
             {
@@ -572,45 +585,55 @@ int main(int argc, char* argv[])
             }
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
-            int res[2] = { User1.SCR_WIDTH, User1.SCR_HEIGHT };        
+            int res[2] = { User1.SCR_WIDTH, User1.SCR_HEIGHT };
             if (ImGui::InputInt2("Resolution", res, ImGuiInputTextFlags_AutoSelectAll))                            // Buttons return true when clicked (most widgets return true when edited/activated)
             {
                 User1.SCR_WIDTH = res[0];
                 User1.SCR_HEIGHT = res[1];
                 glfwSetWindowSize(window, User1.SCR_WIDTH, User1.SCR_HEIGHT);
             }
-            
+
             //ImGui::Text("counter = %d", counter);
-             
+
             //ImGui::Text("%s", to_string(player->obj->transform).c_str());
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
         if (scene_change)
         {
-            std::cout << "old scene : "<< scene->lightList.size();
+            std::cout << "old scene : " << scene->lightList.size();
             delete scene;
             modelManager = new ModelManager();
             scene = new Scene(current_scene, eventHandler, modelManager);
             scene->loadObjects();
+            scene->updateLightBuffer();
             //scene->setPhysics();
             std::cout << "new scene : " << scene->lightList.size();
             scene_change = false;
         }
-        
 
+        timer.Begin();
         // update instance buffer 
-        //scene->fillDrawList(); 
-        scene->dontCull();
+        scene->fillDrawList(camera->Position);
+        //scene->dontCull();
         scene->setInstanceCount();
         scene->setInstanceOffsets();
         scene->fillInstanceBuffer();
-
+        timer.End();
+        try
+        {
+            Frustumculling = (float)(timer.Elapsed_ns()).value() / 1000000;
+            //std::cout << "\nSort: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
+        }
+        catch (const std::bad_optional_access& e)
+        {
+            //std::cout << e.what() << "\n";
+        }
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
         //glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->liveObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->visibleObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene->visibleObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, uboModelMatrices);
-        
+
         // frustrum shit veiw matrices and ****
         camera->constructViewMatrix();
         cameraPlayer.constructViewMatrix();
@@ -620,7 +643,7 @@ int main(int argc, char* argv[])
         float* ptr = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
         if (ptr)
         {
-            cameraPlayer.frustum->updateWS(ptr,cameraPlayer.inView);
+            cameraPlayer.frustum->updateWS(ptr, cameraPlayer.inView);
         }
         glUnmapBuffer(GL_ARRAY_BUFFER);
         // change directional light direction 
@@ -629,7 +652,7 @@ int main(int argc, char* argv[])
         cameraPlayer.frustum->constructLS(lightView);
         xyminmax = cameraPlayer.frustum->getFrustrumMinMax(xyminmax);
         cameraPlayer.updateForCulling();
-        
+
         //float worldunitpertexel = cameraPlayer.frustum->diagnolFrustrum / SHADOW_MAP_MAX_SIZE_DIR;
         //for (int i = 0; i < 4; i++)
         //{
@@ -646,42 +669,55 @@ int main(int argc, char* argv[])
         dirShadow_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         pbrShader_instanced.use();
         pbrShader_instanced.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        pbrShader.use();
+        pbrShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         // render
         // ------
         //glClearColor(0, 0, 0, 1.0f);
-        glClearColor(1,1, 1, 1.0f);
+        glClearColor(1, 1, 1, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
+
+        if (state.shadows){
         timer.Begin();
-        // 1. render scene to depth cubemap
-        // --------------------------------
+        //1. render scene to depth cubemap
+       // --------------------------------
+
+
         glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
-        //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
         glEnable(GL_DEPTH_TEST);
         scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
 
-        glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        //simpleDepthShader.setVec3("lightPos", scene.lightList[0].position);
-        glEnable(GL_DEPTH_TEST);
-        glCullFace(GL_FRONT);
-        //scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
-        glCullFace(GL_BACK);
-        //helmet.draw(simpleDepthShader);
-         
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         timer.End();
         try
         {
+            PointLightshadowPass = (float)(timer.Elapsed_ns()).value() / 1000000;
             //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
         }
         catch (const std::bad_optional_access& e)
         {
             //std::cout << e.what() << "\n";
         }
+        timer.Begin();
+        //glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
+        //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
+        //glClear(GL_DEPTH_BUFFER_BIT);
+        //glEnable(GL_DEPTH_TEST);
+        //glCullFace(GL_FRONT);
+        ////scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
+        //glCullFace(GL_BACK);
+        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        try
+        {
+            DirectionalLightshadowPass = (float)(timer.Elapsed_ns()).value() / 1000000;
+            //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
+        }
+        catch (const std::bad_optional_access& e)
+        {
+            //std::cout << e.what() << "\n";
+        }
+    }
         timer.Begin();
             
         //glClearColor(1,1,1, 1.0f);
@@ -693,35 +729,14 @@ int main(int argc, char* argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
-            pbrShader.use();     
-            pbrShader.setMat4("projection", camera->Projection);
-            pbrShader.setMat4("view", camera->View);
-            pbrShader.setVec3("viewPos", camera->Position);
-            pbrShader.setVec3("spotLight.position", camera->Position);
-            pbrShader.setVec3("spotLight.direction", camera->Front);
-            pbrShader.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
-            pbrShader.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
-            pbrShader.setBool("existnormals", 1);
-            pbrShader.setInt("numLights", scene->numLights);
-            pbrShader.setFloat("far_plane", cameraPlayer.far_plane);
-            glActiveTexture(GL_TEXTURE11);
-            glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
-            //scene.drawObjects(pbrShader);
-            //helmet.draw(pbrShader);
-            glActiveTexture(GL_TEXTURE0);
-            //scene.drawobj(pbrShader);
-            //axes.Draw(pbrShader);
             pbrShader_instanced.use();
-            //glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
-            //glm::mat4 view = camera.GetViewMatrix();
             pbrShader_instanced.setMat4("projection", camera->Projection);
             pbrShader_instanced.setMat4("view", camera->View);
             pbrShader_instanced.setVec3("viewPos", camera->Position);
             pbrShader_instanced.setVec3("spotLight.position", camera->Position);
             pbrShader_instanced.setVec3("spotLight.direction", camera->Front);
             pbrShader_instanced.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
-            pbrShader_instanced.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
-            //pbrShader_instanced.setBool("existnormals", 1);
+            pbrShader_instanced.setInt("donormals", state.normals); // enable/disable normals by pressing '2
             pbrShader_instanced.setInt("numLights", scene->numLights);
             pbrShader_instanced.setFloat("far_plane", cameraPlayer.far_plane);
             pbrShader_instanced.setInt("irradianceMap", 10);
@@ -739,36 +754,75 @@ int main(int argc, char* argv[])
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             //scene.drawObjects(pbrShader);
             scene->drawObjectsInstanced(pbrShader_instanced);
-            //helmet.draw(pbrShader);
-            //pbrShader_instanced.setVec3("albedo", 0.5f, 0.0f, 0.0f);
+            timer.End();
+            try
+            {
+                InstancedRendering = (float)(timer.Elapsed_ns()).value() / 1000000;
+                //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
+            }
+            catch (const std::bad_optional_access& e)
+            {
+                //std::cout << e.what() << "\n";
+            }
+            glm::mat4 view = glm::mat4(glm::mat3(camera->View)); // remove translation from the view matrix
+            ///hdr.draw(view);
+            skybox.draw(view, camera->Projection);
 
+            timer.Begin();
+            pbrShader.use();
+            //glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
+            //glm::mat4 view = camera.GetViewMatrix();
+            pbrShader.setMat4("projection", camera->Projection);
+            pbrShader.setMat4("view", camera->View);
+            pbrShader.setVec3("viewPos", camera->Position);
+            pbrShader.setVec3("spotLight.position", camera->Position);
+            pbrShader.setVec3("spotLight.direction", camera->Front);
+            pbrShader.setInt("doshadows", state.shadows); // enable/disable shadows by pressing '1'
+            pbrShader.setInt("donormals", state.normals); // enable/disable normals by pressing '2'
+            //pbrShader.setBool("existnormals", 1);
+            pbrShader.setInt("numLights", scene->numLights);
+            pbrShader.setFloat("far_plane", cameraPlayer.far_plane);
+            pbrShader.setInt("irradianceMap", 10);
+            pbrShader.setInt("prefilterMap", 9);
+            pbrShader.setInt("brdfLUT", 8);
+
+            scene->drawTransparentObjects(pbrShader);
+            try
+            {
+                transparentRendering = (float)(timer.Elapsed_ns()).value() / 1000000;
+                //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
+            }
+            catch (const std::bad_optional_access& e)
+            {
+                //std::cout << e.what() << "\n";
+            }
             glActiveTexture(GL_TEXTURE0);
             //draw the bulbs
-            
-            glm::mat4 model1 = glm::mat4(1.0f);
-            lightCubeShader.use();
-            lightCubeShader.setMat4("projection", camera->Projection);
-            lightCubeShader.setMat4("view", camera->View);
-            lightCubeShader.setMat4("model", glm::mat4(1.0f));
-            for (unsigned int i = 0; i < scene->numLights; i++)
-            {
-                model1 = glm::mat4(1.0f);
-                model1 = glm::translate(model1, scene->lightList[i].position);
-                model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
-                // model1 = model1 * world_trans_intitial
-                lightCubeShader.setMat4("model", model1);
-                //bulb.Draw(lightCubeShader);
-            }
-            model1 = glm::mat4(1.0f);
-            model1 = glm::translate(model1, dlight.direction);
-            model1 = glm::scale(model1, glm::vec3(0.5f));
-            lightCubeShader.setMat4("model", model1);
-            bulb.Draw(lightCubeShader);
-            //player->obj->draw(pbrShader);
-            model1 = glm::mat4(1.0f);
-            model1 = glm::translate(model1, glm::vec3(0));
-            model1 = glm::scale(model1, glm::vec3(0.5f));
-            lightCubeShader.setMat4("model", model1);
+            timer.Begin();
+            //glm::mat4 model1 = glm::mat4(1.0f);
+            //lightCubeShader.use();
+            //lightCubeShader.setMat4("projection", camera->Projection);
+            //lightCubeShader.setMat4("view", camera->View);
+            //lightCubeShader.setMat4("model", glm::mat4(1.0f));
+            //for (unsigned int i = 0; i < scene->numLights; i++)
+            //{
+            //    model1 = glm::mat4(1.0f);
+            //    model1 = glm::translate(model1, scene->lightList[i].position);
+            //    model1 = glm::scale(model1, glm::vec3(1.0f)); // Make it a smaller cube
+            //    // model1 = model1 * world_trans_intitial
+            //    lightCubeShader.setMat4("model", model1);
+            //    //bulb.Draw(lightCubeShader);
+            //}
+            //model1 = glm::mat4(1.0f);
+            //model1 = glm::translate(model1, dlight.direction);
+            //model1 = glm::scale(model1, glm::vec3(0.5f));
+            //lightCubeShader.setMat4("model", model1);
+            //bulb.Draw(lightCubeShader);
+            ////player->obj->draw(pbrShader);
+            //model1 = glm::mat4(1.0f);
+            //model1 = glm::translate(model1, glm::vec3(0));
+            //model1 = glm::scale(model1, glm::vec3(0.5f));
+            //lightCubeShader.setMat4("model", model1);
             //test.setMVP(projection* view);
             //test.draw();
             /*for (int i = 0; i < lines.size(); i++)
@@ -777,7 +831,7 @@ int main(int argc, char* argv[])
                 lines[i].draw();*/
             
             //bulb.Draw(lightCubeShader);
-            wireShader.use();
+     /*       wireShader.use();
             wireShader.setMat4("projection", camera->Projection);
             wireShader.setMat4("view", camera->View);
             wireShader.setMat4("model", glm::mat4(1.0f));
@@ -791,7 +845,7 @@ int main(int argc, char* argv[])
                 model1 = glm::scale(model1, glm::vec3(scene->lightList[i].size)); 
                 // model1 = model1 * world_trans_intitial
                 wireShader.setMat4("model", model1);
-                renderSphere();
+                //renderSphere();
                 //bulb.Draw(lightCubeShader);
             }
             //scene->drawHulls(wireShader);
@@ -799,19 +853,28 @@ int main(int argc, char* argv[])
             //chimera.Draw(wireShader);
             glBindVertexArray(VAO_frustrum);
             //glDrawElements(GL_TRIANGLES, sizeof(cameraPlayer.frustum->indices), GL_UNSIGNED_INT, 0);
-            glEnable(GL_CULL_FACE);
+            //glEnable(GL_CULL_FACE);
             glBindVertexArray(0);
             //helmet.draw(pbrShader);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glm::mat4 view = glm::mat4(glm::mat3(camera->View)); // remove translation from the view matrix
+      */    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            //glm::mat4 view = glm::mat4(glm::mat3(camera->View)); // remove translation from the view matrix
             ///hdr.draw(view);
-            skybox.draw(view, camera->Projection);
+            //skybox.draw(view, camera->Projection);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, postFBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
         glBlitFramebuffer(0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, 0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT);
+        try
+        {
+            DebugRendering = (float)(timer.Elapsed_ns()).value() / 1000000;
+            //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
+        }
+        catch (const std::bad_optional_access& e)
+        {
+            //std::cout << e.what() << "\n";
+        }
         //glDisable(GL_DEPTH_TEST);
         //post processing
         //------------------------------------------------------------------------------------------------------------------------
@@ -823,15 +886,7 @@ int main(int argc, char* argv[])
         hdrShader.setFloat("exposure", User1.exposure);
         glDisable(GL_DEPTH_TEST);
         renderQuad();
-        timer.End();
-        try
-        {
-            //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
-        }
-        catch (const std::bad_optional_access& e)
-        {
-            //std::cout << e.what() << "\n";
-        }
+        
         // Rendering
         ImGui::Render();
         int display_w = User1.SCR_WIDTH, display_h = User1.SCR_HEIGHT;
