@@ -7,6 +7,7 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <thread>
+
 class Texture {
 public:
     unsigned int id;
@@ -18,7 +19,6 @@ public:
     static bool first_pbo;
     Texture() {}
     Texture(std::string path) {
-    
         id = TextureFromFile(path);
         this->path = path;
     }

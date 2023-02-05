@@ -16,6 +16,8 @@
     "glm",
     "assimp",
     "bullet3",
-    "nlohmann-json"
+    "nlohmann-json",
+    "zstd",
+    "basisu"
   ]
 }

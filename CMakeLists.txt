@@ -40,9 +40,11 @@ find_package(OpenGL REQUIRED)
 set(SOURCES
   include/include_psych/Aabb.h
   include/include_psych/Camera.h
+  include/include_psych/Culling.h
   include/include_psych/EventHandler.h
   include/include_psych/FileIO.h
   include/include_psych/Frustum.h
+  include/include_psych/Hdr.h
   include/include_psych/Light.h
   include/include_psych/Mesh.h
   include/include_psych/Model.h
@@ -50,8 +52,10 @@ set(SOURCES
   include/include_psych/Object.h
   include/include_psych/Physics.h
   include/include_psych/Scene.h
+  include/include_psych/SceneLight.h
   include/include_psych/Settings.h
   include/include_psych/Shader.h
+  include/include_psych/Skybox.h
   include/include_psych/State.h
   include/include_psych/Texture.h
   include/include_psych/TextureManager.h
@@ -60,6 +64,7 @@ set(SOURCES
   src/src_psych/Camera.cpp
   src/src_psych/EventHandler.cpp
   src/src_psych/FileIO.cpp
+  src/src_psych/Light.cpp
   src/src_psych/main.cpp
   src/src_psych/Mesh.cpp
   src/src_psych/Model.cpp
@@ -72,6 +77,7 @@ set(SOURCES
   src/src_psych/Texture.cpp
   src/src_psych/TextureManager.cpp
   src/src_extern/TimerQueryAsyncz.cpp
+  src/src_extern/glad.c
   
   )
 
@@ -99,6 +105,8 @@ target_link_libraries(Psychspiration
     gli
     assimp::assimp
     LinearMath BulletCollision BulletDynamics BulletSoftBody
-    nlohmann_json)
+    nlohmann_json
+    zstd
+    basisu)
 
     

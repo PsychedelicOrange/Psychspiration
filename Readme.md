@@ -13,7 +13,6 @@ Hobby Game Engine
 * MSAA, Anti-Aliasing, HDR, Transparency,Instanced rendering 
 * Integrated Bullet Physics (*broken in current version*)
 
-# Build Instruction
 # Goals
 ## Graphics Feature Addition
 * [x] Better GLTF Support

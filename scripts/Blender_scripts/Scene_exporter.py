@@ -1,21 +1,24 @@
+import sys
+print(sys.exec_prefix)
 import bpy, os
 from bpy_extras.io_utils import axis_conversion
 from mathutils import Matrix
 import mathutils
 from subprocess import Popen, CREATE_NEW_CONSOLE,PIPE,STDOUT
 import json
+import zstandard as zstd
+cctx = zstd.ZstdCompressor(threads=-1)
 #config
 psych_root = r'C:\Data\psych_test\Psychspiration'
 psych_executable = r'C:\Data\psych_test\Psychspiration\build\Debug\Psychspiration.exe'
 #settings
-export_models = True
 export_hulls = True
 export_models_metadata = True
 compress_textures = True # make sure texture  file names do not contain 'jpg' or 'png' in filename ( for compressed )
 scene_metadata = True
 keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
 #globals
-    # get path to render output (usually /tmp\)
+
 rootPath = os.path.abspath (bpy.context.scene.render.filepath)
 ModelPath = rootPath +r'/Models'
 HullPath = rootPath + r'/Hulls'
@@ -37,13 +40,25 @@ def get_export_name(dup_name):
         return dup_name   
     else:
         return dup_name[0:rfound]
-def to_dds(name1,name2): # opens batch script to convert textures to dds 
-    _name1 = name1[name1.rfind('/'):]
-    _name2 = name2[name2.rfind('/'):]
-    print(psych_root + r'\scripts\Blender_scripts\to_dds.bat'+TexturePath+' '+_name1+' '+_name2)
-    if(not os.path.exists(TexturePath+_name2)):
-        p = Popen([psych_root + r'\scripts\Blender_scripts\to_dds.bat',TexturePath,_name1,_name2],creationflags=CREATE_NEW_CONSOLE)
+def compressTextures(name): # opens batch script to convert textures to dds and compress to zstd
+    name = name[:name.find('.')]
+    print('texture_name: '+name)
+    if(not os.path.exists(TexturePath+name+'.dds')):
+        print(psych_root + r'\scripts\Blender_scripts\to_dds.bat' + ' cd '+TexturePath+ ' 'r'/'+name+'.png'+' '+r'/'+name+'.dds')
+        p = Popen([psych_root + r'\scripts\Blender_scripts\to_dds.bat',TexturePath,r'/'+name+'.png',r'/'+name+'.dds'],creationflags=CREATE_NEW_CONSOLE)
+        q = Popen([psych_root + r'\scripts\Blender_scripts\to_dds.bat',TexturePath,r'/'+name+'.jpg',r'/'+name+'.dds'],creationflags=CREATE_NEW_CONSOLE)
         p.wait()
+        q.wait()
+        if(not os.path.exists(TexturePath+name+'.zstd')):
+            to_zstd(name)
+def to_zstd(name): # compresses dds textures to zstd
+    TextureUncompressedFile = open(os.path.join(TexturePath,name+'.dds'),'rb')
+    compressed = cctx.compress(TextureUncompressedFile.read())
+    TextureUncompressedFile.close()
+    TextureCompressedFile = open(os.path.join(TexturePath,name+'.zstd'),'wb')
+    TextureCompressedFile.write(compressed)
+    TextureCompressedFile.close()
+    
 def run_vhacd(name):
     script = (r'C:\Users\parth\source\repos\Psychspiration\Blender_scripts\TestVHACD.exe "{}" -o obj'.format(name))
     vhacd = Popen(script,creationflags=CREATE_NEW_CONSOLE)
@@ -63,12 +78,10 @@ def editglTF(name):# edit gltf to support dds textures
     print(name)
     if('images' in model_gltf):
         for i in model_gltf['images']:
-            name_initial = i['uri']
-            i['uri'] = i['uri'].replace('jpg','dds')
-            i['uri']= i['uri'].replace('png','dds')
-            name_after = i['uri']
-            #print(name_after)
-            to_dds(name_initial,name_after)
+            name_initial = i['uri'] # ..textures/_Tname_.png/jpg
+            i['uri'] = i['uri'].replace('jpg','zstd')
+            i['uri']= i['uri'].replace('png','zstd')
+            compressTextures(i['uri'][i['uri'].rfind('/')+1:]) # _Tname_.zstb
             i['mimeType'].replace('jpeg','vnd-ms.dds')
             i['mimeType'].replace('png','vnd-ms.dds')
         #p = Popen(['del',r'\textures\*.png'],creationflags=CREATE_NEW_CONSOLE)
@@ -127,25 +140,18 @@ for ob in scene.objects:
         # export the currently selected object to its own file based on its name
         ob.rotation_mode = 'AXIS_ANGLE'
         ob.rotation_mode = 'XYZ'
-        
-        #print(filepath_object+'.gltf')
-        #print(os.path.exists(filepath_object+'.gltf'))
-        #if(export_hulls and not os.path.exists(ModelPath+'\\'+'Hulls'+'\\'+export_name+'.obj')):
-        #    bpy.ops.export_scene.obj(filepath=ModelPath+'\\'+'Hulls'+'\\'+export_name+'.obj',use_selection=True)
-        #    run_vhacd(ModelPath+'\\'+'Hulls'+'\\'+export_name+'.obj')
-        
-        # write the selected object's name and dimensions to a string
-        if( not ('_hull_' in ob.name) ): 
+        if( not ('_hull_' in ob.name) ):
             # export objects 
             export_name = get_export_name(ob.name)
             filepath_object=ModelPath +'\\'+"{}".format(export_name)
-            if(export_models and not os.path.exists(filepath_object+'.gltf')):
+            if(not os.path.exists(filepath_object+'.gltf')):
                 bpy.ops.export_scene.gltf(filepath=filepath_object,use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = '..\Textures')
                 if(compress_textures):
                     editglTF(export_name)
             # write objects to scene data   
             data['objects'].append({'name':ob.name,'export_name':export_name,'scale':convertvectolist(ob.scale),'translate':convertvectolist(ob.location),'rotate':convertvectolist(ob.rotation_axis_angle),'transform':convertmattolist(get_opengl(ob.matrix_world))})
             data['objects'][-1].update({'hulls':[]})
+            # exports hulls
             for child in ob.children:
                 ob.select_set(False)
                 child.select_set(True)

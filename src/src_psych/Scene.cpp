@@ -126,7 +126,8 @@ void Scene::fillDrawList(glm::vec3 cameraLoc)
 
     for (auto obj : liveObjects)
     {
-        bool isInFrustum = obj.second->aabb->isOnFrustum(obj.second->getTransform());
+        //bool isInFrustum = obj.second->aabb->isOnFrustum(obj.second->getTransform());
+        bool isInFrustum = true;
         bool isOpaque = !obj.second->model->hasTransparentMesh;
         if (isInFrustum && isOpaque)
         {

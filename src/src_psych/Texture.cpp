@@ -3,11 +3,45 @@
 #include <stb_image.h>
 #include <chrono>
 #include <thread>
+#include <fstream>
+#include <iostream>
+#include <zstd.h>      // zstd library is installed
+#include<common.h>
 
 unsigned int Texture::pbo[2];
- GLsync Texture::is_pbo_free[2];
+GLsync Texture::is_pbo_free[2];
 bool Texture::first_pbo;
 std::thread* Texture::TextureTransferCPU;
+
+std::vector<char> decompress(const char* fname)
+{
+    size_t cSize;
+    void* const cBuff = mallocAndLoadFile_orDie(fname, &cSize);
+    /* Read the content size from the frame header. For simplicity we require
+     * that it is always present. By default, zstd will write the content size
+     * in the header when it is known. If you can't guarantee that the frame
+     * content size is always written into the header, either use streaming
+     * decompression, or ZSTD_decompressBound().
+     */
+    unsigned long long const rSize = ZSTD_getFrameContentSize(cBuff, cSize);
+    CHECK(rSize != ZSTD_CONTENTSIZE_ERROR, "%s: not compressed by zstd!", fname);
+    CHECK(rSize != ZSTD_CONTENTSIZE_UNKNOWN, "%s: original size unknown!", fname);
+
+    std::vector<char> rVec((size_t)rSize);
+    //rVec.reserve((size_t)rSize);
+
+    size_t const dSize = ZSTD_decompress(rVec.data(), rSize, cBuff, cSize);
+    CHECK_ZSTD(dSize);
+    /* When zstd knows the content size, it will error if it doesn't match. */
+    CHECK(dSize == rSize, "Impossible because zstd will check this condition!");
+
+    std::ofstream tempdump("tempdump.dat", std::ios::out | std::ios::binary);
+    tempdump.write(rVec.data(), rSize * sizeof(char)); tempdump.close();
+    /* success */
+    printf("%25s : %6u -> %7u \n", fname, (unsigned)cSize, (unsigned)rSize);
+    return rVec;
+}
+
 unsigned int Texture::TextureFromFile(std::string path)
 {
     path = pathResource + '\\' + path.substr(2, path.size() - 2);
@@ -17,18 +51,33 @@ unsigned int Texture::TextureFromFile(std::string path)
     //stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
     std::string format = path.substr(path.find_last_of('.'), path.length());
+    if (format == ".dds" || format == ".zstd")
+    {
+        gli::texture Texture;
+        if (format == ".zstd")
+        {
+            std::size_t Tsize;
+            char* TBuff;
+            std::vector<char> dataUncomped = decompress(path.c_str());
+            Texture = gli::load(&dataUncomped[0],dataUncomped.size());
+            // Texture = gli::load("tempdump.dat");
+        }
+        if (format == ".dds") {
 
-    if (format == ".dds") {
-
-        gli::texture Texture = gli::load(path);
-
+            Texture = gli::load(path);
+        }
+        
         if (Texture.empty())
+        {
+            std::cout << "Texture is empty !!??!?!?";
             return 0;
+        }
 
         //std::cout << "hello";
         gli::gl GL(gli::gl::PROFILE_GL33);
         gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
         GLenum Target = GL.translate(Texture.target());
+
         std::cout << Texture.levels() << " mips, " << Texture.faces() << " faces, " << Texture.layers() << " layers\n";
         std::cout << static_cast<GLsizei>(Texture.size()) << " storage in bytes\n";
         GLuint TextureName = 0;
@@ -89,12 +138,12 @@ unsigned int Texture::TextureFromFile(std::string path)
             first_pbo = 1;
         }*/
         GLbitfield flags = 0;
-        
-        if(first_pbo)
+
+        if (first_pbo)
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[0]);
         else
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[1]);
-        
+
         /*TextureTransferCPU = new std::thread([=]() {
             glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizei>(Texture.size()), Texture.data(), GL_STREAM_DRAW);
             });
@@ -114,7 +163,7 @@ unsigned int Texture::TextureFromFile(std::string path)
 
         //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         //is_pbo_free[0] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,flags);
-        
+
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
         return TextureName;
 
@@ -411,3 +460,22 @@ unsigned int Texture::TextureEmbedded(const aiTexture* texture, std::string type
     return textureID;
 
 }
+std::vector<unsigned char> read_binary_file(const std::string filename)
+{
+    // binary mode is only for switching off newline translation
+    std::ifstream file(filename, std::ios::binary);
+    file.unsetf(std::ios::skipws);
+
+    std::streampos file_size;
+    file.seekg(0, std::ios::end);
+    file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<unsigned char> vec;
+    vec.reserve(file_size);
+    vec.insert(vec.begin(),
+        std::istream_iterator<unsigned char>(file),
+        std::istream_iterator<unsigned char>());
+    return (vec);
+}
+

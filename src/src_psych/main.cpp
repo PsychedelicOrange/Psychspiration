@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
     Model bulb("\\Models\\bulb.gltf");
     Model chimera("\\Models\\Suzanne.gltf");
 
-    Hdr hdr("Newport_Loft_Ref.hdr");
+    Hdr hdr("sp.jpg");
     hdr.renderToCubeMap();
     hdr.renderToIrradianceMap();
     hdr.renderToPrefilterMap();
