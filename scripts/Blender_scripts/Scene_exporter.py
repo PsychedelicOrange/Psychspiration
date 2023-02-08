@@ -16,6 +16,8 @@ export_hulls = True
 export_models_metadata = True
 compress_textures = True # make sure texture  file names do not contain 'jpg' or 'png' in filename ( for compressed )
 scene_metadata = True
+use_zstd = True 
+use_zstd = use_zstd and compress_textures
 keep_both_textures = False # dont delete uncompressed textures and keep a separate gltf for uncompressed
 #globals
 
@@ -49,7 +51,7 @@ def compressTextures(name): # opens batch script to convert textures to dds and 
         q = Popen([psych_root + r'\scripts\Blender_scripts\to_dds.bat',TexturePath,r'/'+name+'.jpg',r'/'+name+'.dds'],creationflags=CREATE_NEW_CONSOLE)
         p.wait()
         q.wait()
-        if(not os.path.exists(TexturePath+name+'.zstd')):
+        if(use_zstd and not os.path.exists(TexturePath+name+'.zstd')):
             to_zstd(name)
 def to_zstd(name): # compresses dds textures to zstd
     TextureUncompressedFile = open(os.path.join(TexturePath,name+'.dds'),'rb')
@@ -79,9 +81,14 @@ def editglTF(name):# edit gltf to support dds textures
     if('images' in model_gltf):
         for i in model_gltf['images']:
             name_initial = i['uri'] # ..textures/_Tname_.png/jpg
-            i['uri'] = i['uri'].replace('jpg','zstd')
-            i['uri']= i['uri'].replace('png','zstd')
-            compressTextures(i['uri'][i['uri'].rfind('/')+1:]) # _Tname_.zstb
+            if(use_zstd):
+                i['uri'] = i['uri'].replace('jpg','zstd')
+                i['uri']= i['uri'].replace('png','zstd')
+            else:
+                i['uri'] = i['uri'].replace('jpg','dds')
+                i['uri']= i['uri'].replace('png','dds')
+            compressTextures(i['uri'][i['uri'].rfind('/')+1:]) # _Tname_.zstb 
+            
             i['mimeType'].replace('jpeg','vnd-ms.dds')
             i['mimeType'].replace('png','vnd-ms.dds')
         #p = Popen(['del',r'\textures\*.png'],creationflags=CREATE_NEW_CONSOLE)

@@ -27,6 +27,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -150,6 +151,10 @@ float lastY = User1.SCR_HEIGHT / 2.0f;
 // camera 
 Camera* camera;
 unsigned int maxLights{ 100 };
+void myCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* data)
+{
+    std::cout << "\n Error! Source: " << source << " type: " << type << " id: " << id << " severity: " << severity << "\n Details " << msg;
+}
 int main(int argc, char* argv[])
 {
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -161,6 +166,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 #ifdef __APPLE__
@@ -182,7 +188,6 @@ int main(int argc, char* argv[])
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window,key_callback);
     //glfwWindowHint(GLFW_SAMPLES, 8);
-
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     // glad: load all OpenGL function pointers
@@ -196,13 +201,13 @@ int main(int argc, char* argv[])
     glEnable(GL_DEPTH_TEST);
     //glEnable(GL_CULL_FACE);
     //glCullFace(GL_BACK);
-    //glEnable(GL_DEPTH_CLAMP);
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(myCallback, NULL);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_FRAMEBUFFER_SRGB);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     //stbi_set_flip_vertically_on_load(true);
     // Setup Dear Imgui
     // Setup Dear ImGui context
@@ -385,7 +390,7 @@ int main(int argc, char* argv[])
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // directional light shadow map texture setup
-    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096*8;
+    const unsigned int SHADOW_MAP_MAX_SIZE_DIR = 4096;
     unsigned int depthMap;
     glGenTextures(1,&depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
