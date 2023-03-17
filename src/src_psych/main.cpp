@@ -22,7 +22,6 @@
 #include <Model.h>
 #include <ModelManager.h>
 #include <Player.h>
-#include <TimerQueryAsync.h>
 #include <functional>
 #include <iostream>
 #include <chrono>
@@ -233,7 +232,7 @@ int main(int argc, char* argv[])
     ModelManager* modelManager = new ModelManager();
     Camera cameraPlayer(eventHandler, glm::vec3(0.0f, 0.0f, 3.0f));
     Camera cameraDebug(eventHandler, glm::vec3(1));
-    TimerQueryAsync timer(5);
+
     // pbo required for texture loading 
     glGenBuffers(2, Texture::pbo);
     Texture::first_pbo = 1;
@@ -287,7 +286,7 @@ int main(int argc, char* argv[])
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // SET UP BUFFERS 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    //// lights UBO
+    //// lights UBO 
     //unsigned int lightUBO;
     //glGenBuffers(1, &lightUBO);
     //glBindBuffer(GL_UNIFORM_BUFFER, lightUBO);
@@ -559,13 +558,6 @@ int main(int argc, char* argv[])
                 }
                 ImGui::EndCombo();
             }
-            std::string perf = "PointLightshadowPass: " + std::to_string(PointLightshadowPass) + "\n" +
-                "DirectionalLightshadowPass: " + std::to_string(DirectionalLightshadowPass) + "\n" +
-                "Frustumculling: " + std::to_string(Frustumculling) + "\n" +
-                "InstancedRendering: " + std::to_string(InstancedRendering) + "\n" +
-                "TransparentRendering: " + std::to_string(transparentRendering) + "\n" +
-                "DebugRendering: " + std::to_string(DebugRendering);
-            ImGui::Text(perf.c_str());
             ImGui::Checkbox("Renderer", &state.show_renderer);      // Edit bools storing our window open/close state
             if (state.show_renderer)
             {
@@ -617,23 +609,14 @@ int main(int argc, char* argv[])
             scene_change = false;
         }
 
-        timer.Begin();
         // update instance buffer 
         scene->fillDrawList(camera->Position);
         //scene->dontCull();
         scene->setInstanceCount();
         scene->setInstanceOffsets();
         scene->fillInstanceBuffer();
-        timer.End();
-        try
-        {
-            Frustumculling = (float)(timer.Elapsed_ns()).value() / 1000000;
-            //std::cout << "\nSort: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
-        }
-        catch (const std::bad_optional_access& e)
-        {
-            //std::cout << e.what() << "\n";
-        }
+
+
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, uboModelMatrices);
         //glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4)* scene->liveObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * scene->visibleObjects.size(), scene->instancedTransforms, GL_DYNAMIC_DRAW);
@@ -682,48 +665,26 @@ int main(int argc, char* argv[])
         glClearColor(1, 1, 1, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (state.shadows){
-        timer.Begin();
-        //1. render scene to depth cubemap
-       // --------------------------------
+        if (state.shadows) {
+            //1. render scene to depth cubemap
+           // --------------------------------
 
 
-        glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
+            glViewport(0, 0, SHADOW_MAP_MAX_SIZE, SHADOW_MAP_MAX_SIZE);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
+            scene->drawShadowObjectsInstanced(simpleDepthShader_instanced); // point lights shadows
 
-        timer.End();
-        try
-        {
-            PointLightshadowPass = (float)(timer.Elapsed_ns()).value() / 1000000;
-            //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
+            //glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
+            //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
+            //glClear(GL_DEPTH_BUFFER_BIT);
+            //glEnable(GL_DEPTH_TEST);
+            //glCullFace(GL_FRONT);
+            ////scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
+            //glCullFace(GL_BACK);
+            //glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-        catch (const std::bad_optional_access& e)
-        {
-            //std::cout << e.what() << "\n";
-        }
-        timer.Begin();
-        //glViewport(0, 0, SHADOW_MAP_MAX_SIZE_DIR, SHADOW_MAP_MAX_SIZE_DIR);
-        //glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_dir);
-        //glClear(GL_DEPTH_BUFFER_BIT);
-        //glEnable(GL_DEPTH_TEST);
-        //glCullFace(GL_FRONT);
-        ////scene->drawShadowObjectsInstanced(dirShadow_instanced); // directional lights shadows
-        //glCullFace(GL_BACK);
-        //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        try
-        {
-            DirectionalLightshadowPass = (float)(timer.Elapsed_ns()).value() / 1000000;
-            //std::cout << "\nShadowpass: " << (float)(timer.Elapsed_ns()).value() / 1000000 <<" ms";
-        }
-        catch (const std::bad_optional_access& e)
-        {
-            //std::cout << e.what() << "\n";
-        }
-    }
-        timer.Begin();
             
         //glClearColor(1,1,1, 1.0f);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
@@ -759,21 +720,13 @@ int main(int argc, char* argv[])
             glBindTexture(GL_TEXTURE_CUBE_MAP_ARRAY, depthCubemap);
             //scene.drawObjects(pbrShader);
             scene->drawObjectsInstanced(pbrShader_instanced);
-            timer.End();
-            try
-            {
-                InstancedRendering = (float)(timer.Elapsed_ns()).value() / 1000000;
-                //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
-            }
-            catch (const std::bad_optional_access& e)
-            {
-                //std::cout << e.what() << "\n";
-            }
+           
+
             glm::mat4 view = glm::mat4(glm::mat3(camera->View)); // remove translation from the view matrix
             ///hdr.draw(view);
             skybox.draw(view, camera->Projection);
 
-            timer.Begin();
+
             pbrShader.use();
             //glm::mat4 projection = glm::perspective(glm::radians(90.0f), (float)User1.SCR_WIDTH / (float)User1.SCR_HEIGHT, 0.1f, 100.0f);
             //glm::mat4 view = camera.GetViewMatrix();
@@ -792,18 +745,10 @@ int main(int argc, char* argv[])
             pbrShader.setInt("brdfLUT", 8);
 
             scene->drawTransparentObjects(pbrShader);
-            try
-            {
-                transparentRendering = (float)(timer.Elapsed_ns()).value() / 1000000;
-                //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
-            }
-            catch (const std::bad_optional_access& e)
-            {
-                //std::cout << e.what() << "\n";
-            }
+            
             glActiveTexture(GL_TEXTURE0);
             //draw the bulbs
-            timer.Begin();
+            
             //glm::mat4 model1 = glm::mat4(1.0f);
             //lightCubeShader.use();
             //lightCubeShader.setMat4("projection", camera->Projection);
@@ -871,15 +816,7 @@ int main(int argc, char* argv[])
         glBlitFramebuffer(0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, 0, 0, User1.SCR_WIDTH, User1.SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT);
-        try
-        {
-            DebugRendering = (float)(timer.Elapsed_ns()).value() / 1000000;
-            //std::cout << "\nMainpass: " << (float)(timer.Elapsed_ns()).value() / 1000000<<" ms";
-        }
-        catch (const std::bad_optional_access& e)
-        {
-            //std::cout << e.what() << "\n";
-        }
+       
         //glDisable(GL_DEPTH_TEST);
         //post processing
         //------------------------------------------------------------------------------------------------------------------------

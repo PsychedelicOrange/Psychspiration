@@ -22,7 +22,6 @@ struct Material {
     float emmisive = 0;
     float alphaClip = 0.5;
     std::string alphaMode;
-
 };
 
 class Mesh {

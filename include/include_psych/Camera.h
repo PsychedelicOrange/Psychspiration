@@ -22,7 +22,7 @@ const float ZOOM = 45.0f;
 class Camera
 {
 public:
-    // frustum 
+    // frustum
     Frustum* frustum;
     float near_plane = 0.1f;
     float far_plane = 100.0f;

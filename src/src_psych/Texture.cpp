@@ -6,7 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <zstd.h>      // zstd library is installed
-#include<common.h>
+#include <common.h>
 
 unsigned int Texture::pbo[2];
 GLsync Texture::is_pbo_free[2];
@@ -35,8 +35,6 @@ std::vector<char> decompress(const char* fname)
     /* When zstd knows the content size, it will error if it doesn't match. */
     CHECK(dSize == rSize, "Impossible because zstd will check this condition!");
 
-    std::ofstream tempdump("tempdump.dat", std::ios::out | std::ios::binary);
-    tempdump.write(rVec.data(), rSize * sizeof(char)); tempdump.close();
     /* success */
     printf("%25s : %6u -> %7u \n", fname, (unsigned)cSize, (unsigned)rSize);
     return rVec;
@@ -73,7 +71,6 @@ unsigned int Texture::TextureFromFile(std::string path)
             return 0;
         }
 
-        //std::cout << "hello";
         gli::gl GL(gli::gl::PROFILE_GL33);
         gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
         GLenum Target = GL.translate(Texture.target());
@@ -405,7 +402,6 @@ void Texture::uploadTextureDMA(gli::texture Texture, gli::gl::format Format, GLe
 }
 unsigned int Texture::TextureEmbedded(const aiTexture* texture, std::string typeName)
 {
-
     unsigned char* image_data = nullptr;
     unsigned char* read_image_data = nullptr;
     int  width, height, components_per_pixel;
@@ -419,8 +415,6 @@ unsigned int Texture::TextureEmbedded(const aiTexture* texture, std::string type
         image_data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(texture->pcData), texture->mWidth, &width, &height, &components_per_pixel, 0);
 
     }
-
-
     else
     {
         image_data = stbi_load_from_memory(reinterpret_cast<unsigned char*>(texture->pcData), texture->mWidth * texture->mHeight, &width, &height, &components_per_pixel, 0);
@@ -460,22 +454,3 @@ unsigned int Texture::TextureEmbedded(const aiTexture* texture, std::string type
     return textureID;
 
 }
-std::vector<unsigned char> read_binary_file(const std::string filename)
-{
-    // binary mode is only for switching off newline translation
-    std::ifstream file(filename, std::ios::binary);
-    file.unsetf(std::ios::skipws);
-
-    std::streampos file_size;
-    file.seekg(0, std::ios::end);
-    file_size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<unsigned char> vec;
-    vec.reserve(file_size);
-    vec.insert(vec.begin(),
-        std::istream_iterator<unsigned char>(file),
-        std::istream_iterator<unsigned char>());
-    return (vec);
-}
-

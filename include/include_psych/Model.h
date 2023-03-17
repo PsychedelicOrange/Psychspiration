@@ -26,8 +26,6 @@ public:
     bool gammaCorrection;
     bool hasTransparentMesh=0;
 
-
-    
     // constructor, expects a filepath to the 3D model.
     Model(std::string const& path, unsigned int* pbo = nullptr, bool gamma = false);
     Model();

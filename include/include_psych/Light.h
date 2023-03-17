@@ -55,4 +55,4 @@ struct SpotLight {
     float linear;
     float quadratic;
     glm::vec3 color;
-};
+}

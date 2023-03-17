@@ -50,7 +50,7 @@ const aiScene* Model::loadModel(const std::string& path)
     // check for errors
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
     {
-        std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
+        std::cout << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
         return scene;
     }
     // retrieve the directory path of the filepath
@@ -252,40 +252,12 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
     {
         aiString str;
         mat->GetTexture(type, i, &str);
-        
+
         //Texture* t = new Texture (str.C_Str());
         Texture* t = textureManager.getTexture(str.C_Str());
-        t->type=typeName;
+        t->type = typeName;
         textures.push_back(*(t));
-        //// check if texture was loaded before and if so, continue to next iteration: skip loading a new texture
-        //bool skip = false;
-        //for (unsigned int j = 0; j < textures_loaded.size(); j++)
-        //{
-        //    if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
-        //    {
-        //        textures.push_back(textures_loaded[j]);
-        //        skip = true; // a texture with the same filepath has already been loaded, continue to next one. (optimization)
-        //        break;
-        //    }
-        //}
-        //if (!skip)
-        //{   // if texture hasn't been loaded already, load it
-        //    Texture texture;
-        //    texture.id = TextureFromFile(str.C_Str(), this->directory);
-        //    texture.type = typeName;
-        //    //std::cout << std::endl << "Type : " << texture.type;
-        //    texture.path = str.C_Str();
-        //    textures.push_back(texture);
-        //    textures_loaded.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
-        //}
     }
-    /*for (int i = 0; i < textures.size(); i++)
-    {
-        std::cout << i << "'st Texture id , path , type = ";
-        std::cout << textures[i].id << " ";
-        std::cout << textures[i].type << " ";
-        std::cout << textures[i].path << std::endl;
-    }*/
     return textures;
 }
 

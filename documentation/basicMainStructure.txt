@@ -1,0 +1,32 @@
+int main()
+{
+  Windowinnit();
+  gladInnit();
+  ImguiInnit();
+
+  LoadSceneData();
+
+  ProcessHdrMap(); // some draw calls 
+
+  CreateInstanceBuffer();
+  CreateShadowMapTextures();
+  CreatePostProcessFrameBuffers();
+  SetStaticShaderParameters();
+
+  while(window.open)
+  {
+	processKeys();
+	ImguiConfig();
+	updateSceneData();
+	updateInstanceBuffer();
+	updateCameraFrustum();
+	cull();
+
+	drawShadows();
+        drawOpaqueObjectsInstanced();
+	drawTransparentObjects();
+	drawPostProcess();
+	drawImgui();
+  }
+  
+}
