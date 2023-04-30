@@ -8,16 +8,17 @@
 #include <glad/glad.h>
 class RMeshBuilder {
 public:
-	RMesh build(aiMesh* mesh, const aiScene* scene)
+	RMesh* build(aiMesh* mesh, const aiScene* scene)
 	{
+        rmesh = new RMesh();
 		LoadVerticeData(mesh);
 		UploadVerticeData();
 		LoadMaterialData(mesh,scene);
 		return rmesh;
 	}
+    RMeshBuilder() { rmesh = new RMesh(); }
 private:
-    RMesh rmesh;
-    RMaterialBuilder rMaterialBuilder;
+    RMesh* rmesh;
 	void LoadVerticeData(aiMesh* mesh)
 	{
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -64,7 +65,7 @@ private:
             else
                 vertex.TexCoords = glm::vec2(0.0f, 0.0f);
 
-            rmesh.vertices.push_back(vertex);
+            rmesh->vertices.push_back(vertex);
 
         }
         // now walk through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
@@ -73,27 +74,27 @@ private:
             aiFace face = mesh->mFaces[i];
             // retrieve all indices of the face and store them in the indices vector
             for (unsigned int j = 0; j < face.mNumIndices; j++)
-                rmesh.indices.push_back(face.mIndices[j]);
+                rmesh->indices.push_back(face.mIndices[j]);
         }
 
 	}
     void UploadVerticeData()
     {
         // create buffers/arrays
-        glGenVertexArrays(1, &rmesh.VAO);
-        glGenBuffers(1, &rmesh.VBO);
-        glGenBuffers(1, &rmesh.EBO);
+        glGenVertexArrays(1, &rmesh->VAO);
+        glGenBuffers(1, &rmesh->VBO);
+        glGenBuffers(1, &rmesh->EBO);
 
-        glBindVertexArray(rmesh.VAO);
+        glBindVertexArray(rmesh->VAO);
         // load data into vertex buffers
-        glBindBuffer(GL_ARRAY_BUFFER, rmesh.VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, rmesh->VBO);
         // A great thing about structs is that their memory layout is sequential for all its items.
         // The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
         // again translates to 3/2 floats which translates to a byte array.
-        glBufferData(GL_ARRAY_BUFFER, rmesh.vertices.size() * sizeof(Vertex), &rmesh.vertices[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, rmesh->vertices.size() * sizeof(Vertex), &rmesh->vertices[0], GL_STATIC_DRAW);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rmesh.EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, rmesh.indices.size() * sizeof(unsigned int), &rmesh.indices[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rmesh->EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, rmesh->indices.size() * sizeof(unsigned int), &rmesh->indices[0], GL_STATIC_DRAW);
 
         // set the vertex attribute pointers
         // vertex Positions
@@ -116,7 +117,9 @@ private:
     }
     void LoadMaterialData(aiMesh* mesh,const aiScene* scene)
 	{
-        rmesh.material = rMaterialBuilder.build(scene->mMaterials[mesh->mMaterialIndex]);
+        RMaterialBuilder rMaterialBuilder;
+        unsigned int materialIndex = mesh->mMaterialIndex;
+        rmesh->material = rMaterialBuilder.build(scene->mMaterials[mesh->mMaterialIndex]);
 	}
 	
 };

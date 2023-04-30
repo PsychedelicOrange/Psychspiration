@@ -1,13 +1,13 @@
 #pragma once
 #include <ASSIMPimporter.h>
-#include <RTextureBuilder.h>
 #include <RModel.h>
 class RModelBuilder
 {
 public:
-	ASSIMPimporter assimp;
+	ASSIMPimporter* assimp;
+	RModelBuilder() { assimp = new ASSIMPimporter(); }
 	RModel* build(string path)
 	{
-		return assimp.load(path);
+		return assimp->load(path);
 	}
 };

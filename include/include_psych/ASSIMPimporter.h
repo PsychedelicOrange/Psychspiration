@@ -10,8 +10,9 @@
 class ASSIMPimporter
 {
     RModel* model;
-    RMeshBuilder rMeshBuilder;
+    RMeshBuilder* rMeshBuilder;
 public:
+    ASSIMPimporter() { rMeshBuilder = new RMeshBuilder(); }
 	RModel* load(string path)
 	{
         model = new RModel();
@@ -25,9 +26,10 @@ public:
             std::cout << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
             return nullptr; 
         }
-        return processNode(scene->mRootNode, scene);
+        processNode(scene->mRootNode, scene);
+        return model;
 	}
-    RModel* processNode(aiNode* node, const aiScene* scene)
+    void processNode(aiNode* node, const aiScene* scene)
     {
         // process each mesh located at the current node
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -35,7 +37,7 @@ public:
             // the node object only contains indices to index the actual objects in the scene. 
             // the scene contains all the data, node is just to keep stuff organized (like relations between nodes).
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-            model->meshes.push_back(rMeshBuilder.build(mesh, scene));
+            model->meshes.push_back(rMeshBuilder->build(mesh, scene));
         }
         // after we've processed all of the meshes (if any) we then recursively process each of the children nodes
         for (unsigned int i = 0; i < node->mNumChildren; i++)

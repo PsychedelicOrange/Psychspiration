@@ -1,5 +1,4 @@
-#pragma once
-#include <glad/glad.h>
+ #pragma once
 #include <Light.h>
 #include <vector>
 class SceneLight

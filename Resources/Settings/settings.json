@@ -1,0 +1,13 @@
+{
+    "video":{
+        "resolution": [1920,1080],
+        "display_mode": "fullscreen",
+        "anti_aliasingMSAA": 8
+    },
+    "controls":{
+        "FORWARD_KEY":"W",
+        "BACKWARD_KEY":"S",
+        "RIGHT_KEY":"D",
+        "LEFT_KEY":"A"
+    }
+}

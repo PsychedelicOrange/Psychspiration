@@ -16,12 +16,17 @@ public:
 	}
 	void render()
 	{
-		for (auto renderItem : renderList)
+		for (auto const& renderItem : renderList)
 		{
 			setState(renderItem.first);
+			draw();
 		}
 	}
 	void setState(RenderState renderState)
+	{
+
+	}
+	void draw()
 	{
 
 	}

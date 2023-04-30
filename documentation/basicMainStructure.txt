@@ -30,3 +30,14 @@ int main()
   }
   
 }
+
+new structure:
+int main()
+{
+	Settings settings = LoadSettings();
+	Renderer renderer = Renderer.getInstance();
+	renderer.settings = &settings;
+	vector<RObject*> objects = LoadScene(); // loads all textures,models,meshes,shaders
+	renderer.addToRenderList(objects);
+	
+}

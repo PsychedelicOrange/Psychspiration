@@ -1,8 +1,10 @@
 #pragma once
+#include <RSettings.h>
 #include <string>
 #include <unordered_map>
 #include <functional>
 #include <iostream>
+#include <RSettings.h>
 class EventHandler
 {
 //public:
@@ -25,7 +27,7 @@ public:
 	EventHandler() {
 		deltaTime = 0;
 	}
-	std::unordered_map < std::string, std::function<void()>> controlTable;
+	std::unordered_map <std::string, std::function<void()>> controlTable;
 	void registerCallback(std::string action, std::function<void()> callback)
 	{
 		controlTable.insert({ action,callback });

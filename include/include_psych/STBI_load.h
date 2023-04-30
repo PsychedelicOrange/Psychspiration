@@ -1,10 +1,11 @@
 #pragma once
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <assimp/texture.h>
 #include <iostream>
 #include <glad/glad.h>
 #include <string>
+#include <vector>
+using std::vector;
 using std::string;
 class STBI_load
 {
@@ -47,6 +48,7 @@ public:
         glGenTextures(1, &textureID);
         data = stbi_load_from_memory((unsigned char *)TextureData.data(),TextureData.size(), &width, &height, &nrComponents, 0);
         upload(textureID);
+        return textureID;
     }
     unsigned int operator()(const aiTexture* texture)
     {
@@ -54,5 +56,6 @@ public:
         glGenTextures(1, &textureID);
         data = stbi_load_from_memory((unsigned char*)texture->pcData, texture->mHeight*texture->mWidth, &width, &height, &nrComponents, 0);
         upload(textureID);
+        return textureID;
     }
 };

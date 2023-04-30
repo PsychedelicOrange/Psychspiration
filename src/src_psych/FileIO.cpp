@@ -1,10 +1,11 @@
-#include<FileIO.h>
+#include <FileIO.h>
 #include <Windows.h>
 #include <filesystem>
 #include <sstream>
 #include <fstream>
 #include <iostream>
 // for string delimiter
+std::string pathResource = getdefpathResource();
 std::vector<std::string> split(const std::string& s, char delim) {
     std::vector<std::string> result;
     std::stringstream ss(s);
@@ -61,33 +62,6 @@ std::string getRelativePath()
 	std::filesystem::path relPath(pBuf);
 	relPath.remove_filename();
 	return relPath.string();
-	/*std::wstring wstr = pBuf;
-	if (!wstr.empty())
-	{
-		int sizeRequired = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, NULL, 0, NULL, NULL);
-
-		if (sizeRequired > 0)
-		{
-			std::vector<char> utf8String(sizeRequired);
-			int bytesConverted = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(),
-				-1, &utf8String[0], utf8String.size(), NULL,
-				NULL);
-			if (bytesConverted != 0)
-			{
-				tempString = &utf8String[0];
-			}
-			else
-			{
-				std::stringstream err;
-				err << __FUNCTION__
-					<< " std::string WstrToUtf8Str failed to convert wstring '"
-					<< wstr.c_str() << L"'";
-				throw std::runtime_error(err.str());
-			}
-		}
-	}
-	tempString.erase(tempString.size() - 18, tempString.size() - 1);
-	return tempString;*/
 }
 std::string getdefpathResource()
 {
