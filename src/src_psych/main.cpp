@@ -379,7 +379,7 @@ int main(int argc, char* argv[])
     glGenFramebuffers(1, &depthMapFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-    /* for (int layer = 0; layer < numLights; layer++)
+    /*for (int layer = 0; layer < numLights; layer++)
      {
          glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0, layer);
      }*/

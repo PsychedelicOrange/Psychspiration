@@ -1,43 +1,54 @@
-int main()
-{
-  Windowinnit();
-  gladInnit();
-  ImguiInnit();
+Broad Goals :
 
-  LoadSceneData();
+	Old Main Structure :
+		int main()
+		{
+		Windowinnit();
+		gladInnit();
+		ImguiInnit();
 
-  ProcessHdrMap(); // some draw calls 
+		LoadSceneData();
 
-  CreateInstanceBuffer();
-  CreateShadowMapTextures();
-  CreatePostProcessFrameBuffers();
-  SetStaticShaderParameters();
+		ProcessHdrMap(); // some draw calls 
 
-  while(window.open)
-  {
-	processKeys();
-	ImguiConfig();
-	updateSceneData();
-	updateInstanceBuffer();
-	updateCameraFrustum();
-	cull();
+		CreateInstanceBuffer();
+		CreateShadowMapTextures();
+		CreatePostProcessFrameBuffers();
+		SetStaticShaderParameters();
 
-	drawShadows();
-        drawOpaqueObjectsInstanced();
-	drawTransparentObjects();
-	drawPostProcess();
-	drawImgui();
-  }
-  
-}
+		while(window.open)
+		{
+			processKeys();
+			ImguiConfig();
+			updateSceneData();
+			updateInstanceBuffer();
+			updateCameraFrustum();
+			cull();
 
-new structure:
-int main()
-{
-	Settings settings = LoadSettings();
-	Renderer renderer = Renderer.getInstance();
-	renderer.settings = &settings;
-	vector<RObject*> objects = LoadScene(); // loads all textures,models,meshes,shaders
-	renderer.addToRenderList(objects);
-	
-}
+			drawShadows();
+			drawOpaqueObjectsInstanced();
+			drawTransparentObjects();
+			drawPostProcess();
+			drawImgui();
+		}
+		
+		}
+
+	new structure :
+		int main()
+		{
+			Settings settings = LoadSettings();
+			Renderer renderer = Renderer.getInstance();
+			renderer.settings = &settings;
+			vector<RObject*> objects = LoadScene(); // loads all textures,models,meshes,shaders
+			renderer.addToRenderList(objects);
+			while(window.open)
+			{
+				
+			}
+		}
+
+
+What was I doing again ?
+
+		

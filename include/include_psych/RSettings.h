@@ -1,23 +1,27 @@
 #pragma once
+#include <iostream>
 #include <string>
 #include <unordered_map>
-#include <Controls.h>
 #include <GLFW/glfw3.h>
+#include <enums.h>
 using std::string;
 using std::unordered_map;
 class Settings {
 public:
-//default settings
+	Settings() {
+    
+	}
 	//video
 	int resolution[2] = {1920,1080};
-	string display_mode = "windowed";
-	int anti_aliasingMSAA = 9;
-	
+	DisplayType display_mode = DisplayType::WINDOWED;
+	int anti_aliasingMSAA = 8;
 	//controls
-	unordered_map<Controls, int> controlToGLFWKeys = {
-		{Controls::FORWARD_KEY,GLFW_KEY_W},
-		{Controls::BACKWARD_KEY,GLFW_KEY_S},
-		{Controls::RIGHT_KEY,GLFW_KEY_D},
-		{Controls::LEFT_KEY,GLFW_KEY_A}
+	unordered_map<int,string> GLFWKeysToControl = {
+		{GLFW_KEY_W,"FORWARD_KEY"},
+		{GLFW_KEY_S,"BACKWARD_KEY"},
+		{GLFW_KEY_D,"RIGHT_KEY"},
+		{GLFW_KEY_A,"LEFT_KEY"},
+		{GLFW_KEY_ESCAPE,"EXIT_KEY"},
+		{GLFW_KEY_SPACE,"PLAY_KEY"}
 	};
 };

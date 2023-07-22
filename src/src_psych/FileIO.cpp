@@ -15,7 +15,18 @@ std::vector<std::string> split(const std::string& s, char delim) {
     }
     return result;
 }
-
+bool checkFileExists(std::string path) {
+	std::ifstream file;
+	file.open(path);
+	if (file)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 std::string getStringFromDisk_direct(std::string path)
 {
 	std::fstream file{  path };
@@ -23,6 +34,7 @@ std::string getStringFromDisk_direct(std::string path)
 	if (!file)
 	{   // Print an error and exit
 		std::cerr << "Uh oh, \" " << path << "\" could not be opened for reading!" << std::endl;
+		return "";
 	}
 	while (file)
 	{
@@ -37,7 +49,7 @@ std::string getStringFromDisk(std::string path)
 	std::fstream file{ pathResource + path };
 	std::string prop;
 	if (!file)
-	{   // Print an error and exit
+	{
 		std::cerr << "Uh oh, \" " << path << "\" could not be opened for reading!" << std::endl;
 	}
 	while (file)

@@ -12,8 +12,8 @@ public:
 	bool play = false;
 
 	//windows 
-	bool show_menu = true;
-	bool show_renderer = false;
+	bool show_menu = true; 
+	bool show_renderer = false; 
 	
 	// last
 	bool firstMouse = true;

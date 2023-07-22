@@ -18,4 +18,7 @@ public:
     vector<unsigned int>indices;
     Material material;
     unsigned int VAO, EBO, VBO;
+    glm::mat4* transform;
+    // renderer
+    int VBObufferid, VBOoffset,baseVertex;
 };

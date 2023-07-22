@@ -1,7 +1,7 @@
 #pragma once
-#include <Object.h>
+#include <RObject.h>
 #include <bullet/btBulletDynamicsCommon.h>
-
+#include <DebugDrawPhysics.h>
 class Physics {
 	public:
 	//collision shapes
@@ -21,17 +21,23 @@ class Physics {
 
 	btDiscreteDynamicsWorld* dynamicsWorld;
 
+	//debug draw
+	DebugDrawPhysics* debugdrawphysics;
+
 	//constraint with all axis locked 
 	Physics();
 	~Physics();
 	void cleanupPhysics();
 	void cleanupModels();
-	void setObject(Object* obj);
-	void setDynamicRigidBody(Object* obj);
-	void setStaticRigidBody(Object* obj);
+	void setObject(RObject* obj);
+	void setObjects(vector<RObject*> obj);
+	void setDynamicRigidBody(RObject* obj);
+	void setStaticRigidBody(RObject* obj);
 	void setGravity();
 	void assignBB();
-	void setTransforms(Object* obj);
+	void setTransform(RObject* obj);
+	void setTransforms(vector < RObject*> objects);
+	void drawDebug(mat4 view, mat4 projection);
 	void stepSim();
 	
 };

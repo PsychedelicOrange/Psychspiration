@@ -8,6 +8,7 @@
 #include <STBI_load.h> 
 #include <GLI_load.h>  
 #include <common.h> // zstd
+#include <regex>
 #include <vector>
 
 using std::vector;
@@ -18,9 +19,20 @@ public:
 	{
         RTexture* texture = new RTexture;
         texture->path = path;
-        string Absolutepath = pathResource + '\\' + path.substr(2, path.size() - 2);
+        string Absolutepath = pathResource + '\\' + path.substr(3, path.size() - 3);
+        Absolutepath = std::regex_replace(Absolutepath, std::regex("%20"), " ");
         string format = Absolutepath.substr(Absolutepath.find_last_of('.'), Absolutepath.length());
-        
+        if (!checkFileExists(Absolutepath))
+        {
+            std::cout << "Warning : Texture not found -> " << Absolutepath << std::endl;
+            Absolutepath = Absolutepath.substr(0, Absolutepath.size() - 3) + "png";
+            format = ".png";
+            if (!checkFileExists(Absolutepath))
+            {
+                texture->ID = 0;
+                return texture;
+            }
+        }
         std::vector<char> TextureData = load(Absolutepath,format); // read from file
         return uploadTexture(TextureData,format,texture); // create and assign
 	}

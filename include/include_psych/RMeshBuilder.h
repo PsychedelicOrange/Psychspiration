@@ -13,6 +13,9 @@ public:
         rmesh = new RMesh();
 		LoadVerticeData(mesh);
 		UploadVerticeData();
+        glGenBuffers(1, &rmesh->EBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, rmesh->EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, rmesh->indices.size() * sizeof(unsigned int), &rmesh->indices[0], GL_STATIC_DRAW);
 		LoadMaterialData(mesh,scene);
 		return rmesh;
 	}

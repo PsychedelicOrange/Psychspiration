@@ -28,12 +28,12 @@ vector<char> RTextureBuilder::load_compressed(string Absolutepath)
     CHECK(dSize == resultSize, "Impossible because zstd will check this condition!");
 
     /* success */
-    printf("%25s : %6u -> %7u \n", Absolutepath, (unsigned)ogVector.size(), (unsigned)resultSize);
+    //printf("%25s : %6u -> %7u \n", Absolutepath, (unsigned)ogVector.size(), (unsigned)resultSize);
     return resultVec;
 }
 
 vector<char> RTextureBuilder::load_uncompressed(string Absolutepath)
-{
+{   
     std::ifstream file(Absolutepath, std::ios::binary);
     file.unsetf(std::ios::skipws);
 
@@ -45,9 +45,10 @@ vector<char> RTextureBuilder::load_uncompressed(string Absolutepath)
     std::vector<char> vec;
     vec.reserve(file_size);
     vec.insert(vec.begin(),
-        std::istream_iterator<char>(file),
-        std::istream_iterator<char>());
+    std::istream_iterator<char>(file),
+    std::istream_iterator<char>());
     return (vec);
+    
 }
 
 RTexture* RTextureBuilder::uploadTexture(const vector<char>& TextureData, string format, RTexture* texture)

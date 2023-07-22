@@ -11,6 +11,10 @@ class RTextureManager
 	static RTextureManager* instance;
 	RTextureManager() {};
 public:
+	std::unordered_map<string, RTexture*> getAll()
+	{
+		return Textures;
+	}
 	RTextureManager(RTextureManager& obj)
 		= delete;
 	static RTextureManager* getInstance();

@@ -32,7 +32,7 @@ public:
     std::vector<Texture>      textures;
     Material material;
     unsigned int VAO;
-    //physics 
+    //physics
     float* vertices_flat;
     unsigned int * indices_flat;
     btCollisionShape* colShape;

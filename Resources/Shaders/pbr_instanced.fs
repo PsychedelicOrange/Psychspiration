@@ -69,7 +69,8 @@ vec3 gridSamplingDisk[20] = vec3[]
 void main()
 {
     vec4 texcolor;
-    vec3 albedo = u_albedo; float metallic = u_metallic,roughness = u_roughness;
+    vec3 albedo = u_albedo;
+    float metallic = u_metallic,roughness = u_roughness;
     if(existdiffuse)
     {
         texcolor = texture(texture_diffuse,TexCoords).rgba;
@@ -93,10 +94,10 @@ void main()
         V = normalize(TangentViewPos - TangentFragPos);
         fragPos = TangentFragPos;
     }
-     vec3 F0 = vec3(0.04f);
-     F0 = mix(F0,albedo,metallic);
+    vec3 F0 = vec3(0.04f);
+    F0 = mix(F0,albedo,metallic);
 	 
-     vec3 Lt = vec3(0.0f);
+    vec3 Lt = vec3(0.0f);
      // point lights 
 	for(int i =0 ;i< numLights;++i)
 	{

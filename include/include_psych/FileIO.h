@@ -11,3 +11,4 @@ std::string getStringFromDisk_direct(std::string path);
 std::string getStringFromDisk(std::string path);
 std::vector<std::string> parse(std::string path);
 std::vector<std::string> getSceneList();
+bool checkFileExists(std::string path);

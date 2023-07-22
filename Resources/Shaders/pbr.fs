@@ -16,7 +16,7 @@ struct Material {
     sampler2D texture_height1;
     sampler2D texture_roughmetal1;
     float shininess;
-}; 
+};
 struct GPULight {
     vec4 position;
     vec4 color;

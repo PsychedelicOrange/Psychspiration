@@ -6,6 +6,6 @@ using std::vector;
 class Material
 {
 public:
-	vector<RTexture*> TexAlbedo, TexNormal, TexMetallicRoughness, TexEmmisive, TexOther;
+	vector<RTexture*> TexAlbedo, TexNormal, TexRoughMetal, TexEmmisive, TexOther;
 	glm::vec3 Albedo; float Metallic, Roughness, Emmisive; AlphaType aplhaType;
 };

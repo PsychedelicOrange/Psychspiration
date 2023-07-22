@@ -4,6 +4,7 @@
 #include <RLights.h>
 class RenderState
 {
+public:
 	Shader* shader;
 	RCamera* camera;
 	RLights* lights;

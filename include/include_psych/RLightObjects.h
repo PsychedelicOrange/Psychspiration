@@ -1,6 +1,5 @@
-#include <RLight.h>
 #include <glm/glm.hpp>
-struct GPULight {
+struct GPUpLight {
     glm::vec4 position;
     glm::vec4 color;
     unsigned int enabled;

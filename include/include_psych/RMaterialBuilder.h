@@ -75,7 +75,7 @@ private:
 			case TextureType::Albedo:
 				material.TexAlbedo = textures; break;
 			case TextureType::MetallicRoughness:
-				material.TexMetallicRoughness = textures; break;
+				material.TexRoughMetal = textures; break;
 			case TextureType::Normal:
 				material.TexNormal = textures; break;
 			case TextureType::Emmisive:

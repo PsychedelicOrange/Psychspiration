@@ -1,15 +1,13 @@
 {
     "controls": {
         "BACKWARD_KEY": "S",
-        "EXIT_KEY": "ESCAPE",
         "FORWARD_KEY": "W",
         "LEFT_KEY": "A",
-        "PLAY_KEY": "SPACE",
         "RIGHT_KEY": "D"
     },
     "video": {
         "anti_aliasingMSAA": 8,
-        "display_mode": 1,
+        "display_mode": "fullscreen",
         "resolution": [
             1920,
             1080
