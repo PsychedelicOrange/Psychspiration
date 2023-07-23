@@ -3,13 +3,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <Globals.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <R_Scene.h>
+#include <SettingsManager.h>
 #include <RInput.h>
 #include <RWindow.h>
 #include <RModelManager.h>
 #include <Renderer.h>
 #include <ConsoleDebug.h>
-#include <SettingsManager.h>
 #include <Physics.h>
 #include <RawInput.h>
 #include <string>
@@ -19,10 +20,11 @@ int main()
 	//engine innit
 	ConsoleDebug console;
 	Settings settings = SettingsManager::getSettings();
-	Input input(settings);
+	EventHandler eventHandler;
+	Input input(settings.GLFWKeysToControl,settings.GLFWMouseKeysToControl,&eventHandler);
 	
 	Window Windows(settings,&input);
-	RawInput rawInput(&Windows);
+	//RawInput rawInput(&Windows,settings.ControlToGLFWKeys);
 
 
 	RModelManager* modelMan = RModelManager::getInstance();
@@ -30,30 +32,20 @@ int main()
 	RScene scene("testt");
 	scene.LoadObjects();
 
-	//RObject* ball = new RObject();
-	//ball->dynamic = 1;
-	//ball->name = "spider";
-	//ball->path = "Spider_Eyes_Spider";
-	//ball->model = modelMan->getModel("Spider_Eyes_Spider");
-	//ball->localScale = glm::vec3(0.1, 0.1, 0.1);
-	//ball->transform = glm::mat4(1.0f);
-	//ball->transform = glm::scale(ball->transform, glm::vec3(0.1, 0.1, 0.1));
-	//ball->transform = glm::translate(ball->transform, glm::vec3(0,10, 0));
 	for (auto objects : scene.Objects)
 	{
 		console.log(objects->model);
 	}
-	/*console.log(ball->model);*/
 	//load lights
 	RPointLight light;
-
+	
 	//load camera
-	RCameraObject* camera = new RCameraObject(new RCamera(),glm::vec3(10,10,10), glm::vec3(0, 1, 0), glm::vec3(-10, -10, -10));
-
+	RCameraObject* camera = new RCameraObject(new RCamera(),input,glm::vec3(10,10,10), glm::vec3(0, 1, 0), glm::vec3(-10, -10, -10));
+	
 	//load physics
 	Physics physics;
 	physics.setObjects(scene.Objects);
-	//physics.setObject(ball);
+
 	// and lights camera action !
 	//console.log()
 	Renderer renderer;
@@ -66,21 +58,29 @@ int main()
 
 	renderer.innit();
 
-	rawInput.camera = renderer.camerasLive[0];
+	//rawInput.camera = renderer.camerasLive[0];
 
-	//controls 
+	//controls for physics
 	bool* play = new bool;
 	*play = false;
-	input.eventHandler.registerCallback("PLAY_KEY", [=]() {*play = true;});
+	input.eventHandler->registerCallback("PLAY_KEY",1 ,[=]() {*play = true;});
 
 	while (!glfwWindowShouldClose(Windows.window))
 	{
+		input.updateDeltaTimePoll();
 		if (*play)
 		{
-			physics.stepSim();
+			for (auto obj : renderer.dynamicObjects)
+			{
+				auto body = obj->rigidBody;
+				body->activate(true);
+				body->applyCentralForce({ 0,0,-100 });
+			}
+			*play = false;
 		}
-		physics.setTransforms(renderer.dynamicObjects);
-		rawInput.updateDeltaTime();
+		physics.stepSim();
+		physics.updateTransforms(renderer.dynamicObjects);
+		
 		
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -90,7 +90,7 @@ int main()
 
 		//physics.drawDebug(camera->getView(), camera->projection);
 		
-		rawInput.MoveCameraRawKeys();
+		//rawInput.MoveCameraRawKeys();
 		glfwSwapBuffers(Windows.window);
 		glfwPollEvents();
 	}

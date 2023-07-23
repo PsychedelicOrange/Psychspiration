@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
+#include <RInput.h>
+//#include <Events.h>
 class RCameraObject
 {
 	RCamera* camera;
@@ -17,8 +19,24 @@ public:
 	float Yaw = -90.0f;
 	float Pitch = 0;
 
-	RCameraObject(RCamera* camera = new RCamera(),glm::vec3 Position = glm::vec3(0,0,1),glm::vec3 Up = glm::vec3(0,1,0),glm::vec3 Front = glm::vec3(0,0,-1)): Position(Position),Up(Up),Front(Front),camera(camera)
+	RCameraObject(RCamera* camera , Input& input, glm::vec3 Position = glm::vec3(0,0,1),glm::vec3 Up = glm::vec3(0,1,0),glm::vec3 Front = glm::vec3(0,0,-1)): Position(Position),Up(Up),Front(Front),camera(camera)
 	{
+		input.registerMouseMovementCallback([this](double xpos, double ypos) {
+			processMouseInput(xpos, ypos);
+			});
+		input.registerKeyCallback("FORWARD_KEY", 3, [this, &input]() {
+			//std::cout << "hi" << input.deltaTime;
+			ProcessKeyboard(0, input.deltaTime);
+			});
+		input.registerKeyCallback("BACKWARD_KEY", 3, [this, &input]() {
+			ProcessKeyboard(1, input.deltaTime);
+			});
+		input.registerKeyCallback("LEFT_KEY",3, [this, &input]() {
+			ProcessKeyboard(2, input.deltaTime);
+			});
+		input.registerKeyCallback("RIGHT_KEY",3, [this, &input]() {
+			ProcessKeyboard(3, input.deltaTime);
+			});
 		WorldUp = Up;
 		Right = glm::cross(Front, WorldUp);
 		innitMatrices();
@@ -40,7 +58,7 @@ public:
 	{
 		return view = glm::lookAt(Position, Position + Front, Up);
 	}
-	void processMouseInput(float xoffset,float yoffset)
+	void processMouseInput(double xoffset, double yoffset)
 	{
 		xoffset *= MouseSensitivity;
 		yoffset *= MouseSensitivity;

@@ -27,16 +27,14 @@ class Physics {
 	//constraint with all axis locked 
 	Physics();
 	~Physics();
-	void cleanupPhysics();
-	void cleanupModels();
 	void setObject(RObject* obj);
 	void setObjects(vector<RObject*> obj);
 	void setDynamicRigidBody(RObject* obj);
 	void setStaticRigidBody(RObject* obj);
 	void setGravity();
 	void assignBB();
-	void setTransform(RObject* obj);
-	void setTransforms(vector < RObject*> objects);
+	void updateTransform(RObject* obj);
+	void updateTransforms(vector < RObject*> objects);
 	void drawDebug(mat4 view, mat4 projection);
 	void stepSim();
 	

@@ -5,7 +5,7 @@ Ultimate Plaza
         *  Write hulls to disk.✅
         *  Speed up VHACD process.✅
         *  [Optional]: Do convex decomposition within engine.
-    Test collision of dynamic body with static body.
+    Test collision of dynamic body with static body.✅
     Test callback on collision and raycast.
     Add Camera follow object feature.
     Test collision of kinematic body with static body. (control body with input)

@@ -3,6 +3,12 @@
 #include <unordered_map>
 #include <functional>
 #include <iostream>
+#include <utility>
+using std::string;
+using std::pair;
+using std::unordered_map;
+using std::vector;
+using std::function;
 class EventHandler
 {
 //public:
@@ -23,18 +29,25 @@ class EventHandler
 public:
 	EventHandler() {
 	}
-	std::unordered_map <std::string, std::function<void()>> controlTable;
-	void registerCallback(std::string action, std::function<void()> callback)
+	unordered_map <string,vector<function<void()>>> controlTable;
+	// action GLFW_RELEASE = 0, GLFW_PRESS = 1
+	void registerCallback(std::string key,int action, std::function<void()> callback)
 	{
-		controlTable.insert({ action,callback });
-	}
-	void fireCallback(std::string action)
-	{
-		std::cout << "\nButton Press Detected: " << action;
-		if (controlTable[action])
-			(controlTable[action])();
+		key += std::to_string(action);
+		if (controlTable.find(key) != controlTable.end())
+			controlTable[key].push_back(callback);
 		else
-			std::cout << "\nError: " << action << " action not registered anywhere !";
+			controlTable[key] = vector<function<void()>>{ callback };
+	}
+	void fireCallback(std::string key,int action)
+	{
+		key += std::to_string(action);
+		//std::cout << "\nButton Press Detected: " << key;
+		if (controlTable.find(key) != controlTable.end())
+			for (auto callback : controlTable[key])
+				callback();
+		else
+			std::cout << "\nError: " << key << " Key not registered anywhere !";
 	}
 	//void processHoldKeys(GLFWwindow* window,//inherit a common class with process keyboard functions)
 	//{

@@ -168,7 +168,8 @@ void Physics::setDynamicRigidBody(RObject* obj)
     btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(*mass, myMotionState, compound2, inertia);
     btRigidBody* body = new btRigidBody(rbInfo);
-
+    //body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+    //body->setActivationState(DISABLE_DEACTIVATION);
     dynamicsWorld->addRigidBody(body);
     obj->rigidBody = body;
 }
@@ -181,7 +182,7 @@ void Physics::stepSim()
     dynamicsWorld->stepSimulation(1.f / 60.f, 10);
 }
 
-void Physics::setTransform(RObject* obj)
+void Physics::updateTransform(RObject* obj)
 {
     btRigidBody* rbody = obj->rigidBody;
     btCollisionObject* pobj = rbody;
@@ -200,10 +201,10 @@ void Physics::setTransform(RObject* obj)
     scaled_transform = glm::scale(glm::mat4(1.0f), obj->localScale);
     obj->transform = transform * scaled_transform;
 }
-void Physics::setTransforms(vector<RObject* >objects)
+void Physics::updateTransforms(vector<RObject* >objects)
 {
     for (auto obj : objects)
-        setTransform(obj);
+        updateTransform(obj);
 }
 
 void Physics::drawDebug(mat4 view,mat4 projection)
@@ -212,7 +213,3 @@ void Physics::drawDebug(mat4 view,mat4 projection)
     debugdrawphysics->setMVP(view, projection);
     debugdrawphysics->flushLines();
 }
- //        }
- //    }
- //}
- //

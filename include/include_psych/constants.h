@@ -96,8 +96,10 @@ namespace Keys {
     {"RIGHT_ALT", GLFW_KEY_RIGHT_ALT},
     {"RIGHT_SUPER", GLFW_KEY_RIGHT_SUPER},
     {"MENU", GLFW_KEY_MENU},
-    {"LAST", GLFW_KEY_LAST}
-
+    {"LAST", GLFW_KEY_LAST},
+    { "LEFT_CLICK",GLFW_MOUSE_BUTTON_LEFT},
+    { "RIGHT_CLICK",GLFW_MOUSE_BUTTON_RIGHT  },
+    { "MIDDLE_CLICK",GLFW_MOUSE_BUTTON_MIDDLE }
     };
     std::unordered_map<int,std::string> GLFWKeysToString = {
         {GLFW_KEY_SPACE, "SPACE"},
@@ -219,6 +221,9 @@ namespace Keys {
         {GLFW_KEY_RIGHT_CONTROL, "RIGHT_CONTROL"},
         {GLFW_KEY_RIGHT_ALT, "RIGHT_ALT"},
         {GLFW_KEY_RIGHT_SUPER, "RIGHT_SUPER"},
-        {GLFW_KEY_MENU, "MENU"}
+        {GLFW_KEY_MENU, "MENU"},
+        { GLFW_MOUSE_BUTTON_LEFT ,"LEFT_CLICK"},
+        { GLFW_MOUSE_BUTTON_RIGHT ,"RIGHT_CLICK" },
+        { GLFW_MOUSE_BUTTON_MIDDLE ,"MIDDLE_CLICK" }
     };
 }

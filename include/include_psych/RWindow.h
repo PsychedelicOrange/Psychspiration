@@ -50,17 +50,37 @@ public:
         glfwSetWindowUserPointer(window, userPointers);
         auto key_callback = [](GLFWwindow* w, int key, int scancode, int action, int mods)
         {
-            static_cast<Input*>(static_cast<void**>(glfwGetWindowUserPointer(w))[0])->key_callback(w, key, scancode, action, mods);
+            static_cast<Input*>(static_cast<void**>(glfwGetWindowUserPointer(w))[0])->key_callback( key, scancode, action, mods);
         };
         glfwSetKeyCallback(window, key_callback);
+        
+        auto cursor_pos_callback = [](GLFWwindow* w, double xpos, double ypos)
+        {
+            static_cast<Input*>(static_cast<void**>(glfwGetWindowUserPointer(w))[0])->mouse_movement_callback( xpos, ypos);
+        };
+        glfwSetCursorPosCallback(window, cursor_pos_callback);
+
+        auto mouse_button_callback = [](GLFWwindow* w, int button, int action, int mods)
+        {
+            static_cast<Input*>(static_cast<void**>(glfwGetWindowUserPointer(w))[0])->mouse_button_callback(button, action, mods);
+        };
+        glfwSetMouseButtonCallback(window, mouse_button_callback);
+
+        auto scroll_callback = [](GLFWwindow* w, double xoffset, double yoffset)
+        {
+            static_cast<Input*>(static_cast<void**>(glfwGetWindowUserPointer(w))[0])->scroll_callback(xoffset,yoffset);
+        };
+        glfwSetScrollCallback(window, scroll_callback);
+
         auto framebuffer_callback = [](GLFWwindow* w, int width, int height)
         {
-            static_cast<Window*>(static_cast<void**>(glfwGetWindowUserPointer(w))[1])->framebuffer_size_callback(w,width,height);
+            static_cast<Window*>(static_cast<void**>(glfwGetWindowUserPointer(w))[1])->framebuffer_size_callback(w, width, height);
         };
         glfwSetFramebufferSizeCallback(window, framebuffer_callback);
+        
         oneTimeGladLoader();
         // test
-        input->eventHandler.registerCallback("EXIT_KEY", [=]() {this->close(); });
+        input->eventHandler->registerCallback("EXIT_KEY",1, [=]() {this->close(); });
 	};
     void close()
     {

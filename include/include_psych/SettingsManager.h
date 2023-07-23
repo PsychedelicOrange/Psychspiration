@@ -27,9 +27,15 @@ public:
         settings.display_mode = data["video"]["display_mode"];
         settings.resolution[0] = data["video"]["resolution"][0];
         settings.resolution[1] = data["video"]["resolution"][1];
-        for (auto control : data["controls"].items())
+        for (auto control : data["controls"]["keyboard"].items())
         {
+            settings.ControlToGLFWKeys[control.key()] = Keys::stringToGLFWKeys[control.value()];
             settings.GLFWKeysToControl[Keys::stringToGLFWKeys[control.value()]] = control.key();
+        }
+        for (auto control : data["controls"]["mouse"].items())
+        {
+            settings.ControlToGLFWMouseKeys[control.key()] = Keys::stringToGLFWKeys[control.value()];
+            settings.GLFWMouseKeysToControl[Keys::stringToGLFWKeys[control.value()]] = control.key();
         }
         for (auto controlPair : settings.GLFWKeysToControl)
         {

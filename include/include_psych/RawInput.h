@@ -1,13 +1,14 @@
 #pragma once
 #include <GLFW/glfw3.h>
 #include <RCameraObject.h>
-#include <RWindow.h>
-#include <Controls.h>
+#include <RInput.h>
+//#include <Controls.h>
 class RawInput {
 public:
     RCameraObject* camera;
     Window* window;
-    RawInput(Window* window): window(window) {
+    unordered_map<string, int> controlToGLFWkeys;
+    RawInput(Window* window,unordered_map<string,int>& controlToGLFWkeys): window(window),controlToGLFWkeys(controlToGLFWkeys) {
         lastX = window->width / 2.0f;
         lastY = window->height / 2.0f;
         static_cast<void**>(glfwGetWindowUserPointer(window->window))[2] = this;
@@ -42,13 +43,13 @@ public:
     }
     void MoveCameraRawKeys()
     {
-        if (glfwGetKey(window->window, GLFW_KEY_W) == GLFW_PRESS)
+        if (glfwGetKey(window->window, controlToGLFWkeys["FORWARD_KEY"]) == GLFW_PRESS)
             camera->ProcessKeyboard(0, deltaTime);
-        if (glfwGetKey(window->window, GLFW_KEY_S) == GLFW_PRESS)
+        if (glfwGetKey(window->window, controlToGLFWkeys["BACKWARD_KEY"]) == GLFW_PRESS)
             camera->ProcessKeyboard(1, deltaTime);
-        if (glfwGetKey(window->window, GLFW_KEY_A) == GLFW_PRESS)
+        if (glfwGetKey(window->window, controlToGLFWkeys["LEFT_KEY"]) == GLFW_PRESS)
             camera->ProcessKeyboard(2, deltaTime);
-        if (glfwGetKey(window->window, GLFW_KEY_D) == GLFW_PRESS)
+        if (glfwGetKey(window->window, controlToGLFWkeys["RIGHT_KEY"]) == GLFW_PRESS)
             camera->ProcessKeyboard(3, deltaTime);
     }
     void updateDeltaTime()
