@@ -6,10 +6,13 @@ Ultimate Plaza
         *  Speed up VHACD process.✅
         *  [Optional]: Do convex decomposition within engine.
     Test collision of dynamic body with static body.✅
-    Test callback on collision and raycast.
-    Add Camera follow object feature.
-    Test collision of kinematic body with static body. (control body with input)
-    Test how to apply forces such as wind, friction, input
+    input task : ✅
+    (control body with input)✅
+    Test collision of kinematic body with static body. 
+    Test how to apply forces such as wind, friction,
+    {Add Camera follow object feature.
+    Test callback on collision and raycast}.
+
 * Gameplay iteration
     -> find fun
     -> demo levels and concepts

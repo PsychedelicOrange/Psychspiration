@@ -7,7 +7,7 @@
 #include <iostream>
 void HullBuilder::builder(string path, std::vector<Hull*>& hulls)
 {
-	std::string path_hull = pathResource + "/Hulls/" + path + "_hull"+".gltf";
+	std::string path_hull = pathResource + "/Models/" + path + "_hull"+".gltf";
 	if (checkFileExists(path_hull))
 	{
 		RModelManager* modelMan = RModelManager::getInstance();

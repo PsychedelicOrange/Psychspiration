@@ -90,23 +90,21 @@ void Physics::setStaticRigidBody(RObject* obj)
     groundTransform.setFromOpenGLMatrix(&(obj->transform[0][0]));
     //= obj->model->compShape 
     RMesh* t_mesh;
-    auto scale = btVector3(1/obj->localScale.x, 1/obj->localScale.y, 1/obj->localScale.z);
+    auto scale = btVector3(obj->localScale.x, obj->localScale.y, obj->localScale.z);
     for (int i = 0; i < obj->model->meshes.size(); i++)
     {
         t_mesh = obj->model->meshes[i];
         btCollisionShape* colShape;
 
         auto mesh = new btTriangleIndexVertexArray((int)t_mesh->indices.size() / 3, (int*)&(t_mesh->indices[0]), 3 * sizeof(unsigned int),t_mesh->vertices.size(),(btScalar* )&(t_mesh->vertices[0]), sizeof(Vertex));
-        std::cout <<"Scale"<< obj->localScale.x << "," << obj->localScale.y << "," << obj->localScale.z;
+        //std::cout <<"Scale"<< obj->localScale.x << "," << obj->localScale.y << "," << obj->localScale.z;
         colShape = new btScaledBvhTriangleMeshShape(new btBvhTriangleMeshShape(mesh, false),scale);
-        //colShape = new btBvhTriangleMeshShape(mesh, false);
-        //colShape->setLocalScaling(scale);
-        //colShape = new btBvhTriangleMeshShape(mesh, false);
-        //obj->model->meshes[i].colShape = colShape ;
-        
+
         collisionShapes.push_back(colShape);
-        
-        compoundShape->addChildShape(groundTransform,colShape);
+        btTransform hullTransform;
+        glm::mat4 t(1.0);
+        hullTransform.setFromOpenGLMatrix(&(t[0][0]));
+        compoundShape->addChildShape(hullTransform,colShape);
  
     }
     btScalar mass =  0 ;

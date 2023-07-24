@@ -37,16 +37,17 @@ public:
 		input.registerKeyCallback("BACKWARD_KEY", 3, [this, &input]() {
 			ProcessKeyboard(1, input.deltaTime);
 			});
-		input.registerKeyCallback("LEFT_KEY",3, [this, &input]() {
+		input.registerKeyCallback("LEFT_KEY", 3, [this, &input]() {
 			ProcessKeyboard(2, input.deltaTime);
 			});
-		input.registerKeyCallback("RIGHT_KEY",3, [this, &input]() {
+		input.registerKeyCallback("RIGHT_KEY", 3, [this, &input]() {
 			ProcessKeyboard(3, input.deltaTime);
 			});
 		WorldUp = Up;
 		Right = glm::cross(Front, WorldUp);
 		innitMatrices();
 	}
+
 	const RCamera getCamera() 
 	{
 		return *camera;

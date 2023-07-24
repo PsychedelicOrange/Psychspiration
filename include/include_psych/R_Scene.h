@@ -17,7 +17,7 @@ public:
 		parseScene(getStringFromDisk("\\Scenes\\" + sceneName + ".scene"));
 	}
 	void parseScene(std::string data);
-
+	RObject* getObject(string name);
 	void LoadObjects();
 
 };

@@ -133,17 +133,32 @@ public:
 			//doIfDirty();
 			setGlobalUniforms(shader); // view, projection, lights
 			glBindVertexArray(vaos[0]);
-			for (auto mesh : staticMeshes)
+			for (auto obj : staticObjects)
 			{
-				// set transform
-				shader->setMat4("model", *(mesh->transform));
-				setMeshUniforms(mesh, shader); // transforms and materials
-				//glBindVertexArray(mesh->VAO);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
-				glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0, mesh->baseVertex);
-				//glDrawElements(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0);
-				glActiveTexture(GL_TEXTURE0);
+				for (auto mesh : obj->model->meshes)
+				{
+					// set transform
+					shader->setMat4("model", *(mesh->transform));
+					setMeshUniforms(mesh, shader); // transforms and materials
+					//glBindVertexArray(mesh->VAO);
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
+					glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0, mesh->baseVertex);
+					//glDrawElements(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0);
+					glActiveTexture(GL_TEXTURE0);
+				}
 			}
+
+			//for (auto mesh : staticMeshes)
+			//{
+			//	// set transform
+			//	shader->setMat4("model", *(mesh->transform));
+			//	setMeshUniforms(mesh, shader); // transforms and materials
+			//	//glBindVertexArray(mesh->VAO);
+			//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->EBO);
+			//	glDrawElementsBaseVertex(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0, mesh->baseVertex);
+			//	//glDrawElements(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0);
+			//	glActiveTexture(GL_TEXTURE0);
+			//}
 			glBindVertexArray(0);
 	}
 	void draw(RObject* obj)
@@ -163,6 +178,9 @@ public:
 	}
 	void draw(vector<RObject*> objects)
 	{
+		auto shader = shaders[0];
+		shader->use();
+		setGlobalUniforms(shader);
 		for (auto obj : objects)
 			draw(obj);
 	}

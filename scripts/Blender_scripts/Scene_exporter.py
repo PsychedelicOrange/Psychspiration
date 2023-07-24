@@ -137,6 +137,9 @@ bpy.ops.object.select_all(action='DESELECT')
 # loop through all the objects in the scene
 scene = bpy.context.scene
 
+DynamicObjects = bpy.data.collections["Dynamic"]
+
+
 for ob in scene.objects:
     # make the current object active and select it
     bpy.context.view_layer.objects.active = ob
@@ -145,9 +148,12 @@ for ob in scene.objects:
     # make sure that we only export meshes
     if ob.type == 'MESH':
         # export the currently selected object to its own file based on its name
-        ob.rotation_mode = 'AXIS_ANGLE'
+        #ob.rotation_mode = 'AXIS_ANGLE'
         ob.rotation_mode = 'XYZ'
-        if( not ('_hull_' in ob.name) ):
+        dynamic = False
+        if DynamicObjects in ob.users_collection:
+            dynamic = True
+        if( not ('_hull' in ob.name) ):
             # export objects 
             export_name = get_export_name(ob.name)
             filepath_object=ModelPath +'\\'+"{}".format(export_name)
@@ -155,22 +161,20 @@ for ob in scene.objects:
                 bpy.ops.export_scene.gltf(filepath=filepath_object,use_selection=True,export_format='GLTF_SEPARATE',export_colors=False,export_tangents=True,export_texture_dir = '..\Textures')
                 if(compress_textures):
                     editglTF(export_name)
+            openglMat = get_opengl(ob.matrix_world)
+            
             # write objects to scene data   
-            data['objects'].append({'name':ob.name,'export_name':export_name,'scale':convertvectolist(ob.scale),'translate':convertvectolist(ob.location),'rotate':convertvectolist(ob.rotation_axis_angle),'transform':convertmattolist(get_opengl(ob.matrix_world))})
-            data['objects'][-1].update({'hulls':[]})
+            data['objects'].append({'name':ob.name,'export_name':export_name,'scale':convertvectolist(ob.scale),'translate':convertvectolist(ob.location),'rotate':convertvectolist(openglMat.to_euler("XYZ")),'transform':convertmattolist(openglMat),'dynamic':dynamic})
             # exports hulls
             for child in ob.children:
                 ob.select_set(False)
                 child.select_set(True)
-                #export hulls and write hull data
-                child_export_name = get_export_name(child.name)
-                filepath_hull = HullPath +'\\'+"{}".format(child_export_name)
-                if(export_models and export_hulls and not os.path.exists(filepath_hull+'.glb')):    
-                    bpy.ops.export_scene.gltf(filepath=filepath_hull,use_selection=True,export_format='GLB')
-                data['objects'][-1]['hulls'].append({'name':child.name,'export_name':child_export_name,'transform':convertmattolist(get_opengl(ob.matrix_local))})                    
+                filepath_hull = ModelPath + r'/' + "{}".format(child.name)
+                print(filepath_hull)
+                if(export_hulls and not os.path.exists(filepath_hull+'.gltf')):
+                    bpy.ops.export_scene.gltf(filepath=filepath_hull,use_selection=True,export_format='GLTF_EMBEDDED')
                 child.select_set(False)
                 ob.select_set(True)
-
         ob.select_set(False)
     # deselect the object and move on to another if any more are left
     if obj.type == 'LIGHT':

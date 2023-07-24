@@ -1,9 +1,17 @@
 #pragma once
 #include <iostream>
-#include <RModel.h>
+#include <RObject.h>
 #include "glm/ext.hpp"  // for to_string
 class ConsoleDebug {
 public :
+	void log(RObject* object)
+	{
+		std::cout << "Object Information: \n";
+		std::cout << "\tObject Name: " << object->name << std::endl;
+		std::cout << "\tObject Model Path : " << object->path << std::endl;
+		std::cout << "\tDynamic: " << object->dynamic << std::endl;
+		std::cout << "\tNo. of Hulls : " << object->hulls.size() << std::endl;
+	}
 	void log(RModel* model)
 	{
 		std::cout << "Model Information: \n";

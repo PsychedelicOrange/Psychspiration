@@ -6,6 +6,9 @@ class Input {
 public:
 	float deltaTime = 0.0f;
 	float lastFrame = 0.0f;
+	
+	std::vector<std::function<void()>> perTickCallbacks;
+
 	std::unordered_map<string, int> keyStates; //store for repeat
 	std::unordered_map<string,std::vector<std::function<void()>>> repeatCallbacks;
 
@@ -16,13 +19,16 @@ public:
 	Settings& settings;
 	Input(Settings& settings): settings(settings){}
 
-	void updateDeltaTimePoll();
-	void registerRepeatKeys(string key, std::function<void()> callback);
+	void tick();
 
 	/*Register various callbacks*/
 
 	//for both mouse and keyboard
 	// if action 0 means fire on released, 1 means fire on pressed, and 2 means fire on repeat, and 3 means fire on held(continuosly).
+	void registerPerTickCallback(std::function<void()> callback)
+	{
+		perTickCallbacks.push_back(callback);
+	}
 	void registerKeyCallback(std::string control,int action, std::function<void()> callback)
 	{
 		if (action == 3)

@@ -44,7 +44,12 @@ glm::vec3 convvec3_blender(glm::vec3 temp)
     temp.z = tempo;
     return temp;
 }
-
+RObject* RScene::getObject(string name)
+{
+    for (auto object : Objects)
+        if (object->name == name)
+            return object;
+}
 void RScene::parseScene(std::string data)
 {
     Json sceneData = Json::parse(data);
@@ -56,7 +61,18 @@ void RScene::parseScene(std::string data)
         ob->path = object["export_name"].get<std::string>();
         ob->transform = getmat4_json(object["transform"]);
         ob->localScale = getvec3_json(object["scale"]);
-        ob->dynamic = object["dynamic"].get<bool>();
+        ob->translate = convvec3_blender(getvec3_json(object["translate"]));
+        auto rotate= convvec3_blender(getvec3_json(object["rotate"]));
+        //ob->angle = rotate[0];
+        ob->rotateAxis = rotate;//{ rotate[1],rotate[2],rotate[3] };
+        try
+        {
+            ob->dynamic = object["dynamic"].get<bool>();
+        }
+        catch(...)
+        {
+            ob->dynamic = false;
+        }
         Objects.push_back(ob);
     }
     for (auto& light : sceneData["lights"])

@@ -1,7 +1,7 @@
 #include<RInput.h>
 #include<GLFW/glfw3.h>
 
-void Input::updateDeltaTimePoll()
+void Input::tick()
 {
 	float currentFrame = static_cast<float>(glfwGetTime());
 	deltaTime = currentFrame - lastFrame;
@@ -14,9 +14,7 @@ void Input::updateDeltaTimePoll()
 			for (auto callback : item.second)
 				callback();
 	}
+	for (auto tickCallback : perTickCallbacks)
+		tickCallback();
 }
 
-void Input::registerRepeatKeys(string key, std::function<void()> callback)
-{
-	
-}
