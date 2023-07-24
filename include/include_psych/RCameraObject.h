@@ -18,11 +18,17 @@ public:
 	// euler Angles
 	float Yaw = -90.0f;
 	float Pitch = 0;
-
+	// mouse
+	float lastX;
+	float lastY;
+	bool firstMouse = true;
+	float deltaTime = 0.0f;
+	float lastFrame = 0.0f;
+	
 	RCameraObject(RCamera* camera , Input& input, glm::vec3 Position = glm::vec3(0,0,1),glm::vec3 Up = glm::vec3(0,1,0),glm::vec3 Front = glm::vec3(0,0,-1)): Position(Position),Up(Up),Front(Front),camera(camera)
 	{
 		input.registerMouseMovementCallback([this](double xpos, double ypos) {
-			processMouseInput(xpos, ypos);
+			updateCamera(xpos, ypos);
 			});
 		input.registerKeyCallback("FORWARD_KEY", 3, [this, &input]() {
 			//std::cout << "hi" << input.deltaTime;
@@ -57,6 +63,23 @@ public:
 	glm::mat4 getView()
 	{
 		return view = glm::lookAt(Position, Position + Front, Up);
+	}
+	void updateCamera(double xpos, double ypos)
+	{
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+		lastX = xpos;
+		lastY = ypos;
+		processMouseInput(xoffset, yoffset);
+
 	}
 	void processMouseInput(double xoffset, double yoffset)
 	{

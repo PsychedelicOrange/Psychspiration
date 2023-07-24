@@ -1,11 +1,18 @@
 {
     "controls": {
-        "BACKWARD_KEY": "S",
-        "EXIT_KEY": "ESCAPE",
-        "FORWARD_KEY": "W",
-        "LEFT_KEY": "A",
-        "PLAY_KEY": "SPACE",
-        "RIGHT_KEY": "D"
+        "keyboard": {
+            "BACKWARD_KEY": "S",
+            "EXIT_KEY": "ESCAPE",
+            "FORWARD_KEY": "W",
+            "LEFT_KEY": "A",
+            "PLAY_KEY": "SPACE",
+            "RIGHT_KEY": "D"
+        },
+        "mouse": {
+            "ALT_CLICK_KEY": "RIGHT_CLICK",
+            "CLICK_KEY": "LEFT_CLICK",
+            "MIDDLE_CLICK_KEY": "MIDDLE_CLICK"
+        }
     },
     "video": {
         "anti_aliasingMSAA": 8,

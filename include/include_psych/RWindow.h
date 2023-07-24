@@ -9,7 +9,7 @@ public:
     int height, width;
     DisplayType display_mode;
     GLFWwindow* window;
-	Window(const Settings settings, Input* input): height(settings.resolution[1]),width(settings.resolution[0]),display_mode(settings.display_mode) {
+	Window(Input* input): height(input->settings.resolution[1]),width(input->settings.resolution[0]),display_mode(input->settings.display_mode) {
         // glfw: initialize and configure
         glfwInit();
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -79,8 +79,7 @@ public:
         glfwSetFramebufferSizeCallback(window, framebuffer_callback);
         
         oneTimeGladLoader();
-        // test
-        input->eventHandler->registerCallback("EXIT_KEY",1, [=]() {this->close(); });
+        input->registerKeyCallback("EXIT_KEY",1, [=]() {this->close(); });
 	};
     void close()
     {

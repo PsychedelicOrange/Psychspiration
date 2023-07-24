@@ -51,12 +51,19 @@ public:
 		video["display_mode"] = (int)settings.display_mode;
 		video["anti_aliasingMSAA"] = settings.anti_aliasingMSAA;
 		auto controls = data["controls"];
+        auto keyboardcontrols = controls["keyboard"];
         for (auto controlPair : settings.GLFWKeysToControl)
         {
-            controls[controlPair.second] = Keys::GLFWKeysToString[controlPair.first];
+            keyboardcontrols[controlPair.second] = Keys::GLFWKeysToString[controlPair.first];
+        }
+        auto Mousecontrols = controls["mouse"];
+        for (auto controlPair : settings.GLFWMouseKeysToControl)
+        {
+            Mousecontrols[controlPair.second] = Keys::GLFWKeysToString[controlPair.first];
         }
         data["video"] = video;
-        data["controls"] = controls;
+        data["controls"]["keyboard"] = keyboardcontrols;
+        data["controls"]["mouse"] = Mousecontrols;
         std::ofstream o(pathResource + "/Settings/settings.json");
         o << std::setw(4) << data << std::endl;
 	}

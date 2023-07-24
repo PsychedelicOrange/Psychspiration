@@ -21,9 +21,9 @@ int main()
 	ConsoleDebug console;
 	Settings settings = SettingsManager::getSettings();
 	EventHandler eventHandler;
-	Input input(settings.GLFWKeysToControl,settings.GLFWMouseKeysToControl,&eventHandler);
+	Input input(settings);
 	
-	Window Windows(settings,&input);
+	Window Windows(&input);
 	//RawInput rawInput(&Windows,settings.ControlToGLFWKeys);
 
 
@@ -63,7 +63,7 @@ int main()
 	//controls for physics
 	bool* play = new bool;
 	*play = false;
-	input.eventHandler->registerCallback("PLAY_KEY",1 ,[=]() {*play = true;});
+	input.registerKeyCallback("PLAY_KEY",3 ,[=]() {*play = true;});
 
 	while (!glfwWindowShouldClose(Windows.window))
 	{

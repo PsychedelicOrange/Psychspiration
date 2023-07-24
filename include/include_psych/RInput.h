@@ -1,7 +1,7 @@
 #pragma once
 //#include <Events.h>
 #include <EventHandler.h>
-
+#include <RSettings.h>
 class Input {
 public:
 	float deltaTime = 0.0f;
@@ -12,10 +12,9 @@ public:
 	std::vector<std::function<void(double xpos, double ypos)>> mouseMovementCallbacks;
 	std::vector<std::function<void(double xoffset, double yoffset)>> mouseScrollCallbacks;
 	
-	EventHandler* eventHandler; // stores button key,action pairs with their corresponding callbacks.
-	unordered_map<int, string> GLFWKeysToControl;// controls from settings
-	unordered_map<int, string>& GLFWMouseKeysToControl; //controls from settings
-	Input(unordered_map<int, string>& GLFWKeysToControl, unordered_map<int, string>& GLFWMouseKeysToControl,EventHandler* eventHandler): GLFWKeysToControl(GLFWKeysToControl), GLFWMouseKeysToControl(GLFWMouseKeysToControl),eventHandler(eventHandler){}
+	EventHandler eventHandler; // stores button key,action pairs with their corresponding callbacks.
+	Settings& settings;
+	Input(Settings& settings): settings(settings){}
 
 	void updateDeltaTimePoll();
 	void registerRepeatKeys(string key, std::function<void()> callback);
@@ -34,7 +33,7 @@ public:
 				repeatCallbacks[control] = { callback };
 		}
 		else
-			eventHandler->registerCallback(control, action, callback);
+			eventHandler.registerCallback(control, action, callback);
 	}
 	void registerMouseMovementCallback(std::function<void(double xpos, double ypos)> callback)
 	{
@@ -49,9 +48,9 @@ public:
 	{
 		
 		try {
-			std::string control = GLFWKeysToControl.at(key);
+			std::string control = settings.GLFWKeysToControl.at(key);
 			keyStates[control] = action;
-			eventHandler->fireCallback(control,action);
+			eventHandler.fireCallback(control,action);
 		}
 		catch (std::out_of_range)
 		{
@@ -62,9 +61,9 @@ public:
 	void mouse_button_callback( int button, int action, int mods)
 	{
 		try {
-			std::string control = GLFWMouseKeysToControl.at(button);
+			std::string control = settings.GLFWMouseKeysToControl.at(button);
 			keyStates[control] = action;
-			eventHandler->fireCallback(control, action);
+			eventHandler.fireCallback(control, action);
 		}
 		catch (std::out_of_range)
 		{
