@@ -1,0 +1,25 @@
+1. Description: A singleplayer flying disk adventure with maps based in MIT, Manipal's campus !
+
+2. Target audience: Targetting casual gamers/ non-gamers  who are recent students, Alumni's or anyone related to Manipal/ MIT.
+
+3. Pitch: "Verb in a noun while you verb"
+Fly your disk through many locations around MIT,to dodge DT's, collect umbrellas, and defeat evil bosses lowering students cgpa's.
+
+3.5. Price: Free but option to donate via UPI, to get some special rewards like skins.
+
+4. Details
+Gameplay: 1. Campain: Control your disc. 2. Time attack. 3. Free roam.
+Story: Fight fantasy evil attacking college premises. Maybe some random events around the college.
+Art Style: Realistic style Graphics with some cartoony elements.
+Soundtrack: Mood based. (Optional : Allow linking spotify in free roam)
+Number of levels/worlds: Student Plaza, and if time allows, another one.
+SinglePlayer: Might include leaderboards for time attack gamemode.
+Length of the campaign 3-5 hours. // don't know yet targetting difficulty, rather than content.
+
+5. Socials
+* Reddit -> start engaging with gamedev subs, post there under hflife0693
+* Link.tree with all information / custom website host on github. 
+* Instagram -> Instagram account with lints to website.
+* Discord server with joshua as a mod. / playtest.
+* Game on microsoft store or itch.io (TO BE DECIDED)
+* presskit on website.
