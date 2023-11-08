@@ -4,7 +4,7 @@
 
 [More Screenshots](https://www.flickr.com/photos/197526599@N02/albums/72177720307335647)
 
-[Demo Download](https://drive.google.com/file/d/1SZVbb-R04-iJFkY4swBH5971s-X_H_2a/view?usp=sharing)
+[Demo Download](https://drive.google.com/uc?export=download&id=1SZVbb-R04-iJFkY4swBH5971s-X_H_2a)
 
 [Build Instructions](./documentation/Documentation.md)
 # Features
