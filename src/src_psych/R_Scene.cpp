@@ -6,7 +6,6 @@
 #include <set>
 #include <RModelManager.h>
 using Json = nlohmann::json;
-bool compareDistance(glm::vec3 a, glm::vec3 b, glm::vec3 c);
 glm::mat4 getmat4_json(Json temp)
 {
     float temp_arr[16];
@@ -44,6 +43,9 @@ glm::vec3 convvec3_blender(glm::vec3 temp)
     temp.z = tempo;
     return temp;
 }
+RScene::RScene(std::string sceneName) {
+    parseScene(getStringFromDisk("\\Scenes\\" + sceneName + ".scene"));
+}
 RObject* RScene::getObject(string name)
 {
     for (auto object : Objects)
@@ -65,13 +67,12 @@ void RScene::parseScene(std::string data)
         auto rotate= convvec3_blender(getvec3_json(object["rotate"]));
         //ob->angle = rotate[0];
         ob->rotateAxis = rotate;//{ rotate[1],rotate[2],rotate[3] };
-        try
-        {
-            ob->dynamic = object["dynamic"].get<bool>();
+        ob->dynamic = false;
+        try {
+        ob->dynamic = object["dynamic"].get<bool>();
         }
-        catch(...)
-        {
-            ob->dynamic = false;
+        catch(...){
+            std::cout << "Dynamic property not specified";
         }
         Objects.push_back(ob);
     }

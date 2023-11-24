@@ -52,6 +52,15 @@ private:
 
                 vertex.TexCoords = vec;
             }
+            if (mesh->mTextureCoords[1]) {
+                glm::vec2 vec;
+                // a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
+                // use models where a vertex can have multiple texture coordinates so we always take the first set (0).
+                vec.x = mesh->mTextureCoords[1][i].x;
+                vec.y = mesh->mTextureCoords[1][i].y;
+
+                vertex.TexCoords2 = vec;
+            }
             if (mesh->HasTangentsAndBitangents())
             {
                 // tangent

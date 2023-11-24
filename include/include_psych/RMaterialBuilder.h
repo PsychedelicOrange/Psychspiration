@@ -33,18 +33,17 @@ public:
 private:
 	void loadMaterialValues()
 	{
-		aiMaterial* aimaterial_temp = aimaterial;
-		aiColor3D color(0.f, 0.f, 0.f);
+		aiColor3D color(0.f, 0.f, 0.f), emmisive;
 		aiString aiAlphaMode;
-		ai_real metallic, roughness, emmisive;
-		aimaterial_temp->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-		aimaterial_temp->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
-		aimaterial_temp->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
-		aimaterial_temp->Get(AI_MATKEY_COLOR_EMISSIVE, emmisive);
-		aimaterial_temp->Get(AI_MATKEY_GLTF_ALPHAMODE, aiAlphaMode);
-		material.Metallic = (float)metallic;
-		material.Roughness = (float)roughness;
-		material.Emmisive = (float)emmisive;
+		ai_real metallic, roughness;
+		aimaterial->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+		aimaterial->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
+		aimaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+		aimaterial->Get(AI_MATKEY_COLOR_EMISSIVE, emmisive);
+		aimaterial->Get(AI_MATKEY_GLTF_ALPHAMODE, aiAlphaMode);
+		material.Metallic = metallic;
+		material.Roughness = roughness;
+		material.Emmisive = glm::vec3(emmisive.r, emmisive.g, emmisive.b);
 		material.Albedo = glm::vec3(color.r, color.g, color.b);
 		if (aiAlphaMode.C_Str() == "OPAQUE")
 			material.aplhaType = AlphaType::OPAQUE;

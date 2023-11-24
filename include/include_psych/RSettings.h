@@ -11,7 +11,6 @@ public:
 	int resolution[2] = {1920,1080};
 	DisplayType display_mode = DisplayType::WINDOWED;
 	int anti_aliasingMSAA = 8;
-
 	Settings();
 	unordered_map<string, int> ControlToGLFWKeys;
 	unordered_map<int,string> GLFWKeysToControl;

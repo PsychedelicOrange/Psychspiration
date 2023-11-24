@@ -6,7 +6,9 @@
             "FORWARD_KEY": "W",
             "LEFT_KEY": "A",
             "PLAY_KEY": "SPACE",
-            "RIGHT_KEY": "D"
+            "RELOAD_SHADER_KEY": "GRAVE_ACCENT",
+            "RIGHT_KEY": "D",
+            "RUN_KEY": "LEFT_SHIFT"
         },
         "mouse": {
             "ALT_CLICK_KEY": "RIGHT_CLICK",

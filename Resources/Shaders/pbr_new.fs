@@ -16,6 +16,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0);
 float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometrySchlickGGX(float NdotV, float roughness);
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
+vec3 srgbEncode(vec3 color);
     //structs
 struct GPULight {
     vec4 position;
@@ -29,9 +30,9 @@ struct GPULight {
 //uniforms
     //material values
 uniform vec3 u_albedo;
+uniform vec3 u_emmisive;
 uniform float u_metallic;
 uniform float u_roughness;
-uniform float u_emmisive;
     //textures
 uniform sampler2D texture_diffuse;
 uniform sampler2D texture_normal;
@@ -54,16 +55,17 @@ layout (std140, binding = 3) uniform lightUBO{
 
 void main()
 {
-
-    vec4 texcolor;
+    float gamma = 2.2;
     vec3 albedo = u_albedo;
     float metallic = u_metallic,roughness = u_roughness;
+    vec4 texcolor;
     if(existdiffuse)
     {
         texcolor = texture(texture_diffuse,TexCoords).rgba;
         if(texcolor.a < 0.1)
             discard;
-        albedo   = pow(texcolor.rgb,vec3(2.2));
+        albedo = texcolor.rgb;
+        albedo = pow(albedo,vec3(gamma));
     }
     if(existroughmetal)
     {
@@ -84,15 +86,17 @@ void main()
     }
     else
     {
-         N = normalize(Normal);
-	     V = normalize(viewPos - FragPos);
-         fragPos = FragPos;
+        N = normalize(Normal);
+        V = normalize(viewPos - FragPos);
+        fragPos = FragPos;
     }
-
-    vec3 F0 = vec3(0.04f);
-    F0 = mix(F0,albedo,metallic);
-	 
+    vec3 F0 = vec3(0.25);
+    F0 = mix(F0,albedo,metallic) ;
+    //if(metallic == 1)F0 = albedo;
+    //if(metallic == 1)F0 = vec3(0.95, 0.64, 0.54); // gold F0
+	vec3 Ft = vec3(0.0f);
     vec3 Lt = vec3(0.0f);
+    
 	for(int i =0 ;i< numPLights;++i)
 	{
         vec3 Lo = vec3(0.0f);
@@ -111,7 +115,7 @@ void main()
         float attenuation = 1.0 / (distance * distance); // attenuation based on inverse square law
    
 		vec3 H = normalize (V+L);
-        vec3 radiance = gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation * 0.1f;
+        vec3 radiance = gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation;
 		// calculate Cook-Terrence specular BRDF 
 		            // F
 		            vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
@@ -120,6 +124,7 @@ void main()
                     // G
                     float G   = GeometrySmith(N, V, L, roughness);       
                     vec3 specular = (NDF * G * F) / (4*max(dot(N,V),0.0f)*max(dot(N,L),0.0f)+0.0001);
+        Ft += F;
         vec3 ks = F;
         vec3 kd = vec3(1.0)- ks;
         kd *= (1.0-metallic);
@@ -127,15 +132,26 @@ void main()
         Lt += Lo;
 	}
     
-    vec3 color = Lt + vec3(0.1,0.1,0.1);
-    vec3 emmisive = vec3(u_emmisive);
+    vec3 color = Lt;
+    vec3 emmisive = u_emmisive;
     if(existemmisive)
     {
         emmisive = vec3(texture(texture_emmisive,TexCoords));
     }
-    color+=emmisive;
-
-    //gamma correction done in glEnable sRGB
+    float customFresnel = clamp(1-max(dot(N,V),0.0f),0,1);
+    float intensityFresnel = 3.5;
+    customFresnel = pow(customFresnel,intensityFresnel);
+    color += emmisive + customFresnel;
+    float exposure = 0.05;
+    // HDR tonemap
+    color = vec3(1.0) - exp(-color * exposure);
+    //color = albedo;
+    //color = color / (color + vec3(1.0));
+    //vec3 x = max(vec3(0),color-0.004);
+    //color = (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
+    //color = vec3(customFresnel)*1.0;
+    // gamma correction 
+    //color = srgbEncode(color);
     if(!existOpacity)
     {
         FragColor = vec4(vec3(color),(1.0f));
@@ -143,9 +159,16 @@ void main()
         FragColor = vec4(vec3(color),texcolor.a);
         //FragColor = vec4(texcolor.a);
     }
+    
 }
 
 // Function Definations
+vec3 srgbEncode(vec3 color) {
+    float r = color.r < 0.0031308 ? 12.92 * color.r : 1.055 * pow(color.r, 1.0/2.4) - 0.055;
+    float g = color.g < 0.0031308 ? 12.92 * color.g : 1.055 * pow(color.g, 1.0/2.4) - 0.055;
+    float b = color.b < 0.0031308 ? 12.92 * color.b : 1.055 * pow(color.b, 1.0/2.4) - 0.055;
+    return vec3(r, g, b);
+}
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {

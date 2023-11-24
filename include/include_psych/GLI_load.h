@@ -87,7 +87,7 @@ public:
 		Texture = gli::load(TextureData.data(), TextureData.size());
 		Format = GL.translate(Texture.format(), Texture.swizzles());
 		Target = GL.translate(Texture.target());
-
+        std::cout << "\nTexture Format: " << Texture.format();
 		// Generate TextureName and set tex parameters
 		GLuint TextureName = 0;
 		glGenTextures(1, &TextureName);

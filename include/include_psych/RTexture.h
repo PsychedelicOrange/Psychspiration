@@ -2,9 +2,8 @@
 #include <string>
 #include <enums.h>
 using std::string;
-class RTexture {
-public:
-	int ID; // openGL Texture name
-	string path;
+struct RTexture {
+	int ID; // openGL Texture name 
 	TextureType textureType;
+	std::string path;
 };

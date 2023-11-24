@@ -1,5 +1,7 @@
 #pragma once
 #include <unordered_map>
+#include <GLFW/glfw3.h>
+
 namespace Keys {
     std::unordered_map<std::string, int> stringToGLFWKeys = {
     {"A", GLFW_KEY_A},
@@ -99,7 +101,8 @@ namespace Keys {
     {"LAST", GLFW_KEY_LAST},
     { "LEFT_CLICK",GLFW_MOUSE_BUTTON_LEFT},
     { "RIGHT_CLICK",GLFW_MOUSE_BUTTON_RIGHT  },
-    { "MIDDLE_CLICK",GLFW_MOUSE_BUTTON_MIDDLE }
+    { "MIDDLE_CLICK",GLFW_MOUSE_BUTTON_MIDDLE },
+    {"GRAVE_ACCENT",GLFW_KEY_GRAVE_ACCENT}
     };
     std::unordered_map<int,std::string> GLFWKeysToString = {
         {GLFW_KEY_SPACE, "SPACE"},

@@ -1,19 +1,18 @@
 #pragma once
-#include <EventHandler.h>
+#include <RInput.h>
 class State
 {
 public:
 	//toggle
-	bool shadows = false; 
-	bool normals = true; 
-	bool cameraDebugBool = false; 
-	
+//	bool shadows = false; 
+//	bool normals = true; 
+//	bool cameraDebugBool = false; 
 	//hold
 	bool play = false;
 
 	//windows 
-	bool show_menu = true; 
-	bool show_renderer = false; 
+	bool show_menu = false; 
+	//bool show_renderer = false; 
 	
 	// last
 	bool firstMouse = true;
@@ -23,12 +22,20 @@ public:
 	{
 
 	}
-	State(EventHandler* eventHandler){
-		eventHandler->registerCallback("Toggle_Camera", [=]() {
-			cameraDebugBool = !cameraDebugBool;
+	State(Input& input){
+		input.registerKeyCallback("MIDDLE_CLICK_KEY", 0, [this, &input]() { 
+			show_menu = !show_menu; // toggle menu
+			if(show_menu)
+			{
+				input.recieveKeyboardCallbacks = false;
+				input.recieveMouseCallbacks = false;
+			}
+			else
+			{
+				input.recieveKeyboardCallbacks = true;
+				input.recieveMouseCallbacks = true;
+			}
 			});
-		eventHandler->registerCallback("Toggle_Debug", [=]() {
-			show_menu = !show_menu;
-			});
+		input.registerKeyCallback("PLAY_KEY", 0, [this]() {play = !play; });
 	}
 };

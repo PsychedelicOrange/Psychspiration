@@ -36,7 +36,7 @@ class Physics {
 	void updateTransform(RObject* obj);
 	void updateTransforms(vector < RObject*> objects);
 	void drawDebug(mat4 view, mat4 projection);
-	void stepSim();
+	void stepSim(float deltaTime);
 	
 };
 

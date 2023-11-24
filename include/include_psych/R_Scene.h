@@ -13,9 +13,7 @@ public:
 	vector<RSpotLight*> sLights; // all spot lights loaded
 	vector<RAreaLight*> aLights; // all area lights loaded
 
-	RScene(std::string sceneName) {
-		parseScene(getStringFromDisk("\\Scenes\\" + sceneName + ".scene"));
-	}
+	RScene(std::string sceneName);
 	void parseScene(std::string data);
 	RObject* getObject(string name);
 	void LoadObjects();

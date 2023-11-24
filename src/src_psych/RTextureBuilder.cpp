@@ -1,6 +1,35 @@
 #include <RTextureBuilder.h>
 GLI_load RTextureBuilder::gLI_load = GLI_load();
 STBI_load RTextureBuilder::sTBI_load = STBI_load();
+RTexture* RTextureBuilder::build(string path, TextureType type)
+{
+    RTexture* texture = new RTexture;
+    texture->path = path;
+    string Absolutepath = pathResource + '\\' + path.substr(3, path.size() - 3);
+    Absolutepath = std::regex_replace(Absolutepath, std::regex("%20"), " ");
+    string format = ".zstd";
+    string FullPath = Absolutepath.substr(0, Absolutepath.find_last_of('.') + 1) + "zstd";
+    if (!checkFileExists(FullPath))
+    {
+        std::cout << "Warning : Texture ZSTD not found -> " << FullPath << std::endl;
+        FullPath = Absolutepath.substr(0, Absolutepath.find_last_of('.') + 1) + "png";
+        format = ".png";
+        if (!checkFileExists(Absolutepath))
+        {
+            std::cout << "Warning : Texture PNG not found -> " << Absolutepath << std::endl;
+            texture->ID = 0;
+            return texture;
+        }
+    }
+    //std::cout <<"\n" << format;
+    std::vector<char> TextureData = load(FullPath, format); // read from file
+    return uploadTexture(TextureData, format, texture); // create and assign
+}
+//RTexture RTextureBuilder::build(const aiTexture* texture)
+//{
+//    // create and assign gl texture
+//    sTBI_load(texture);
+//}
 vector<char> RTextureBuilder::load(string Absolutepath, string format)
 {
     if (format == ".zstd") // Texture is compressed , decompress 

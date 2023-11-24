@@ -4,7 +4,7 @@ class RCamera
 {
 public:
 	//common
-	float zfar = 100.0, znear = 0.1;
+	float zfar = 10000.0, znear = 0.1;
 
 	CameraType cameraType = CameraType::PERSPECTIVE;
 

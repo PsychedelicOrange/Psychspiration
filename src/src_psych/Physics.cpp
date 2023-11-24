@@ -146,8 +146,9 @@ void Physics::setDynamicRigidBody(RObject* obj)
 
     int nchilds = compoundShape->getNumChildShapes();
     btScalar* mass = new btScalar[nchilds];
+    btScalar total_mass = 0.175; //total_mass /= nchilds;
     for (int i = 0; i < nchilds; i++)
-        mass[i] = 1.0;
+        mass[i] = total_mass;
     btTransform principal;
     btVector3 inertia;
     compoundShape->calculatePrincipalAxisTransform(mass, principal, inertia);
@@ -175,9 +176,12 @@ void Physics::setGravity()
 {
     dynamicsWorld->setGravity(btVector3(0, -10, 0));
 }
-void Physics::stepSim()
+void Physics::stepSim(float deltaTime)
 {
-    dynamicsWorld->stepSimulation(1.f / 60.f, 10);
+    /*
+        https://web.archive.org/web/20091118162634/http://bulletphysics.org/mediawiki-1.5.8/index.php/Stepping_The_World
+    */
+    dynamicsWorld->stepSimulation(deltaTime,4,(float)1/60);
 }
 
 void Physics::updateTransform(RObject* obj)
