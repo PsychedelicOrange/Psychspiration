@@ -18,5 +18,5 @@ public:
 	RTextureManager(RTextureManager& obj)
 		= delete;
 	static RTextureManager* getInstance();
-	RTexture* getTexture(string path, TextureType type = TextureType::Other);
+	RTexture* getTexture(string path);
 };

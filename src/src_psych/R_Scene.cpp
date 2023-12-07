@@ -2,9 +2,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <nlohmann/json.hpp>
+#include <json.hpp>
 #include <set>
 #include <RModelManager.h>
+#include <RTextureManager.h>
 using Json = nlohmann::json;
 glm::mat4 getmat4_json(Json temp)
 {
@@ -44,13 +45,15 @@ glm::vec3 convvec3_blender(glm::vec3 temp)
     return temp;
 }
 RScene::RScene(std::string sceneName) {
-    parseScene(getStringFromDisk("\\Scenes\\" + sceneName + ".scene"));
+    parseScene(getStringFromDisk("/Scenes/" + sceneName + ".scene"));
 }
 RObject* RScene::getObject(string name)
 {
     for (auto object : Objects)
         if (object->name == name)
             return object;
+    std::cout << "Object not found !";
+    return nullptr;
 }
 void RScene::parseScene(std::string data)
 {
@@ -89,9 +92,16 @@ void RScene::parseScene(std::string data)
 void RScene::LoadObjects()
 {
     RModelManager* modelMan = RModelManager::getInstance();
-    for (auto object : Objects)
-    {
+    for(auto object : Objects){
         std::cout << "Now Loading : " << object->path << std::endl;
         object->model = modelMan->getModel(object->path);
+        string baked_path = pathResource+"/Textures/"+object->path+"_baked.hdr"; 
+        if(checkFileExists(baked_path)){
+            std::cout << "Baked lightmaps found, now loading ..." << std::endl;
+            RTextureManager* textureManager = RTextureManager::getInstance();
+            object->lightmapID = (textureManager->getTexture("Textures/"+ object->path+"_baked.hdr"))->ID;
+        }else{
+            std::cout << "Baked lightmaps not found." << std::endl;
+        }
     }
 }

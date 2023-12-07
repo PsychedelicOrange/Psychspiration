@@ -25,7 +25,9 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 	 delete *shaders.begin();
 	 shaders.pop_back();
 	 Shader* shader = new Shader("pbr_baked_diffuse.vs", "pbr_baked_diffuse.fs", "0");
-	 shaders.push_back(shader);
+	 shaders[0] = shader;
+	 Shader* shader1 = new Shader("quad.vs", "hdr.fs", "0");
+	 shaders[1] = shader1;
  }
  void Renderer::innit()
 {
@@ -39,8 +41,33 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 	//Shader* shader= new Shader("pbr_new.vs", "pbr_new.fs", "0");
 	Shader* shader = new Shader("pbr_baked_diffuse.vs", "pbr_baked_diffuse.fs", "0");
 	shaders.push_back(shader);
-
+	Shader* shader1 = new Shader("quad.vs", "hdr.fs", "0");
+	shaders.push_back(shader1);
 	// init all framebuffers and renderbuffers, shadow maps, HDR maps etc. 
+	
+	// REFACTOR
+    glGenFramebuffers(1, &hdrFBO);
+
+    // create floating point color buffer
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1920, 1080, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // create depth buffer (renderbuffer)
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 1920, 1080);
+    // attach buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // light buffer
 	plightBuffer.innit();
 	plightBuffer.updateBuffer(pLightsLive);
 
@@ -94,25 +121,27 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 			glBufferSubData(GL_ARRAY_BUFFER, staticMeshes[i]->VBOoffset, staticMeshes[i]->vertices.size() * sizeof(Vertex), &(staticMeshes[i]->vertices[0]));
 		}
 	}
+
 	// set the vertex attribute pointers
-	// vertex Positions
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-	// vertex normals
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-	// vertex texture coords
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
-	// vertex texture coords2
-	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords2));
-	// vertex tangent
-	glEnableVertexAttribArray(4);
-	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
-	// vertex bitangent
-	glEnableVertexAttribArray(5);
-	glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+    glEnableVertexAttribArray(0);
+    // vertex Positions	
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    // vertex normals
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+    // vertex tangent
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
+    // vertex bitangent
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+    // vertex texture coords
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+    // vertex texture coords 2 
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(5, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+
 	glBindVertexArray(0);
 }
 
@@ -155,10 +184,17 @@ void Renderer::insertObjects(vector<RObject*>& objects)
  void Renderer::draw(RObject* obj)
 {
 	auto shader = shaders[0];
+	shader->use();
 	shader->setMat4("model", obj->transform);
 	for (auto mesh : obj->model->meshes)
 	{
+		// Set lightmap for object
+
 		setMeshUniforms(mesh, shader);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D,obj->lightmapID);
+		shader->setInt("texture_lightmap", 4);
+
 		glBindVertexArray(mesh->VAO);
 		glDrawElements(GL_TRIANGLES, mesh->indices.size(), GL_UNSIGNED_INT, 0);
 		// always good practice to set everything back to defaults once configured.
@@ -169,12 +205,23 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 }
 
  void Renderer::draw(vector<RObject*> objects)
-{
+{		
 	auto shader = shaders[0];
-	shader->use();
 	setGlobalUniforms(shader);
 	for (auto obj : objects)
 		draw(obj);
+}
+
+void Renderer::drawToQuad(int hdr,float exposure){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    shaders[1]->use();
+    shaders[1]->setInt("hdrBuffer", 0);
+    shaders[1]->setInt("hdrBuffer", 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    shaders[1]->setInt("hdr", hdr);
+    shaders[1]->setFloat("exposure", exposure);
+    renderQuad();
 }
 
  void Renderer::drawInstanced()
@@ -203,6 +250,7 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 
  void Renderer::setGlobalUniforms(Shader* shader)
 {
+	shader->use();
 	// set lights buffer, skymaps , shadow maps , etc.
 	// set camera uniforms like veiw projections
 	shader->setInt("numPLights", pLightsLive.size());
@@ -214,7 +262,7 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 
  void Renderer::setMeshUniforms(RMesh* mesh, Shader* shader)
 {
-
+	shader->use();
 	// set materials and textures
 	auto material = mesh->material;
 	if (material.TexAlbedo.empty())
@@ -267,4 +315,30 @@ void Renderer::insertObjects(vector<RObject*>& objects)
 	}
 	shader->setBool("existOpacity", (material.aplhaType != AlphaType::OPAQUE));
 	shader->setBool("existClip", (material.aplhaType == AlphaType::MASK));
+}
+void Renderer::renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }

@@ -45,6 +45,7 @@ private:
 		material.Roughness = roughness;
 		material.Emmisive = glm::vec3(emmisive.r, emmisive.g, emmisive.b);
 		material.Albedo = glm::vec3(color.r, color.g, color.b);
+		std::cout << "My roughness is : " << material.Roughness << std::endl;
 		if (aiAlphaMode.C_Str() == "OPAQUE")
 			material.aplhaType = AlphaType::OPAQUE;
 		else if (aiAlphaMode.C_Str() == "BLEND")
@@ -64,8 +65,10 @@ private:
 			{
 				
 				aimaterial_temp->GetTexture(type.second, i, &str);
-
-				RTexture* t = textureManager->getTexture(str.C_Str());
+				string tpath = str.C_Str();
+				int offset = 0;
+				if(tpath[0] = '.')offset=3; // Models might have path as ../Textures/
+				RTexture* t = textureManager->getTexture(str.C_Str()+3);
 				t->textureType = type.first;
 				textures.push_back(t);
 			}

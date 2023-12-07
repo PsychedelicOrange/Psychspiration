@@ -18,6 +18,9 @@ public:
 	bool firstMouse = true;
 	float lastFrame = 0.0f;
 	
+	// exposure and hdr
+	int hdr = 1;
+	float exposure =0.5;
 	void update()
 	{
 
@@ -27,12 +30,12 @@ public:
 			show_menu = !show_menu; // toggle menu
 			if(show_menu)
 			{
-				input.recieveKeyboardCallbacks = false;
+				//input.recieveKeyboardCallbacks = false;
 				input.recieveMouseCallbacks = false;
 			}
 			else
 			{
-				input.recieveKeyboardCallbacks = true;
+				//input.recieveKeyboardCallbacks = true;
 				input.recieveMouseCallbacks = true;
 			}
 			});

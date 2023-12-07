@@ -12,7 +12,7 @@ const float PI = 3.14159265359;
 struct GPULight {
     vec4 position;
     vec4 color;
-    unsigned int enabled;
+    int enabled;
     float intensity;
     float range;
     float padding;

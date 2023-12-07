@@ -10,8 +10,8 @@ public:
 	string name, path;
 	RModel* model;
 	glm::mat4 transform;
-
 	bool dynamic = 0;
+	unsigned int lightmapID = -1;
 	std::vector<Hull*> hulls;
 	btRigidBody* rigidBody;
 	glm::vec3 localScale = glm::vec3(1, 1, 1);

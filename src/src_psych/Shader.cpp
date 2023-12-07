@@ -14,7 +14,7 @@ Shader::Shader(std::string computePath)
     try
     {
         // open files
-        cShaderFile.open(pathResource + "\\shaders\\"+computePath);
+        cShaderFile.open(pathResource + "/Shaders/"+computePath);
 
         std::stringstream cShaderStream;
         // read file's buffer contents into streams
@@ -56,8 +56,8 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
     std::ifstream vShaderFile;
     std::ifstream fShaderFile;
     std::ifstream gShaderFile;
-    std::string relativeShaderPath = pathResource + "\\Shaders\\";
-    //std::cout<< relativeShaderPath+vertexPath;
+    std::string relativeShaderPath = pathResource + "/Shaders/";
+    // std::cout<< relativeShaderPath+vertexPath;
     // ensure ifstream objects can throw exceptions:
     vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -96,11 +96,11 @@ Shader::Shader(std::string vertexPath, std::string fragmentPath, std::string geo
     }
     catch (std::ifstream::failure& e)
     {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ::" << std::endl;
+        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ::" << relativeShaderPath << std::endl;
     }
     
     build(vertexCode, fragmentCode, geometryCode);
-
+    std::cout << fragmentPath << std::endl;
 }
 void Shader::buildPermutations(std::string vertexShader, std::string fragmentShader, std::string geometryShader)
 {

@@ -1,94 +1,104 @@
 #include <RTextureBuilder.h>
-GLI_load RTextureBuilder::gLI_load = GLI_load();
-STBI_load RTextureBuilder::sTBI_load = STBI_load();
-RTexture* RTextureBuilder::build(string path, TextureType type)
+#include <filesystem>
+#include <FileIO.h>
+#include <fstream>
+#include <glad/glad.h>
+#include <STBI_load.h> 
+#include <GLI_load.h>
+#include <zstd.h>
+#include <common.h> // zstd
+RTexture* RTextureBuilder::build(string path)
 {
     RTexture* texture = new RTexture;
     texture->path = path;
-    string Absolutepath = pathResource + '\\' + path.substr(3, path.size() - 3);
-    Absolutepath = std::regex_replace(Absolutepath, std::regex("%20"), " ");
-    string format = ".zstd";
-    string FullPath = Absolutepath.substr(0, Absolutepath.find_last_of('.') + 1) + "zstd";
-    if (!checkFileExists(FullPath))
+    string Absolutepath = pathResource + path;
+    std::cout << "Trying to load texture at : " << Absolutepath << std::endl;
+    string extension = path.substr(path.find_last_of('.')+1);
+    //Absolutepath = std::regex_replace(Absolutepath, std::regex("%20"), " ");
+    string path_wo_extension = Absolutepath.substr(0, Absolutepath.find_last_of('.') + 1);
+    std::cout <<"Path w/o extension: " << path_wo_extension;
+    string format = extension;
+    if (checkFileExists(path_wo_extension+"zstd"))
     {
-        std::cout << "Warning : Texture ZSTD not found -> " << FullPath << std::endl;
-        FullPath = Absolutepath.substr(0, Absolutepath.find_last_of('.') + 1) + "png";
-        format = ".png";
-        if (!checkFileExists(Absolutepath))
-        {
-            std::cout << "Warning : Texture PNG not found -> " << Absolutepath << std::endl;
-            texture->ID = 0;
-            return texture;
-        }
+        std::cout << "Texture ZSTD found." << std::endl;
+        format = "zstd"; 
+    }else{
+        std::cout << "Warning : Texture ZSTD not found, using given extension ." << extension << std::endl;
     }
-    //std::cout <<"\n" << format;
-    std::vector<char> TextureData = load(FullPath, format); // read from file
-    return uploadTexture(TextureData, format, texture); // create and assign
+    if(format == "zstd"){
+        Buff buff = readIntoBuffer(path_wo_extension+format);
+        Buff textureData = decompress(buff);
+        GLI_load gli = GLI_load(textureData.data,textureData.size);
+        texture->ID = gli.upload();
+    }else if(format == "dds"){
+        GLI_load gli = GLI_load(path_wo_extension+"dds");
+        texture->ID = gli.upload();
+    }else if(format == "hdr"){
+        texture->ID = HdrTextureFromFile(path_wo_extension+"hdr");
+    }
+    else{
+        STBI_load stb = STBI_load(Absolutepath);
+        texture->ID = stb.upload();
+    }
+    return texture;
 }
 //RTexture RTextureBuilder::build(const aiTexture* texture)
 //{
 //    // create and assign gl texture
 //    sTBI_load(texture);
 //}
-vector<char> RTextureBuilder::load(string Absolutepath, string format)
+unsigned int RTextureBuilder::HdrTextureFromFile(std::string path)
 {
-    if (format == ".zstd") // Texture is compressed , decompress 
+    //stbi_set_flip_vertically_on_load(true);
+    int width, height, nrComponents;
+    float* data = stbi_loadf(path.c_str(), &width, &height, &nrComponents, 0);
+    unsigned int hdrTexture;
+    if (data)
     {
-        return load_compressed(Absolutepath);
+        glGenTextures(1, &hdrTexture);
+        glBindTexture(GL_TEXTURE_2D, hdrTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        stbi_image_free(data);
     }
     else
     {
-        return load_uncompressed(Absolutepath);
+        std::cout << "Failed to load HDR image." << std::endl;
     }
+    return hdrTexture;
 }
-
-vector<char> RTextureBuilder::load_compressed(string Absolutepath)
+Buff RTextureBuilder::decompress(Buff compressed_buffer)
 {
-    vector<char> ogVector = load_uncompressed(Absolutepath);
-    unsigned long long const resultSize = ZSTD_getFrameContentSize(ogVector.data(), ogVector.size());
-    CHECK(resultSize != ZSTD_CONTENTSIZE_ERROR, "%s: not compressed by zstd!", Absolutepath);
-    CHECK(resultSize != ZSTD_CONTENTSIZE_UNKNOWN, "%s: original size unknown!", Absolutepath);
+    std::cout << "File Read." << std::flush;
+    unsigned long long const resultSize = ZSTD_getFrameContentSize(compressed_buffer.data, compressed_buffer.size);
+    CHECK(resultSize != ZSTD_CONTENTSIZE_ERROR, "%s: not compressed by zstd!");
+    CHECK(resultSize != ZSTD_CONTENTSIZE_UNKNOWN, "%s: original size unknown!");
 
-    std::vector<char> resultVec((size_t)resultSize);
+    Buff result((size_t)resultSize);
+    //std::vector<char> resultVec((size_t)resultSize);
 
-    size_t const dSize = ZSTD_decompress(resultVec.data(), resultSize, ogVector.data(), ogVector.size());
+    size_t const dSize = ZSTD_decompress(result.data, resultSize, compressed_buffer.data, compressed_buffer.size);
     CHECK_ZSTD(dSize);
     /* When zstd knows the content size, it will error if it doesn't match. */
     CHECK(dSize == resultSize, "Impossible because zstd will check this condition!");
 
     /* success */
     //printf("%25s : %6u -> %7u \n", Absolutepath, (unsigned)ogVector.size(), (unsigned)resultSize);
-    return resultVec;
+    return result;
 }
 
-vector<char> RTextureBuilder::load_uncompressed(string Absolutepath)
+Buff RTextureBuilder::readIntoBuffer(string Absolutepath)
 {   
-    std::ifstream file(Absolutepath, std::ios::binary);
+    std::ifstream file(Absolutepath, std::ios::in | std::ios::binary);
     file.unsetf(std::ios::skipws);
-
-    std::streampos file_size;
-    file.seekg(0, std::ios::end);
-    file_size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<char> vec;
-    vec.reserve(file_size);
-    vec.insert(vec.begin(),
-    std::istream_iterator<char>(file),
-    std::istream_iterator<char>());
-    return (vec);
-    
-}
-
-RTexture* RTextureBuilder::uploadTexture(const vector<char>& TextureData, string format, RTexture* texture)
-{
-    if (format == ".dds" || format == ".zstd")
-    {
-        texture->ID = gLI_load(TextureData);
-    }
-    else
-    {
-        texture->ID = sTBI_load(TextureData);
-    }
-    return texture;
+    std::uintmax_t filesize = std::filesystem::file_size(Absolutepath);
+    Buff inputfile(filesize);
+    std::cout << "File size detected : " << filesize << std::flush;
+    file.read(inputfile.data,inputfile.size);
+    return inputfile;
 }

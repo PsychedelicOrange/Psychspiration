@@ -30,11 +30,17 @@ public:
 	vector<GLuint> vaos = vector<GLuint>(5, 0);
 	vector<GLuint> vbos = vector<GLuint>(5, 0);
 	pLightBuffer plightBuffer;
-	
+	unsigned int hdrFBO;
+	unsigned int colorBuffer;
+    unsigned int rboDepth;			
+    unsigned int quadVAO = 0;
+	unsigned int quadVBO;
+
 	// Miscelleanous
 	Line line;
 	Input& input;
 	Renderer(Input& input) : input(input) {};
+	void LoadLightMaps();
 	void setUpEvents();
 	void insertObjects(vector<RObject*>& objects);
 	void updateShaders();
@@ -47,4 +53,7 @@ public:
 	void drawInstanced();
 	void setGlobalUniforms(Shader* shader);
 	void setMeshUniforms(RMesh* mesh, Shader* shader);
+	void drawToQuad(int hdr,float exposure);
+	// helpers
+	void renderQuad();
 };

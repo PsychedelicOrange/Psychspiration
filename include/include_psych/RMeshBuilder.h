@@ -24,6 +24,10 @@ private:
     RMesh* rmesh;
 	void LoadVerticeData(aiMesh* mesh)
 	{
+        if(mesh->HasTextureCoords(0))std::cout << "Has mTextureCoords_0" << std::endl;
+        else std::cout << "NOOONOONO not Has mTextureCoords_0"<< std::endl;
+        if(mesh->HasTextureCoords(1))std::cout << "Has mTextureCoords_1" << std::endl;
+        else std::cout << "NOOONOONO not Has  mTextureCoords_1"<< std::endl;
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
         {
             Vertex vertex;
@@ -42,20 +46,17 @@ private:
                 vertex.Normal = vector;
             }
             // texture coordinates
-            if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+
+            if (mesh->HasTextureCoords(0)) // does the mesh contain texture coordinates?
             {
                 glm::vec2 vec;
-                // a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
-                // use models where a vertex can have multiple texture coordinates so we always take the first set (0).
                 vec.x = mesh->mTextureCoords[0][i].x;
                 vec.y = mesh->mTextureCoords[0][i].y;
 
                 vertex.TexCoords = vec;
             }
-            if (mesh->mTextureCoords[1]) {
+            if (mesh->HasTextureCoords(1)) {
                 glm::vec2 vec;
-                // a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
-                // use models where a vertex can have multiple texture coordinates so we always take the first set (0).
                 vec.x = mesh->mTextureCoords[1][i].x;
                 vec.y = mesh->mTextureCoords[1][i].y;
 
@@ -74,10 +75,19 @@ private:
                 vector.z = mesh->mBitangents[i].z;
                 vertex.Bitangent = vector;
             }
-            else
+            else{
+                std::cout << "Setting TexCoords 0" << std::endl;
                 vertex.TexCoords = glm::vec2(0.0f, 0.0f);
+            }
 
             rmesh->vertices.push_back(vertex);
+
+        }
+        {
+            std::cout << "TexCoords: " << std::endl;
+            for(auto vertex : rmesh->vertices){
+                std::cout << vertex.TexCoords2.x << ", " << vertex.TexCoords2.y << std::endl;
+            }
 
         }
         // now walk through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
@@ -115,15 +125,18 @@ private:
         // vertex normals
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
-        // vertex texture coords
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
         // vertex tangent
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Tangent));
         // vertex bitangent
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+        // vertex texture coords
         glEnableVertexAttribArray(4);
-        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Bitangent));
+        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+        // vertex texture coords 2 
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords2));
 
         glBindVertexArray(0);
     }

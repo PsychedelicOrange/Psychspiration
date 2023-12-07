@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <implot.h>
 #include <implot_internal.h>
+#include<State.h>
 struct RollingBuffer {
     float Span;
     ImVector<ImVec2> Data;
@@ -58,6 +59,7 @@ public:
 	void startFrame();
     void plotA(float value, int maxAxis);
 	void doOverlay(bool* p_open = NULL);
+    void stateWindow(State& state);
     void doDebugVariables();
     void addDebugVariable(float value,string name);
     void EndFrame();

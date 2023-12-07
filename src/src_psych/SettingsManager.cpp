@@ -1,6 +1,6 @@
 #include <SettingsManager.h>
 #include <FileIO.h>
-#include <nlohmann/json.hpp>
+#include <json.hpp>
 #include <fstream>
 #include <constants.h>
 

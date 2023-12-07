@@ -127,6 +127,7 @@ void Physics::setDynamicRigidBody(RObject* obj)
     btTransform startTransform;
     startTransform.setFromOpenGLMatrix(&(obj->transform[0][0]));
     btConvexHullShape* colShape;
+    std::cout << "loading hulls for " << obj->path << std::endl;
     HullBuilder hullBuilder;
     auto scale = btVector3(obj->localScale.x,obj->localScale.y,obj->localScale.z);
     hullBuilder.builder(obj->path,obj->hulls);

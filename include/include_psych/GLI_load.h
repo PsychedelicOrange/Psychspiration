@@ -1,15 +1,14 @@
 #pragma once
 #include <gli/gli.hpp> 
 #include <glad/glad.h>
-#include <vector>
-using std::vector;
+#include <string>
 class GLI_load{
 
 	gli::gl GL = gli::gl((gli::gl::PROFILE_GL33));
     gli::gl::format Format;
     unsigned int Target;
     gli::texture Texture;
-
+    GLuint textureID;
     void uploadTexture()
     {
         for (std::size_t Layer = 0; Layer < Texture.layers(); ++Layer)
@@ -81,17 +80,20 @@ class GLI_load{
                 }
     }
 public:
-	unsigned int operator()(const vector<char>& TextureData)
-	{
-
-		Texture = gli::load(TextureData.data(), TextureData.size());
+    GLI_load(std::string Filename){
+        Texture = gli::load(Filename);
+    }
+    GLI_load(char* buff, int size){
+        Texture = gli::load(buff,size);
+    }
+    unsigned int upload(){
 		Format = GL.translate(Texture.format(), Texture.swizzles());
 		Target = GL.translate(Texture.target());
         std::cout << "\nTexture Format: " << Texture.format();
-		// Generate TextureName and set tex parameters
-		GLuint TextureName = 0;
-		glGenTextures(1, &TextureName);
-		glBindTexture(Target, TextureName);
+		// Generate textureID and set tex parameters
+		GLuint textureID = 0;
+		glGenTextures(1, &textureID);
+		glBindTexture(Target, textureID);
 		glTexParameteri(Target, GL_TEXTURE_BASE_LEVEL, Texture.base_level());
 		glTexParameteri(Target, GL_TEXTURE_MAX_LEVEL, Texture.max_level());
 		glTexParameteri(Target, GL_TEXTURE_SWIZZLE_R, Format.Swizzles[0]);
@@ -130,11 +132,9 @@ public:
 			assert(0);
 			break;
 		}
-
-        // without PBO
         uploadTexture();
-        return TextureName;
+        return textureID;
+    }
         // reference for with PBO  check commit 904f8690bacb88c00b8e7392d118d529b0c7819b Texture.cpp
-	}
     
 };

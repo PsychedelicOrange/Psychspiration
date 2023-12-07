@@ -81,6 +81,16 @@ void Gui::doOverlay(bool* p_open)
 	}
 	ImGui::End();
 }
+void Gui::stateWindow(State& state){
+	if (ImGui::Begin("Example: Simple overlay"))
+	{
+		ImGui::Text("Change state: ");
+		ImGui::SliderFloat("exposure", &state.exposure, 0.0f, 1.0f);
+		if (ImGui::Button("Hdr toggle")){
+			state.hdr = !(bool)state.hdr;
+		}
+	}ImGui::End();
+}
 void Gui::plotA(float value,int maxAxis) {
 	float history = 10.0f;
 	//t += ImGui::GetIO().DeltaTime; Called already in FPS overlay

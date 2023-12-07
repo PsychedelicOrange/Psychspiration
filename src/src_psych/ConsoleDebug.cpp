@@ -31,7 +31,7 @@
 	int Textureindex = 0;
 	std::cout << "\t\t\t Albedo :" << glm::to_string(material.Albedo) << std::endl;
 	std::cout << "\t\t\t Emmisive :" << glm::to_string(material.Emmisive) << std::endl;
-	std::cout << "\t\t\t Metallic,Roughness : " << material.Metallic << "," << material.Metallic << std::endl;
+	std::cout << "\t\t\t Metallic,Roughness : " << material.Metallic << "," << material.Roughness << std::endl;
 	std::cout << "\t\t\t AlphaType(OPAQUE,BLEND,MASK): " << (int)material.aplhaType << std::endl;
 	std::cout << "\t\t\t No. of Textures: " << material.TexAlbedo.size() + material.TexEmmisive.size() + material.TexRoughMetal.size() + material.TexNormal.size() + material.TexOther.size() << std::endl;
 	for (auto texture : material.TexAlbedo)

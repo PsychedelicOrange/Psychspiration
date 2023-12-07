@@ -9,11 +9,11 @@ RTextureManager* RTextureManager::getInstance()
 		return instance;
 }
 
-RTexture* RTextureManager::getTexture(string path, TextureType type)
+RTexture* RTextureManager::getTexture(string path)
 {
 	if (Textures.empty())
 	{
-		Textures.emplace(path, builder.build(path, type));
+		Textures.emplace(path, builder.build(path));
 		return Textures[path];
 	}
 	else
@@ -25,7 +25,7 @@ RTexture* RTextureManager::getTexture(string path, TextureType type)
 		}
 		else
 		{
-			Textures.emplace(path, builder.build(path, type));
+			Textures.emplace(path, builder.build(path));
 			return Textures[path];
 		}
 	}

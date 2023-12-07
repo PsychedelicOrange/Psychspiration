@@ -17,3 +17,11 @@ documentation/html/
 documentation/man/
 compressonatorcli/
 out/
+CMakeFiles/
+bin/
+cmake_install.cmake
+imgui.ini
+yesterday.log
+Makefile
+Psychspiration
+CMakeCache.txt

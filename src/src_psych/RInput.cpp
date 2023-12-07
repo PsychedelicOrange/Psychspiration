@@ -68,7 +68,7 @@ void Input::tick()
  void Input::mouse_button_callback(int button, int action, int mods)
 {
 	 // DEBUG ONLY
-	 //if (!recieveMouseCallbacks)return;
+	//if (!recieveMouseCallbacks)return;	
 	try {
 		std::string control = settings.GLFWMouseKeysToControl.at(button);
 		keyStates[control] = action;
@@ -85,7 +85,7 @@ void Input::tick()
  void Input::mouse_movement_callback(double xpos, double ypos)
 {
 	 // DEBUG ONLY
-	 if (!recieveMouseCallbacks)return;
+	if (!recieveMouseCallbacks)return;
 	for (auto action : mouseMovementCallbacks)
 	{
 		action(xpos, ypos);

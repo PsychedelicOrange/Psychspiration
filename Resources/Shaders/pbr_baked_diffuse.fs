@@ -21,7 +21,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 struct GPULight {
     vec4 position;
     vec4 color;
-    unsigned int enabled;
+    int enabled;
     float intensity;
     float range;
     float padding;
@@ -38,6 +38,7 @@ uniform sampler2D texture_diffuse;
 uniform sampler2D texture_normal;
 uniform sampler2D texture_roughmetal;
 uniform sampler2D texture_emmisive;
+uniform sampler2D texture_lightmap;
     //bools and numbers
 uniform bool existdiffuse;
 uniform bool existnormals;
@@ -55,10 +56,11 @@ layout (std140, binding = 3) uniform lightUBO{
 
 void main()
 {
-    
+    vec4 texlightmap = texture(texture_lightmap,TexCoords2);
     vec4 texcolor;
     vec3 albedo = u_albedo;
-    float metallic = u_metallic,roughness = u_roughness;
+    float metallic = u_metallic;
+    float roughness = u_roughness;
     if(existdiffuse)
     {
         texcolor = texture(texture_diffuse,TexCoords).rgba;
@@ -113,7 +115,7 @@ void main()
         float attenuation = 1.0 / (distance * distance); // attenuation based on inverse square law
    
 		vec3 H = normalize (V+L);
-        vec3 radiance = gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation * 1.0f;
+        vec3 radiance = ( gpuLight[i].intensity * gpuLight[i].color.xyz * attenuation * 0.001f );
 		// calculate Cook-Terrence specular BRDF 
 		            // F
 		            vec3 F = fresnelSchlick(max(dot(H,V),0.0f),F0);
@@ -125,26 +127,30 @@ void main()
         vec3 ks = F;
         vec3 kd = vec3(1.0)- ks;
         kd *= (1.0-metallic);
-        //Lo = (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
-        Lo = specular * radiance * (max(dot(N,L),0.0f));
-        //Lo = albedo;
+        Lo = (kd * albedo / PI + specular) * radiance * (max(dot(N,L),0.0f));
         Lt += Lo;
 	}
-    
-    vec3 color = Lt + albedo;
+
     vec3 emmisive = vec3(u_emmisive);
     if(existemmisive)
     {
         emmisive = vec3(texture(texture_emmisive,TexCoords));
     }
-    color+=emmisive;
+// lightmap
+    
+    vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metallic;	  
+    vec3 diffuse = texlightmap.rgb * albedo;
+    vec3 ambient = (kD * diffuse);
+
+    Lt += emmisive + ambient;//texlightmap.rgb;
     vec4 finalColor;
     if(!existOpacity)
     {
-        finalColor = vec4(vec3(albedo),(1.0f));
+        finalColor = vec4(vec3(Lt),(1.0f));
     }else{
-        finalColor = vec4(vec3(albedo),texcolor.a);
-        //FragColor = vec4(texcolor.a);
+        finalColor = vec4(vec3(Lt),texcolor.a);
     }
     //finalColor = vec4(N,1.0);
     //float gamma = 1/0.9;

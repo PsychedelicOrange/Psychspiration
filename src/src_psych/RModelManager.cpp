@@ -17,7 +17,7 @@ RModel* RModelManager::getModel(string path)
 	}
 	else
 	{
-		Models.emplace(path, rModelBuilder->build("\\Models\\" + path + ".gltf"));
+		Models.emplace(path, rModelBuilder->build("Models/" + path + ".gltf"));
 		return Models[path];
 	}
 }

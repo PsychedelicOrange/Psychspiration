@@ -1,5 +1,10 @@
 #include <FileIO.h>
+#ifdef _WIN32
 #include <Windows.h>
+#endif
+#ifdef __linux__
+#include <unistd.h>
+#endif
 #include <filesystem>
 #include <sstream>
 #include <fstream>
@@ -46,7 +51,8 @@ std::string getStringFromDisk_direct(std::string path)
 
 std::string getStringFromDisk(std::string path)
 {
-	std::fstream file{ pathResource + path };
+	std::cout << "Resource path: " << pathResource << std::endl;
+	std::fstream file{pathResource+path};
 	std::string prop;
 	if (!file)
 	{
@@ -67,14 +73,23 @@ std::string getRelativePath()
 {
 	std::string tempString;
 	
+
+#ifdef _WIN32
 	char pBuf[MAX_PATH];
 	size_t len = sizeof(pBuf);
-	int bytes = GetModuleFileNameA(NULL, pBuf, MAX_PATH);
-	bytes ? bytes : -1;
+	GetModuleFileNameA(NULL, pBuf, MAX_PATH);
+#endif 
+#ifdef __linux__
+	char pBuf[100];
+	size_t len = sizeof(pBuf);
+	readlink("/proc/self/exe", pBuf, len);
+#endif
 	std::filesystem::path relPath(pBuf);
 	relPath.remove_filename();
 	return relPath.string();
 }
+
+
 std::string getdefpathResource()
 {
 	std::filesystem::path debug = getRelativePath();
@@ -83,6 +98,9 @@ std::string getdefpathResource()
 	debug /= std::filesystem::path("Resources");
 	return debug.string();
 }
+
+
+
 std::vector<std::string> getSceneList()
 {
 	std::filesystem::path sceneFolder = pathResource;
