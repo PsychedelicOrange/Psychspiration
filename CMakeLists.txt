@@ -6,7 +6,7 @@ project(Psychspiration CXX C)
 
 set(CMAKE_CXX_FLAGS_RELEASE "/MT")
 set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CompilerFlags
         CMAKE_CXX_FLAGS
         CMAKE_CXX_FLAGS_DEBUG
@@ -33,6 +33,7 @@ endforeach()
 
 
 set(SOURCES
+include/include_extern/glm/glm.hpp
 include/include_extern/glad/glad.h
 include/include_extern/KHR/khrplatform.h
 include/include_psych/Aabb.h
