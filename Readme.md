@@ -4,7 +4,8 @@
 
 [More Screenshots](https://www.flickr.com/photos/197526599@N02/albums/72177720307335647)
 
-[Demo Download](https://drive.google.com/uc?export=download&id=1SZVbb-R04-iJFkY4swBH5971s-X_H_2a)
+[Demo Download](https://drive.usercontent.google.com/download?id=1qnBI4UzDVmYNWb8oDzKLSu5qdhxBaVKq&export=download)
+( Note: Press `~` to hide the GUI )
 
 [Build Instructions](./documentation/Documentation.md)
 # Features
@@ -12,7 +13,7 @@
 * PBR shading based on learnopengl.com
 * Supports dynamic point,directional lights with shadows (PCF)
 * Import scenes from blender (Custom .py exporter)
-* MSAA, Anti-Aliasing, HDR, Transparency,Instanced rendering 
+* MSAA, Anti-Aliasing, HDR, Transparency, Instanced rendering 
 * Integrated Bullet Physics (*broken in current version*)
 
 # Goals
